@@ -1,6 +1,6 @@
 package com.gdamiens.website.configuration;
 
-import com.gdamiens.website.WsConsumer;
+import com.gdamiens.website.ratp.WsConsumer;
 import com.gdamiens.website.utils.Constants;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

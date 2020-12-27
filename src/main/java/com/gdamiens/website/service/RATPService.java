@@ -1,6 +1,6 @@
 package com.gdamiens.website.service;
 
-import com.gdamiens.website.WsConsumer;
+import com.gdamiens.website.ratp.WsConsumer;
 import com.gdamiens.website.ratp.wsdl.*;
 import org.springframework.stereotype.Service;
 

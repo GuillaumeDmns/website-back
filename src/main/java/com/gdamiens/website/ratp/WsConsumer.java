@@ -1,4 +1,4 @@
-package com.gdamiens.website;
+package com.gdamiens.website.ratp;
 
 import com.gdamiens.website.ratp.wsdl.*;
 import com.gdamiens.website.utils.Constants;
