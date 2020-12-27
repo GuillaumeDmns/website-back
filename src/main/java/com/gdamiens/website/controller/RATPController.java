@@ -1,5 +1,6 @@
-package com.gdamiens.website;
+package com.gdamiens.website.controller;
 
+import com.gdamiens.website.WsConsumer;
 import com.gdamiens.website.ratp.wsdl.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

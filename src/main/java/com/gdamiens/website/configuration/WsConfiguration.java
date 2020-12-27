@@ -1,5 +1,7 @@
-package com.gdamiens.website;
+package com.gdamiens.website.configuration;
 
+import com.gdamiens.website.WsConsumer;
+import com.gdamiens.website.utils.Constants;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
@@ -17,7 +19,7 @@ public class WsConfiguration {
     @Bean
     public WsConsumer wsClient(Jaxb2Marshaller marshaller) {
         WsConsumer client = new WsConsumer();
-        client.setDefaultUri("http://opendata-tr.ratp.fr/wsiv/services/Wsiv");
+        client.setDefaultUri(Constants.RATP_SOAP_URL);
         client.setMarshaller(marshaller);
         client.setUnmarshaller(marshaller);
         return client;

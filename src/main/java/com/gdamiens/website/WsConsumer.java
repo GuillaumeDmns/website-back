@@ -1,11 +1,11 @@
 package com.gdamiens.website;
 
 import com.gdamiens.website.ratp.wsdl.*;
+import com.gdamiens.website.utils.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.ws.client.core.support.WebServiceGatewaySupport;
-import org.springframework.ws.soap.client.core.SoapActionCallback;
 
 
 public class WsConsumer extends WebServiceGatewaySupport {
@@ -24,7 +24,7 @@ public class WsConsumer extends WebServiceGatewaySupport {
         log.info("Requesting lineId " + lineId);
 
         return (GetLinesResponse) getWebServiceTemplate()
-                .marshalSendAndReceive("http://opendata-tr.ratp.fr/wsiv/services/Wsiv", getLines, new SoapActionCallback("GetLinesResponse"));
+                .marshalSendAndReceive(Constants.RATP_SOAP_URL, getLines);
     }
 
     public GetMissionsNextResponse getMissionsNext(String lineId, String stationName) {
@@ -45,7 +45,7 @@ public class WsConsumer extends WebServiceGatewaySupport {
         getMissionsNext.setStation(station);
 
         return (GetMissionsNextResponse) getWebServiceTemplate()
-                .marshalSendAndReceive("http://opendata-tr.ratp.fr/wsiv/services/Wsiv", getMissionsNext, new SoapActionCallback("GetMissionsNextResponse"));
+                .marshalSendAndReceive(Constants.RATP_SOAP_URL, getMissionsNext);
     }
 
 }
