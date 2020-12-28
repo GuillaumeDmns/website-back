@@ -4,10 +4,7 @@ import com.gdamiens.website.ratp.wsdl.*;
 import com.gdamiens.website.service.RATPService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -19,6 +16,17 @@ public class RATPController {
 
     public RATPController(RATPService ratpService) {
         this.ratpService = ratpService;
+    }
+
+    @GetMapping("/stations")
+    public ResponseEntity<List<Station>> getStations(@RequestParam String search) {
+        try {
+            List<Station> stationList = ratpService.getStationsByName(search);
+            return new ResponseEntity<>(stationList, HttpStatus.OK);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping("/rerA")

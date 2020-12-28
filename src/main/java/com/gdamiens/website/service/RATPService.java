@@ -14,15 +14,23 @@ public class RATPService {
         this.wsConsumer = wsConsumer;
     }
 
+    public List<Station> getStationsByName(String stationName) {
+        GetStationsResponse response = wsConsumer.getStations(stationName);
+        WrStations wrStations = response.getReturn();
+
+        return wrStations.getStations();
+    }
+
     public List<Line> getRerAInfos() {
         GetLinesResponse response = wsConsumer.getLines("RA");
+
         return response.getReturn();
     }
 
     public List<Mission> getNext(String lineId, String stationName) {
         GetMissionsNextResponse response = wsConsumer.getMissionsNext(lineId, stationName);
-
         WrMissions wrMissions = response.getReturn();
+
         return wrMissions.getMissions();
     }
 }

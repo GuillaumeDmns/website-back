@@ -12,6 +12,22 @@ public class WsConsumer extends WebServiceGatewaySupport {
 
     private static final Logger log = LoggerFactory.getLogger(WsConsumer.class);
 
+    public GetStationsResponse getStations(String stationName) {
+
+        ObjectFactory factory = new ObjectFactory();
+
+        GetStations getStations = factory.createGetStations();
+        Station station = factory.createStation();
+
+        station.setName(stationName);
+        getStations.setStation(station);
+
+        log.info("Requesting stationName " + stationName);
+
+        return (GetStationsResponse) getWebServiceTemplate()
+                .marshalSendAndReceive(Constants.RATP_SOAP_URL, getStations);
+    }
+
     public GetLinesResponse getLines(String lineId) {
 
         ObjectFactory factory = new ObjectFactory();
@@ -43,6 +59,8 @@ public class WsConsumer extends WebServiceGatewaySupport {
 
         getMissionsNext.setDirection(direction);
         getMissionsNext.setStation(station);
+
+        log.info("Requesting next missions for stationName " + stationName + " and lineId " + lineId);
 
         return (GetMissionsNextResponse) getWebServiceTemplate()
                 .marshalSendAndReceive(Constants.RATP_SOAP_URL, getMissionsNext);
