@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
 @Configuration
-public class WsConfiguration {
+public class WsConfig {
 
     @Bean
     public Jaxb2Marshaller marshaller() {

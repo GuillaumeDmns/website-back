@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -41,10 +42,14 @@ public class RATPController {
     }
 
     @GetMapping("/next/{lineId}/{stationName}")
-    public ResponseEntity<List<Mission>> getNext(@PathVariable String lineId, @PathVariable String stationName) {
+    public ResponseEntity<List<String>> getNext(@PathVariable String lineId, @PathVariable String stationName) {
         try {
             List<Mission> missionList = ratpService.getNext(lineId, stationName);
-            return new ResponseEntity<>(missionList, HttpStatus.OK);
+            List<String> messages = new ArrayList<>();
+            missionList.forEach(mission -> {
+                messages.add("Direction " + mission.getDirection().getName() + ", prochain train dans " + String.join(", ", mission.getStationsMessages()));
+            });
+            return new ResponseEntity<>(messages, HttpStatus.OK);
         }
         catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
