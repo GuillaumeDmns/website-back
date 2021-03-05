@@ -7,19 +7,19 @@ import java.util.List;
 
 public class StationsDTO extends RATPResponse {
 
-    private List<Station> lines;
+    private List<Station> stations;
 
     public StationsDTO(WrStations wrStations) {
         super();
-        this.lines = wrStations.getStations();
+        this.stations = wrStations.getStations();
     }
 
-    public List<Station> getLines() {
-        return lines;
+    public List<Station> getStations() {
+        return stations;
     }
 
-    public void setLines(List<Station> lines) {
-        this.lines = lines;
+    public void setStations(List<Station> stations) {
+        this.stations = stations;
     }
 }
 

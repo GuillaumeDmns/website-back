@@ -7,21 +7,29 @@ import com.gdamiens.website.utils.Constants;
 public class LineCustom {
 
     private String id;
+
     private String code;
+
     private String codeStif;
+
     private String name;
+
     private String image;
+
     private String realm;
-    private Reseau reseau;
+
+    private ReseauCustom reseau;
 
     public LineCustom(Line line) {
-        this.id = line.getId();
-        this.code = line.getCode();
-        this.codeStif = line.getCodeStif();
-        this.name = line.getName();
-        this.image = line.getImage() == null ? null : Constants.ROOT_IMG_URL + line.getImage();
-        this.realm = line.getRealm();
-        this.reseau = line.getReseau();
+        if (line != null) {
+            this.id = line.getId();
+            this.code = line.getCode();
+            this.codeStif = line.getCodeStif();
+            this.name = line.getName();
+            this.image = line.getImage() == null ? null : Constants.ROOT_IMG_URL + line.getImage();
+            this.realm = line.getRealm();
+            this.reseau = new ReseauCustom(line.getReseau());
+        }
     }
 
     public String getId() {
@@ -72,11 +80,11 @@ public class LineCustom {
         this.realm = realm;
     }
 
-    public Reseau getReseau() {
+    public ReseauCustom getReseau() {
         return reseau;
     }
 
-    public void setReseau(Reseau reseau) {
+    public void setReseau(ReseauCustom reseau) {
         this.reseau = reseau;
     }
 }

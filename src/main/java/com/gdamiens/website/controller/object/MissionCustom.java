@@ -15,17 +15,19 @@ public class MissionCustom {
     private List<String> messages;
 
     public MissionCustom(Mission mission) {
-        this.code = mission.getCode();
-        if (mission.getDirection() != null) {
-            this.direction = mission.getDirection().getName();
-        }
+        if (mission != null) {
+            this.code = mission.getCode();
+            if (mission.getDirection() != null) {
+                this.direction = mission.getDirection().getName();
+            }
 
-        if (mission.getStationsDates() != null && mission.getStationsDates().size() > 0) {
-            this.nextPassage = mission.getStationsDates().get(0);
-        }
+            if (mission.getStationsDates() != null && mission.getStationsDates().size() > 0) {
+                this.nextPassage = mission.getStationsDates().get(0);
+            }
 
-        if (mission.getStationsMessages() != null) {
-            this.messages = mission.getStationsMessages();
+            if (mission.getStationsMessages() != null) {
+                this.messages = mission.getStationsMessages();
+            }
         }
     }
 
