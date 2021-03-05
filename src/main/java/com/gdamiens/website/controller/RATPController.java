@@ -1,5 +1,9 @@
 package com.gdamiens.website.controller;
 
+import com.gdamiens.website.controller.object.LineRequest;
+import com.gdamiens.website.controller.object.LinesDTO;
+import com.gdamiens.website.controller.object.NextMissionsDTO;
+import com.gdamiens.website.controller.object.StationsDTO;
 import com.gdamiens.website.ratp.wsdl.*;
 import com.gdamiens.website.service.RATPService;
 import org.springframework.http.HttpStatus;
@@ -19,21 +23,21 @@ public class RATPController {
     }
 
     @GetMapping("/stations")
-    public ResponseEntity<List<Station>> getStations(@RequestParam String search) {
+    public ResponseEntity<StationsDTO> getStations(@RequestParam String search) {
         try {
-            List<Station> stationList = ratpService.getStationsByName(search);
-            return new ResponseEntity<>(stationList, HttpStatus.OK);
+            StationsDTO stations = ratpService.getStationsByName(search);
+            return new ResponseEntity<>(stations, HttpStatus.OK);
         }
         catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @GetMapping("/rerA")
-    public ResponseEntity<List<Line>> getRerAInfos() {
+    @GetMapping("/lines")
+    public ResponseEntity<LinesDTO> getLines(LineRequest lineRequest) {
         try {
-            List<Line> lineList = ratpService.getRerAInfos();
-            return new ResponseEntity<>(lineList, HttpStatus.OK);
+            LinesDTO lines = ratpService.getLinesInfos(lineRequest.getLineId(), lineRequest.getCode(), lineRequest.getCodeStif(), lineRequest.getRealm(), lineRequest.getReseau());
+            return new ResponseEntity<>(lines, HttpStatus.OK);
         }
         catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -41,10 +45,10 @@ public class RATPController {
     }
 
     @GetMapping("/next/{lineId}/{stationName}")
-    public ResponseEntity<List<Mission>> getNext(@PathVariable String lineId, @PathVariable String stationName) {
+    public ResponseEntity<NextMissionsDTO> getNext(@PathVariable String lineId, @PathVariable String stationName) {
         try {
-            List<Mission> missionList = ratpService.getNext(lineId, stationName);
-            return new ResponseEntity<>(missionList, HttpStatus.OK);
+            NextMissionsDTO nextMissions = ratpService.getNext(lineId, stationName);
+            return new ResponseEntity<>(nextMissions, HttpStatus.OK);
         }
         catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
