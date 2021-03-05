@@ -1,16 +1,10 @@
 package com.gdamiens.website.controller;
 
-import com.gdamiens.website.controller.object.LineRequest;
-import com.gdamiens.website.controller.object.LinesDTO;
-import com.gdamiens.website.controller.object.NextMissionsDTO;
-import com.gdamiens.website.controller.object.StationsDTO;
-import com.gdamiens.website.ratp.wsdl.*;
+import com.gdamiens.website.controller.object.*;
 import com.gdamiens.website.service.RATPService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -23,9 +17,9 @@ public class RATPController {
     }
 
     @GetMapping("/stations")
-    public ResponseEntity<StationsDTO> getStations(String search) {
+    public ResponseEntity<StationsDTO> getStations(StationRequest stationRequest) {
         try {
-            StationsDTO stations = ratpService.getStationsByName(search);
+            StationsDTO stations = ratpService.getStations(stationRequest.getId(), stationRequest.getName(), stationRequest.getSens(), stationRequest.getLine(), stationRequest.getLimit(), stationRequest.getIsSortedAlpha());
             return new ResponseEntity<>(stations, HttpStatus.OK);
         }
         catch (Exception e) {
@@ -36,7 +30,7 @@ public class RATPController {
     @GetMapping("/lines")
     public ResponseEntity<LinesDTO> getLines(LineRequest lineRequest) {
         try {
-            LinesDTO lines = ratpService.getLinesInfos(lineRequest.getLineId(), lineRequest.getCode(), lineRequest.getCodeStif(), lineRequest.getRealm(), lineRequest.getReseau());
+            LinesDTO lines = ratpService.getLinesInfos(lineRequest.getId(), lineRequest.getCode(), lineRequest.getCodeStif(), lineRequest.getRealm(), lineRequest.getReseau());
             return new ResponseEntity<>(lines, HttpStatus.OK);
         }
         catch (Exception e) {

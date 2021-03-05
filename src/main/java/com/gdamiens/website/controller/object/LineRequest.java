@@ -2,7 +2,7 @@ package com.gdamiens.website.controller.object;
 
 public class LineRequest {
 
-    private String lineId;
+    private String id;
 
     private String code;
 
@@ -15,12 +15,12 @@ public class LineRequest {
     public LineRequest() {
     }
 
-    public String getLineId() {
-        return lineId;
+    public String getId() {
+        return id;
     }
 
-    public void setLineId(String lineId) {
-        this.lineId = lineId;
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getCode() {

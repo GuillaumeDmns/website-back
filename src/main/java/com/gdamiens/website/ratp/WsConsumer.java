@@ -1,5 +1,6 @@
 package com.gdamiens.website.ratp;
 
+import com.gdamiens.website.controller.object.LineRequest;
 import com.gdamiens.website.ratp.wsdl.*;
 import com.gdamiens.website.utils.Constants;
 import org.slf4j.Logger;
@@ -12,17 +13,37 @@ public class WsConsumer extends WebServiceGatewaySupport {
 
     private static final Logger log = LoggerFactory.getLogger(WsConsumer.class);
 
-    public GetStationsResponse getStations(String stationName) {
+    public GetStationsResponse getStations(String id, String name, String sens, LineRequest lineRequest, Integer limit, Boolean isSortedAlpha) {
 
         ObjectFactory factory = new ObjectFactory();
 
-        GetStations getStations = factory.createGetStations();
+        if (id == null && name == null && sens == null && lineRequest == null) {
+            return null;
+        }
+
+
         Station station = factory.createStation();
+        station.setId(id);
+        station.setName(name);
 
-        station.setName(stationName);
+        Direction direction = factory.createDirection();
+        direction.setSens(sens);
+        station.setDirection(direction);
+
+        if (lineRequest != null) {
+            Line line = factory.createLine();
+            if (lineRequest.getRealm() != null && lineRequest.getRealm().equals("r")) {
+                line.setRealm(lineRequest.getRealm());
+            }
+            station.setLine(line);
+        }
+
+        GetStations getStations = factory.createGetStations();
         getStations.setStation(station);
+        getStations.setLimit(limit);
+        getStations.setSortAlpha(isSortedAlpha);
 
-        log.info("Requesting stationName " + stationName);
+        log.info("Requesting stationId " + id + ", name " + name + ", sens " + sens + ", line " + lineRequest + ", limit " + limit + ", isSortedAlpha " + isSortedAlpha);
 
         return (GetStationsResponse) getWebServiceTemplate()
                 .marshalSendAndReceive(Constants.RATP_SOAP_URL, getStations);
