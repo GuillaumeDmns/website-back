@@ -6,16 +6,23 @@ import java.util.List;
 
 public class MissionCustom {
 
+    private String id;
+
     private String code;
 
     private String direction;
 
     private String nextPassage;
 
-    private List<String> messages;
+    private String messages;
+
+    private Boolean isStationStop;
+
+    private String platform;
 
     public MissionCustom(Mission mission) {
         if (mission != null) {
+            this.id = mission.getId();
             this.code = mission.getCode();
             if (mission.getDirection() != null) {
                 this.direction = mission.getDirection().getName();
@@ -25,10 +32,27 @@ public class MissionCustom {
                 this.nextPassage = mission.getStationsDates().get(0);
             }
 
-            if (mission.getStationsMessages() != null) {
-                this.messages = mission.getStationsMessages();
+            if (mission.getStationsMessages() != null && mission.getStationsMessages().size() > 0) {
+                this.messages = mission.getStationsMessages().get(0);
+            }
+
+
+
+            if (mission.getStationsStops() != null && mission.getStationsStops().size() > 0) {
+                this.isStationStop = mission.getStationsStops().get(0);
+            }
+            if (mission.getStationsPlatforms() != null && mission.getStationsPlatforms().size() > 0) {
+                this.platform = mission.getStationsPlatforms().get(0);
             }
         }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getCode() {
@@ -55,11 +79,27 @@ public class MissionCustom {
         this.nextPassage = nextPassage;
     }
 
-    public List<String> getMessages() {
+    public String getMessages() {
         return messages;
     }
 
-    public void setMessages(List<String> messages) {
+    public void setMessages(String messages) {
         this.messages = messages;
+    }
+
+    public Boolean getStationStop() {
+        return isStationStop;
+    }
+
+    public void setStationStop(Boolean stationStop) {
+        isStationStop = stationStop;
+    }
+
+    public String getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(String platform) {
+        this.platform = platform;
     }
 }

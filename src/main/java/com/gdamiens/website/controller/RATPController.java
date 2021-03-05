@@ -23,7 +23,7 @@ public class RATPController {
     }
 
     @GetMapping("/stations")
-    public ResponseEntity<StationsDTO> getStations(@RequestParam String search) {
+    public ResponseEntity<StationsDTO> getStations(String search) {
         try {
             StationsDTO stations = ratpService.getStationsByName(search);
             return new ResponseEntity<>(stations, HttpStatus.OK);
