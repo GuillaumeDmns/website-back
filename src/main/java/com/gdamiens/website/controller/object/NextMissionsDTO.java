@@ -17,7 +17,7 @@ public class NextMissionsDTO extends RATPResponse {
         this.ambiguityMessage = wrMissions.getAmbiguityMessage();
         this.requestedDate = wrMissions.getArgumentDate();
 
-        if (wrMissions.getAmbiguityMessage() != null) {
+        if (wrMissions.getAmbiguityMessage() != null && wrMissions.getMissions() != null) {
             this.nextMissions = wrMissions.getMissions().stream().map(MissionCustom::new).collect(Collectors.toList());
         }
     }

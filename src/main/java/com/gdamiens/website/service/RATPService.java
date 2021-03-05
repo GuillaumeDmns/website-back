@@ -22,7 +22,7 @@ public class RATPService {
         GetStationsResponse response = wsConsumer.getStations(stationName);
         WrStations wrStations = response.getReturn();
 
-        return new StationsDTO(wrStations.getStations());
+        return new StationsDTO(wrStations);
     }
 
     public LinesDTO getLinesInfos(String lineId, String code, String codeStif, String realm, String codeReseau) {
