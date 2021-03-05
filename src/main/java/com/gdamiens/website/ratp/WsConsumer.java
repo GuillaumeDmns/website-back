@@ -28,16 +28,35 @@ public class WsConsumer extends WebServiceGatewaySupport {
                 .marshalSendAndReceive(Constants.RATP_SOAP_URL, getStations);
     }
 
-    public GetLinesResponse getLines(String lineId) {
+    public GetLinesResponse getLines(String lineId,
+                                     String code,
+                                     String codeStif,
+                                     String realm,
+                                     String codeReseau) {
 
         ObjectFactory factory = new ObjectFactory();
+
+        if (lineId == null && code == null && codeStif == null && codeReseau == null) {
+            return null;
+        }
+
         Line line = factory.createLine();
         line.setId(lineId);
+        line.setCode(code);
+        line.setCodeStif(codeStif);
+        if (realm != null && realm.equals("r")) {
+            line.setRealm(realm);
+        }
+        if (codeReseau != null) {
+            Reseau reseau = factory.createReseau();
+            reseau.setCode(codeReseau);
+            line.setReseau(reseau);
+        }
 
         GetLines getLines = factory.createGetLines();
         getLines.setLine(line);
 
-        log.info("Requesting lineId " + lineId);
+        log.info("Requesting lineId " + lineId + ", code " + code + ", codeStif " + codeStif + ", realm " + realm + ", reseau " + codeReseau);
 
         return (GetLinesResponse) getWebServiceTemplate()
                 .marshalSendAndReceive(Constants.RATP_SOAP_URL, getLines);
