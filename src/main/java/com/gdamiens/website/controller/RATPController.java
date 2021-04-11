@@ -1,7 +1,13 @@
 package com.gdamiens.website.controller;
 
-import com.gdamiens.website.controller.object.*;
+import com.gdamiens.website.controller.object.LineRequest;
+import com.gdamiens.website.controller.object.LinesDTO;
+import com.gdamiens.website.controller.object.NextMissionsDTO;
+import com.gdamiens.website.controller.object.StationRequest;
+import com.gdamiens.website.controller.object.StationsDTO;
 import com.gdamiens.website.service.RATPService;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.Authorization;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +24,7 @@ public class RATPController {
     }
 
     @GetMapping("/stations")
+    @ApiOperation(value = "Get list of stations", authorizations = {@Authorization(value = "Auth. Token")})
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<StationsDTO> getStations(StationRequest stationRequest) {
         try {
@@ -30,6 +37,7 @@ public class RATPController {
     }
 
     @GetMapping("/lines")
+    @ApiOperation(value = "Get list of lines", authorizations = {@Authorization(value = "Auth. Token")})
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<LinesDTO> getLines(LineRequest lineRequest) {
         try {
@@ -42,6 +50,7 @@ public class RATPController {
     }
 
     @GetMapping("/next/{lineId}/{stationName}")
+    @ApiOperation(value = "Get next metros for given line and stations", authorizations = {@Authorization(value = "Auth. Token")})
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<NextMissionsDTO> getNext(@PathVariable String lineId, @PathVariable String stationName) {
         try {
