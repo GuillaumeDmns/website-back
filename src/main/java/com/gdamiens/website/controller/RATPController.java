@@ -4,6 +4,7 @@ import com.gdamiens.website.controller.object.*;
 import com.gdamiens.website.service.RATPService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +18,7 @@ public class RATPController {
     }
 
     @GetMapping("/stations")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<StationsDTO> getStations(StationRequest stationRequest) {
         try {
             StationsDTO stations = ratpService.getStations(stationRequest.getId(), stationRequest.getName(), stationRequest.getSens(), stationRequest.getLine(), stationRequest.getLimit(), stationRequest.getIsSortedAlpha());
@@ -28,6 +30,7 @@ public class RATPController {
     }
 
     @GetMapping("/lines")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<LinesDTO> getLines(LineRequest lineRequest) {
         try {
             LinesDTO lines = ratpService.getLinesInfos(lineRequest.getId(), lineRequest.getCode(), lineRequest.getCodeStif(), lineRequest.getRealm(), lineRequest.getReseau());
@@ -39,6 +42,7 @@ public class RATPController {
     }
 
     @GetMapping("/next/{lineId}/{stationName}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<NextMissionsDTO> getNext(@PathVariable String lineId, @PathVariable String stationName) {
         try {
             NextMissionsDTO nextMissions = ratpService.getNext(lineId, stationName);
