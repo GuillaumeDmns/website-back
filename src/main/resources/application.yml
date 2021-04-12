@@ -1,0 +1,15 @@
+spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+logging:
+  file:
+    path: :/
+
+security:
+  jwt:
+    token:
+      secret-key: ${SECRET_KEY_JWT}
+      expire-length: 300000 # 5 minutes duration by default: 5 minutes * 60 seconds * 1000 miliseconds
+      auth-user: ${AUTH_USER}
+      auth-password: ${AUTH_PASSWORD}

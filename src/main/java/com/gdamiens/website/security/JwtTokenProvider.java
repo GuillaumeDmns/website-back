@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,8 +23,10 @@ import java.util.stream.Collectors;
 @Component
 public class JwtTokenProvider {
 
-  private String secretKey = "Ytm+9Dp+InQ8wIbUkB+EziNO5wQbRMsrW+v5lX6gA09+KS6yBDt3xBi8XymQBPAL73YUfGHFkVRQ+dRFJMQL9g==";
+  @Value("${security.jwt.token.secret-key}")
+  private String secretKey;
 
+  @Value("${security.jwt.token.expire-length:3600000}")
   private final long validityInMilliseconds = 3600000; // 1h
 
   private final MyUserDetails myUserDetails;
