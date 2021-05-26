@@ -1,39 +1,38 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.model.User;
+import com.gdamiens.website.repository.UserRepository;
 import com.gdamiens.website.security.JwtTokenProvider;
 import com.gdamiens.website.security.Role;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
 
-    @Value("${security.jwt.token.auth-user}")
-    private String authUser;
-
-    @Value("${security.jwt.token.auth-password}")
-    private String authPassword;
-
     private final JwtTokenProvider jwtTokenProvider;
 
-    public UserService(JwtTokenProvider jwtTokenProvider) {
+    private final UserRepository userRepository;
+
+    public UserService(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userRepository = userRepository;
     }
 
     public String signIn(String username, String password) {
-        if (!authUser.equals(username) || !authPassword.equals(password)) {
-            return null;
+        Optional<User> optionalUser = userRepository.getByLogin(username);
+        if (optionalUser.isPresent() ) {
+            if (optionalUser.get().getPassword().trim().equals(password)) {
+                List<Role> roleList = new ArrayList<>();
+                roleList.add(Role.ROLE_ADMIN);
+
+                return jwtTokenProvider.createToken(username, roleList);
+            }
         }
-
-//        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
-
-        List<Role> roleList = new ArrayList<>();
-        roleList.add(Role.ROLE_ADMIN);
-
-        return jwtTokenProvider.createToken(username, roleList);
+        return null;
     }
 
     public String refresh(String username) {
@@ -41,5 +40,7 @@ public class UserService {
         roleList.add(Role.ROLE_ADMIN);
         return jwtTokenProvider.createToken(username, roleList);
     }
+
+
 
 }

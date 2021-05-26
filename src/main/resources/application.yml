@@ -1,6 +1,20 @@
 spring:
-  autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  profiles:
+    active: dev
+#  autoconfigure:
+#    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  datasource:
+    username: root
+    password: root
+    url: jdbc:postgresql://localhost:5432/guillaumedamiens
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQL95Dialect
 
 logging:
   file:
@@ -11,5 +25,3 @@ security:
     token:
       secret-key: ${SECRET_KEY_JWT}
       expire-length: 300000 # 5 minutes duration by default: 5 minutes * 60 seconds * 1000 miliseconds
-      auth-user: ${AUTH_USER}
-      auth-password: ${AUTH_PASSWORD}
