@@ -1,8 +1,6 @@
 spring:
   profiles:
     active: dev
-#  autoconfigure:
-#    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
   datasource:
     username: root
     password: root
@@ -18,7 +16,7 @@ spring:
 
 logging:
   file:
-    path: :/
+    path: ./
 
 security:
   jwt:
