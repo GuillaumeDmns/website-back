@@ -1,6 +1,7 @@
 package com.gdamiens.website.controller;
 
 import com.gdamiens.website.controller.object.Credentials;
+import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.service.UserService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -32,17 +33,18 @@ public class UserController {
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Something went wrong"),
             @ApiResponse(code = 422, message = "Invalid username/password supplied")})
-    public ResponseEntity<String> login(@RequestBody Credentials credentials) {
+    public ResponseEntity<JwtDTO> login(@RequestBody Credentials credentials) {
 
         String token = userService.signIn(credentials.getUsername(), credentials.getPassword());
-        return new ResponseEntity<>(token, token == null ? HttpStatus.UNAUTHORIZED : HttpStatus.OK);
+        return new ResponseEntity<>(new JwtDTO(token), token == null ? HttpStatus.UNAUTHORIZED : HttpStatus.OK);
     }
 
     @GetMapping("/refresh")
     @ApiOperation(value = "Refresh the JWT", authorizations = {@Authorization(value = "Auth. Token")})
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public String refresh(HttpServletRequest req) {
-        return userService.refresh(req.getRemoteUser());
+    public ResponseEntity<JwtDTO> refresh(HttpServletRequest req) {
+        String token = userService.refresh(req.getRemoteUser());
+        return new ResponseEntity<>(new JwtDTO(token), token == null ? HttpStatus.UNAUTHORIZED : HttpStatus.OK);
     }
 
 }
