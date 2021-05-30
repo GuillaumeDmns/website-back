@@ -17,6 +17,9 @@ spring:
 logging:
   file:
     path: ./
+  level:
+    org.hibernate.persister.entity: ERROR
+
 
 security:
   jwt:

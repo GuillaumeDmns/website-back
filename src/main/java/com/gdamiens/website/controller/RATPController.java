@@ -20,13 +20,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 public class RATPController {
 
-    private final RATPReseauService ratpReseauService;
     private final RATPLineService ratpLineService;
     private final RATPStationService ratpStationService;
     private final RATPMissionService ratpMissionService;
 
-    public RATPController(RATPReseauService ratpReseauService, RATPLineService ratpLineService, RATPStationService ratpStationService, RATPMissionService ratpMissionService) {
-        this.ratpReseauService = ratpReseauService;
+    public RATPController(RATPLineService ratpLineService, RATPStationService ratpStationService, RATPMissionService ratpMissionService) {
         this.ratpLineService = ratpLineService;
         this.ratpStationService = ratpStationService;
         this.ratpMissionService = ratpMissionService;
@@ -50,7 +48,7 @@ public class RATPController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> refreshDbLines() {
         try {
-            ratpReseauService.refreshReseau();
+            ratpLineService.refreshLines();
             return new ResponseEntity<>(HttpStatus.OK);
         }
         catch (Exception e) {
