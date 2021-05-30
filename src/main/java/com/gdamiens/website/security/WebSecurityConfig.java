@@ -30,13 +30,15 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
-    http.authorizeRequests()//
+    http.authorizeRequests()
         .antMatchers("/api/signin").permitAll()
         .anyRequest().authenticated();
 
     http.exceptionHandling().accessDeniedPage("/login");
 
     http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
+
+    http.cors();
   }
 
   @Override
