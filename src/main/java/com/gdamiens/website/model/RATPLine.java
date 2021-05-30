@@ -1,5 +1,6 @@
 package com.gdamiens.website.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.gdamiens.website.ratp.wsdl.Line;
 
 import javax.persistence.Column;
@@ -36,7 +37,8 @@ public class RATPLine implements Serializable {
     @Column(name = "reseau_id", nullable = false)
     private String reseauId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "reseau_id", referencedColumnName = "id", nullable = false, insertable = false, updatable = false)
     private RATPReseau reseau;
 

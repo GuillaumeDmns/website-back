@@ -29,7 +29,7 @@ public class RATPHistory implements Serializable {
     @Column(name = "operation_date", nullable = false, updatable = false)
     private Timestamp operationDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, insertable = false, updatable = false)
     private User user;
 

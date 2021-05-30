@@ -3,6 +3,7 @@ package com.gdamiens.website.controller;
 import com.gdamiens.website.controller.object.LineRequest;
 import com.gdamiens.website.controller.object.LinesDTO;
 import com.gdamiens.website.controller.object.NextMissionsDTO;
+import com.gdamiens.website.controller.object.ReseauxDTO;
 import com.gdamiens.website.controller.object.StationRequest;
 import com.gdamiens.website.controller.object.StationsDTO;
 import com.gdamiens.website.service.RATPLineService;
@@ -23,11 +24,16 @@ public class RATPController {
     private final RATPLineService ratpLineService;
     private final RATPStationService ratpStationService;
     private final RATPMissionService ratpMissionService;
+    private final RATPReseauService ratpReseauService;
 
-    public RATPController(RATPLineService ratpLineService, RATPStationService ratpStationService, RATPMissionService ratpMissionService) {
+    public RATPController(RATPLineService ratpLineService,
+                          RATPStationService ratpStationService,
+                          RATPMissionService ratpMissionService,
+                          RATPReseauService ratpReseauService) {
         this.ratpLineService = ratpLineService;
         this.ratpStationService = ratpStationService;
         this.ratpMissionService = ratpMissionService;
+        this.ratpReseauService = ratpReseauService;
     }
 
     @GetMapping("/stations")
@@ -56,12 +62,25 @@ public class RATPController {
         }
     }
 
-    @GetMapping("/lines")
-    @ApiOperation(value = "Get list of lines", authorizations = {@Authorization(value = "Auth. Token")})
+    @GetMapping("/reseaux")
+    @ApiOperation(value = "Get list of reseaux", authorizations = {@Authorization(value = "Auth. Token")})
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<LinesDTO> getLines(LineRequest lineRequest) {
+    public ResponseEntity<ReseauxDTO> getReseaux() {
         try {
-            LinesDTO lines = ratpLineService.getLinesInfos(lineRequest.getId(), lineRequest.getCode(), lineRequest.getCodeStif(), lineRequest.getRealm(), lineRequest.getReseau());
+            ReseauxDTO reseauxDTO = this.ratpReseauService.getReseaux();
+            return new ResponseEntity<>(reseauxDTO, HttpStatus.OK);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/lines")
+    @ApiOperation(value = "Get list of lines by reseau", authorizations = {@Authorization(value = "Auth. Token")})
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<LinesDTO> getLines(String reseauId) {
+        try {
+            LinesDTO lines = ratpLineService.getLinesByReseauId(reseauId);
             return new ResponseEntity<>(lines, HttpStatus.OK);
         }
         catch (Exception e) {

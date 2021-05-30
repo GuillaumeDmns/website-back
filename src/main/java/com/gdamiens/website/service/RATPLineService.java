@@ -8,7 +8,7 @@ import com.gdamiens.website.repository.RATPHistoryRepository;
 import com.gdamiens.website.repository.RATPLineRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class RATPLineService extends RATPService {
@@ -26,16 +26,9 @@ public class RATPLineService extends RATPService {
         this.ratpLineRepository = ratpLineRepository;
     }
 
-    public LinesDTO getLinesInfos(String lineId, String code, String codeStif, String realm, String codeReseau) {
-        GetLinesResponse response = wsConsumer.getLines(lineId, code, codeStif, realm, codeReseau);
-
-        if (response != null && response.getReturn().size() > 0 && response.getReturn().get(0) != null) {
-            return new LinesDTO(response.getReturn());
-        }
-
-        this.addToHistory("GetLinesInfos");
-
-        return new LinesDTO(new ArrayList<>());
+    public LinesDTO getLinesByReseauId(String reseauId) {
+        List<RATPLine> ratpLines = ratpLineRepository.findAllByReseauId(reseauId);
+        return new LinesDTO(ratpLines);
     }
 
     public void refreshLines() {

@@ -1,24 +1,23 @@
 package com.gdamiens.website.controller.object;
 
-import com.gdamiens.website.ratp.wsdl.Line;
+import com.gdamiens.website.model.RATPLine;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class LinesDTO extends RATPResponse {
 
-    private List<LineCustom> lines;
+    private List<RATPLine> lines;
 
-    public LinesDTO(List<Line> lines) {
+    public LinesDTO(List<RATPLine> lines) {
         super();
-        this.lines = lines.stream().map(LineCustom::new).collect(Collectors.toList());
+        this.lines = lines;
     }
 
-    public List<LineCustom> getLines() {
+    public List<RATPLine> getLines() {
         return lines;
     }
 
-    public void setLines(List<LineCustom> lines) {
+    public void setLines(List<RATPLine> lines) {
         this.lines = lines;
     }
 }
