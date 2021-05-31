@@ -19,7 +19,7 @@ public class RATPMissionService extends RATPService {
         GetMissionsNextResponse response = wsConsumer.getMissionsNext(lineId, stationName);
         WrMissions wrMissions = response.getReturn();
 
-        this.addToHistory("getNext");
+        this.addToHistory("getNext", false);
 
         return new NextMissionsDTO(wrMissions);
     }

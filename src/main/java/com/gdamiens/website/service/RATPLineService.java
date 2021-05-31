@@ -31,7 +31,7 @@ public class RATPLineService extends RATPService {
         return new LinesDTO(ratpLines);
     }
 
-    public void refreshLines() {
+    public void refreshLines(Boolean isWorker) {
         GetLinesResponse response = this.wsConsumer.getLines(null, "*", null, null, null);
 
         if (response != null && response.getReturn() != null) {
@@ -41,6 +41,6 @@ public class RATPLineService extends RATPService {
             });
         }
 
-        this.addToHistory("RefreshLines");
+        this.addToHistory("RefreshLines", isWorker);
     }
 }

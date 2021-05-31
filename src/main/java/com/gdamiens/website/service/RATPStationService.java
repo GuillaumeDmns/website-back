@@ -19,7 +19,7 @@ public class RATPStationService extends RATPService {
         GetStationsResponse response = wsConsumer.getStations(id, name, sens, line, limit, isSortedAlpha);
         WrStations wrStations = response.getReturn();
 
-        this.addToHistory("GetStations");
+        this.addToHistory("GetStations", false);
 
         return new StationsDTO(wrStations);
     }

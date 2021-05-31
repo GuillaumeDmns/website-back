@@ -1,6 +1,5 @@
 package com.gdamiens.website.controller;
 
-import com.gdamiens.website.controller.object.LineRequest;
 import com.gdamiens.website.controller.object.LinesDTO;
 import com.gdamiens.website.controller.object.NextMissionsDTO;
 import com.gdamiens.website.controller.object.ReseauxDTO;
@@ -54,7 +53,7 @@ public class RATPController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> refreshDbLines() {
         try {
-            ratpLineService.refreshLines();
+            ratpLineService.refreshLines(false);
             return new ResponseEntity<>(HttpStatus.OK);
         }
         catch (Exception e) {
