@@ -10,13 +10,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class RATPMissionService extends RATPService {
 
-
     public RATPMissionService(WsConsumer wsConsumer, RATPHistoryRepository ratpHistoryRepository) {
         super(wsConsumer, ratpHistoryRepository);
     }
 
-    public NextMissionsDTO getNext(String lineId, String stationName) {
-        GetMissionsNextResponse response = wsConsumer.getMissionsNext(lineId, stationName);
+    public NextMissionsDTO getNext(String lineId, String stationId) {
+        GetMissionsNextResponse response = wsConsumer.getMissionsNext(lineId, stationId);
         WrMissions wrMissions = response.getReturn();
 
         this.addToHistory("getNext", false);

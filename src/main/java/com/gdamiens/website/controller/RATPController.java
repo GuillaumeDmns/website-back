@@ -87,7 +87,7 @@ public class RATPController {
     }
 
     @GetMapping("/stations")
-    @ApiOperation(value = "Get list of lines by reseau", authorizations = {@Authorization(value = "Auth. Token")})
+    @ApiOperation(value = "Get list of stations by line and by stationName", authorizations = {@Authorization(value = "Auth. Token")})
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<StationsDTO> getStations(String lineId, String stationName) {
         try {
@@ -99,12 +99,12 @@ public class RATPController {
         }
     }
 
-    @GetMapping("/next/{lineId}/{stationName}")
-    @ApiOperation(value = "Get next metros for given line and stations", authorizations = {@Authorization(value = "Auth. Token")})
+    @GetMapping("/next")
+    @ApiOperation(value = "Get next metros for given line and station", authorizations = {@Authorization(value = "Auth. Token")})
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<NextMissionsDTO> getNext(@PathVariable String lineId, @PathVariable String stationName) {
+    public ResponseEntity<NextMissionsDTO> getNext(String lineId, String stationId) {
         try {
-            NextMissionsDTO nextMissions = ratpMissionService.getNext(lineId, stationName);
+            NextMissionsDTO nextMissions = ratpMissionService.getNext(lineId, stationId);
             return new ResponseEntity<>(nextMissions, HttpStatus.OK);
         }
         catch (Exception e) {

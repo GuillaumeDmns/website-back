@@ -83,7 +83,7 @@ public class WsConsumer extends WebServiceGatewaySupport {
                 .marshalSendAndReceive(Constants.RATP_SOAP_URL, getLines);
     }
 
-    public GetMissionsNextResponse getMissionsNext(String lineId, String stationName) {
+    public GetMissionsNextResponse getMissionsNext(String lineId, String stationId) {
 
         ObjectFactory factory = new ObjectFactory();
 
@@ -94,13 +94,13 @@ public class WsConsumer extends WebServiceGatewaySupport {
 
         line.setId(lineId);
         station.setLine(line);
-        station.setName(stationName);
+        station.setId(stationId);
         direction.setSens("*");
 
         getMissionsNext.setDirection(direction);
         getMissionsNext.setStation(station);
 
-        log.info("Requesting next missions for stationName " + stationName + " and lineId " + lineId);
+        log.info("Requesting next missions for stationId " + stationId + " and lineId " + lineId);
 
         return (GetMissionsNextResponse) getWebServiceTemplate()
                 .marshalSendAndReceive(Constants.RATP_SOAP_URL, getMissionsNext);
