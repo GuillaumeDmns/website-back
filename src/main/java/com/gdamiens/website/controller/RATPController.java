@@ -3,7 +3,6 @@ package com.gdamiens.website.controller;
 import com.gdamiens.website.controller.object.LinesDTO;
 import com.gdamiens.website.controller.object.NextMissionsDTO;
 import com.gdamiens.website.controller.object.ReseauxDTO;
-import com.gdamiens.website.controller.object.StationRequest;
 import com.gdamiens.website.controller.object.StationsDTO;
 import com.gdamiens.website.service.RATPLineService;
 import com.gdamiens.website.service.RATPMissionService;
@@ -35,18 +34,18 @@ public class RATPController {
         this.ratpReseauService = ratpReseauService;
     }
 
-    @GetMapping("/stations")
-    @ApiOperation(value = "Get list of stations", authorizations = {@Authorization(value = "Auth. Token")})
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<StationsDTO> getStations(StationRequest stationRequest) {
-        try {
-            StationsDTO stations = ratpStationService.getStations(stationRequest.getId(), stationRequest.getName(), stationRequest.getSens(), stationRequest.getLine(), stationRequest.getLimit(), stationRequest.getIsSortedAlpha());
-            return new ResponseEntity<>(stations, HttpStatus.OK);
-        }
-        catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
+//    @GetMapping("/stations")
+//    @ApiOperation(value = "Get list of stations", authorizations = {@Authorization(value = "Auth. Token")})
+//    @PreAuthorize("hasRole('ROLE_ADMIN')")
+//    public ResponseEntity<StationsDTO> getStations(StationRequest stationRequest) {
+//        try {
+//            StationsDTO stations = ratpStationService.getStations(stationRequest.getId(), stationRequest.getName(), stationRequest.getSens(), stationRequest.getLine(), stationRequest.getLimit(), stationRequest.getIsSortedAlpha());
+//            return new ResponseEntity<>(stations, HttpStatus.OK);
+//        }
+//        catch (Exception e) {
+//            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+//        }
+//    }
 
     @GetMapping("/refresh-lines")
     @ApiOperation(value = "Refresh lines & reseau", authorizations = {@Authorization(value = "Auth. Token")})
@@ -81,6 +80,19 @@ public class RATPController {
         try {
             LinesDTO lines = ratpLineService.getLinesByReseauId(reseauId);
             return new ResponseEntity<>(lines, HttpStatus.OK);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/stations")
+    @ApiOperation(value = "Get list of lines by reseau", authorizations = {@Authorization(value = "Auth. Token")})
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<StationsDTO> getStations(String lineId, String stationName) {
+        try {
+            StationsDTO stationsDTO = ratpStationService.getStations(lineId, stationName);
+            return new ResponseEntity<>(stationsDTO, HttpStatus.OK);
         }
         catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);

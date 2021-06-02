@@ -1,24 +1,23 @@
 package com.gdamiens.website.controller.object;
 
-import com.gdamiens.website.ratp.wsdl.WrStations;
+import com.gdamiens.website.model.RATPStation;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class StationsDTO extends RATPResponse {
 
-    private List<StationCustom> stations;
+    private List<RATPStation> stations;
 
-    public StationsDTO(WrStations wrStations) {
+    public StationsDTO(List<RATPStation> stations) {
         super();
-        this.stations = wrStations.getStations().stream().map(StationCustom::new).collect(Collectors.toList());
+        this.stations = stations;
     }
 
-    public List<StationCustom> getStations() {
+    public List<RATPStation> getStations() {
         return stations;
     }
 
-    public void setStations(List<StationCustom> stations) {
+    public void setStations(List<RATPStation> stations) {
         this.stations = stations;
     }
 }

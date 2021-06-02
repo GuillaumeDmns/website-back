@@ -106,4 +106,24 @@ public class WsConsumer extends WebServiceGatewaySupport {
                 .marshalSendAndReceive(Constants.RATP_SOAP_URL, getMissionsNext);
     }
 
+    public GetStationsResponse getStations(String lineId, String stationName) {
+
+        ObjectFactory factory = new ObjectFactory();
+
+        GetStations getStations = factory.createGetStations();
+        Station station = factory.createStation();
+        Line line = factory.createLine();
+
+        line.setId(lineId);
+        station.setName(stationName);
+        station.setLine(line);
+
+        getStations.setStation(station);
+
+        log.info("Requesting station for stationName " + stationName + " and lineId " + lineId);
+
+        return (GetStationsResponse) getWebServiceTemplate()
+                .marshalSendAndReceive(Constants.RATP_SOAP_URL, getStations);
+    }
+
 }
