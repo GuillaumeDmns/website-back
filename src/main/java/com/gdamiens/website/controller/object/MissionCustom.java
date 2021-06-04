@@ -2,8 +2,6 @@ package com.gdamiens.website.controller.object;
 
 import com.gdamiens.website.ratp.wsdl.Mission;
 
-import java.util.List;
-
 public class MissionCustom {
 
     private String id;
@@ -11,6 +9,8 @@ public class MissionCustom {
     private String code;
 
     private String direction;
+
+    private String stationEndLine;
 
     private String nextPassage;
 
@@ -36,13 +36,16 @@ public class MissionCustom {
                 this.messages = mission.getStationsMessages().get(0);
             }
 
-
-
             if (mission.getStationsStops() != null && mission.getStationsStops().size() > 0) {
                 this.isStationStop = mission.getStationsStops().get(0);
             }
+
             if (mission.getStationsPlatforms() != null && mission.getStationsPlatforms().size() > 0) {
                 this.platform = mission.getStationsPlatforms().get(0);
+            }
+
+            if (mission.getStationEndLine() != null) {
+                this.stationEndLine = mission.getStationEndLine().getName();
             }
         }
     }
@@ -69,6 +72,14 @@ public class MissionCustom {
 
     public void setDirection(String direction) {
         this.direction = direction;
+    }
+
+    public String getStationEndLine() {
+        return stationEndLine;
+    }
+
+    public void setStationEndLine(String stationEndLine) {
+        this.stationEndLine = stationEndLine;
     }
 
     public String getNextPassage() {

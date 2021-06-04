@@ -2,6 +2,7 @@ package com.gdamiens.website.controller.object;
 
 import com.gdamiens.website.ratp.wsdl.WrMissions;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,7 +20,12 @@ public class NextMissionsDTO extends RATPResponse {
         this.requestedDate = wrMissions.getArgumentDate();
 
         if (wrMissions.getAmbiguityMessage() == null && wrMissions.getMissions() != null) {
-            this.nextMissions = wrMissions.getMissions().stream().map(MissionCustom::new).collect(Collectors.toList());
+            this.nextMissions = wrMissions
+                    .getMissions()
+                    .stream()
+                    .map(MissionCustom::new)
+                    .sorted(Comparator.comparing(MissionCustom::getNextPassage))
+                    .collect(Collectors.toList());
         }
     }
 
