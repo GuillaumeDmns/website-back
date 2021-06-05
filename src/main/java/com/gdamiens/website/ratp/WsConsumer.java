@@ -116,6 +116,7 @@ public class WsConsumer extends WebServiceGatewaySupport {
         Line line = factory.createLine();
 
         line.setId(lineId);
+        line.setRealm("r");
         station.setName(stationName);
         station.setLine(line);
 

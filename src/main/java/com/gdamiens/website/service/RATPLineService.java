@@ -32,7 +32,7 @@ public class RATPLineService extends RATPService {
     }
 
     public void refreshLines(Boolean isWorker) {
-        GetLinesResponse response = this.wsConsumer.getLines(null, "*", null, null, null);
+        GetLinesResponse response = this.wsConsumer.getLines(null, "*", null, "r", null);
 
         if (response != null && response.getReturn() != null) {
             response.getReturn().forEach(line -> {
