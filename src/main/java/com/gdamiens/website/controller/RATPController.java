@@ -1,5 +1,6 @@
 package com.gdamiens.website.controller;
 
+import com.gdamiens.website.controller.object.FullMissionDTO;
 import com.gdamiens.website.controller.object.LinesDTO;
 import com.gdamiens.website.controller.object.NextMissionsDTO;
 import com.gdamiens.website.controller.object.ReseauxDTO;
@@ -106,6 +107,19 @@ public class RATPController {
         try {
             NextMissionsDTO nextMissions = ratpMissionService.getNext(lineId, stationId);
             return new ResponseEntity<>(nextMissions, HttpStatus.OK);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/full-mission")
+    @ApiOperation(value = "Get full mission for given line", authorizations = {@Authorization(value = "Auth. Token")})
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<FullMissionDTO> getFullMission(String lineId) {
+        try {
+            FullMissionDTO fullMission = ratpMissionService.getFullMission(lineId);
+            return new ResponseEntity<>(fullMission, HttpStatus.OK);
         }
         catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);

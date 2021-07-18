@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class LineBatch {
 
-    private RATPLineService ratpLineService;
+    private final RATPLineService ratpLineService;
 
     public LineBatch(RATPLineService ratpLineService) {
         this.ratpLineService = ratpLineService;
