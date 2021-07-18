@@ -39,7 +39,7 @@ public class RATPMissionService extends RATPService {
 
         List<Pair<String, String>> stationConnexions = new ArrayList<>();
 
-        stationsDTO.getStations().forEach(station -> {
+        stationsDTO.getStations().parallelStream().forEach(station -> {
             GetMissionsNextResponse response = wsConsumer.getMissionsNext(lineId, station.getId(), 6);
             WrMissions wrMissions = response.getReturn();
 
