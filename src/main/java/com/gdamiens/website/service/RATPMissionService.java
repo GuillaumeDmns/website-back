@@ -49,12 +49,20 @@ public class RATPMissionService extends RATPService {
 
             if (argumentStation != null && !argumentStation.getId().isEmpty()) {
                 List<String> stationsA = argumentStation.getIdsNextA();
-                if (stationsA != null && stationsA.size() > 0 && stationsA.get(0) != null && !stationsA.get(0).isBlank()) {
-                    stationConnexions.add(Pair.of(wrMissions.getArgumentStation().getId(), wrMissions.getArgumentStation().getIdsNextA().get(0)));
+                if (stationsA != null && !stationsA.isEmpty()) {
+                    stationsA.forEach(stationA -> {
+                        if (stationA != null && !stationA.isBlank()) {
+                            stationConnexions.add(Pair.of(argumentStation.getId(), stationA));
+                        }
+                    });
                 }
                 List<String> stationsR = argumentStation.getIdsNextR();
-                if (stationsR != null && stationsR.size() > 0 && stationsR.get(0) != null && !stationsR.get(0).isBlank()) {
-                    stationConnexions.add(Pair.of(wrMissions.getArgumentStation().getId(), wrMissions.getArgumentStation().getIdsNextR().get(0)));
+                if (stationsR != null && !stationsR.isEmpty()) {
+                    stationsR.forEach(stationR -> {
+                        if (stationR != null && !stationR.isBlank()) {
+                            stationConnexions.add(Pair.of(argumentStation.getId(), stationR));
+                        }
+                    });
                 }
             }
         });
