@@ -1,6 +1,6 @@
 package com.gdamiens.website.controller.object;
 
-import org.springframework.data.util.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 
 import java.util.List;
 
@@ -8,9 +8,9 @@ public class FullMissionDTO extends RATPResponse {
 
     private StationsDTO stationsDTO;
 
-    private List<Pair<String, String>> links;
+    private List<Triple<String, String, Long>> links;
 
-    public FullMissionDTO(StationsDTO stationsDTO, List<Pair<String, String>> links) {
+    public FullMissionDTO(StationsDTO stationsDTO, List<Triple<String, String, Long>> links) {
         this.stationsDTO = stationsDTO;
         this.links = links;
     }
@@ -23,11 +23,11 @@ public class FullMissionDTO extends RATPResponse {
         this.stationsDTO = stationsDTO;
     }
 
-    public List<Pair<String, String>> getLinks() {
+    public List<Triple<String, String, Long>> getLinks() {
         return links;
     }
 
-    public void setLinks(List<Pair<String, String>> links) {
+    public void setLinks(List<Triple<String, String, Long>> links) {
         this.links = links;
     }
 }
