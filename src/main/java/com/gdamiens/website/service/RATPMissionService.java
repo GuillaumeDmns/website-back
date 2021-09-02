@@ -105,8 +105,8 @@ public class RATPMissionService extends RATPService {
                                               boolean isA) {
 
         stationConnexionsOld.forEach(stationConnexion -> {
-            String idSource = isA ? stationConnexion.getFirst() : stationConnexion.getSecond();
-            String idDestination = isA ? stationConnexion.getSecond() : stationConnexion.getFirst();
+            String idSource = stationConnexion.getFirst();
+            String idDestination = stationConnexion.getSecond();
 
             List<String> missionsSource = isA ? nextMissionsByStation.get(idSource).getFirst() : nextMissionsByStation.get(idSource).getSecond();
             List<String> missionsDestination = isA ? nextMissionsByStation.get(idDestination).getFirst() : nextMissionsByStation.get(idDestination).getSecond();
