@@ -17,13 +17,17 @@ public class RATPLineService extends RATPService {
 
     private final RATPLineRepository ratpLineRepository;
 
+    private final RATPStationService ratpStationService;
+
     public RATPLineService(WsConsumer wsConsumer,
                            RATPHistoryRepository ratpHistoryRepository,
                            RATPReseauService ratpReseauService,
-                           RATPLineRepository ratpLineRepository) {
+                           RATPLineRepository ratpLineRepository,
+                           RATPStationService ratpStationService) {
         super(wsConsumer, ratpHistoryRepository);
         this.ratpReseauService = ratpReseauService;
         this.ratpLineRepository = ratpLineRepository;
+        this.ratpStationService = ratpStationService;
     }
 
     public LinesDTO getLinesByReseauId(String reseauId) {
@@ -38,6 +42,13 @@ public class RATPLineService extends RATPService {
             response.getReturn().forEach(line -> {
                 this.ratpReseauService.refreshReseau(line.getReseau());
                 this.ratpLineRepository.save(new RATPLine(line));
+                this.ratpStationService.deactivateStationsByLine(line.getId());
+                this.ratpStationService.getStationsNoDTO(line.getId(), "*")
+                        .forEach(station -> {
+                            station.setActive(true);
+                            station.setCoordinate("todo");
+                            this.ratpStationService.save(station);
+                        });
             });
         }
 
