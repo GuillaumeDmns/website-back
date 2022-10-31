@@ -9,8 +9,8 @@ import com.gdamiens.website.service.RATPLineService;
 import com.gdamiens.website.service.RATPMissionService;
 import com.gdamiens.website.service.RATPReseauService;
 import com.gdamiens.website.service.RATPStationService;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.Authorization;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,21 +35,8 @@ public class RATPController {
         this.ratpReseauService = ratpReseauService;
     }
 
-//    @GetMapping("/stations")
-//    @ApiOperation(value = "Get list of stations", authorizations = {@Authorization(value = "Auth. Token")})
-//    @PreAuthorize("hasRole('ROLE_ADMIN')")
-//    public ResponseEntity<StationsDTO> getStations(StationRequest stationRequest) {
-//        try {
-//            StationsDTO stations = ratpStationService.getStations(stationRequest.getId(), stationRequest.getName(), stationRequest.getSens(), stationRequest.getLine(), stationRequest.getLimit(), stationRequest.getIsSortedAlpha());
-//            return new ResponseEntity<>(stations, HttpStatus.OK);
-//        }
-//        catch (Exception e) {
-//            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-//        }
-//    }
-
     @GetMapping("/refresh-lines")
-    @ApiOperation(value = "Refresh lines & reseau", authorizations = {@Authorization(value = "Auth. Token")})
+    @Operation(summary = "Refresh lines & reseau", security = @SecurityRequirement(name = "Auth. Token"))
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> refreshDbLines() {
         try {
@@ -62,7 +49,7 @@ public class RATPController {
     }
 
     @GetMapping("/reseaux")
-    @ApiOperation(value = "Get list of reseaux", authorizations = {@Authorization(value = "Auth. Token")})
+    @Operation(summary = "Get list of reseaux", security = @SecurityRequirement(name = "Auth. Token"))
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ReseauxDTO> getReseaux() {
         try {
@@ -75,7 +62,7 @@ public class RATPController {
     }
 
     @GetMapping("/lines")
-    @ApiOperation(value = "Get list of lines by reseau", authorizations = {@Authorization(value = "Auth. Token")})
+    @Operation(summary = "Get list of lines by reseau", security = @SecurityRequirement(name = "Auth. Token"))
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<LinesDTO> getLines(String reseauId) {
         try {
@@ -88,7 +75,7 @@ public class RATPController {
     }
 
     @GetMapping("/stations")
-    @ApiOperation(value = "Get list of stations by line and by stationName", authorizations = {@Authorization(value = "Auth. Token")})
+    @Operation(summary = "Get list of stations by line and by stationName", security = @SecurityRequirement(name = "Auth. Token"))
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<StationsDTO> getStations(String lineId, String stationName) {
         try {
@@ -101,7 +88,7 @@ public class RATPController {
     }
 
     @GetMapping("/next")
-    @ApiOperation(value = "Get next metros for given line and station", authorizations = {@Authorization(value = "Auth. Token")})
+    @Operation(summary = "Get next metros for given line and station", security = @SecurityRequirement(name = "Auth. Token"))
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<NextMissionsDTO> getNext(String lineId, String stationId) {
         try {
@@ -114,7 +101,7 @@ public class RATPController {
     }
 
     @GetMapping("/full-mission")
-    @ApiOperation(value = "Get full mission for given line", authorizations = {@Authorization(value = "Auth. Token")})
+    @Operation(summary = "Get full mission for given line", security = @SecurityRequirement(name = "Auth. Token"))
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<FullMissionDTO> getFullMission(String lineId) {
         try {

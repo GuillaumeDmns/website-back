@@ -20,6 +20,9 @@ logging:
   level:
     org.hibernate.persister.entity: ERROR
 
+springdoc:
+  packages-to-scan: com.gdamiens.website.controller
+  paths-to-match: /api/**
 
 security:
   jwt:

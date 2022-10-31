@@ -3,10 +3,10 @@ package com.gdamiens.website.controller;
 import com.gdamiens.website.controller.object.Credentials;
 import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.service.UserService;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-import io.swagger.annotations.Authorization;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,10 +29,10 @@ public class UserController {
     }
 
     @PostMapping("/signin")
-    @ApiOperation(value = "Get the JWT")
+    @Operation(summary = "Get the JWT")
     @ApiResponses(value = {
-            @ApiResponse(code = 400, message = "Something went wrong"),
-            @ApiResponse(code = 422, message = "Invalid username/password supplied")})
+            @ApiResponse(responseCode = "400", description = "Something went wrong"),
+            @ApiResponse(responseCode = "422", description = "Invalid username/password supplied")})
     public ResponseEntity<JwtDTO> login(@RequestBody Credentials credentials) {
 
         String token = userService.signIn(credentials.getUsername(), credentials.getPassword());
@@ -40,7 +40,7 @@ public class UserController {
     }
 
     @GetMapping("/refresh")
-    @ApiOperation(value = "Refresh the JWT", authorizations = {@Authorization(value = "Auth. Token")})
+    @Operation(summary = "Refresh the JWT", security = @SecurityRequirement(name = "Auth. Token"))
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<JwtDTO> refresh(HttpServletRequest req) {
         String token = userService.refresh(req.getRemoteUser());
