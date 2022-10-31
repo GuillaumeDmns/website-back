@@ -24,13 +24,11 @@ public class UserService {
 
     public String signIn(String username, String password) {
         Optional<User> optionalUser = userRepository.getByLogin(username);
-        if (optionalUser.isPresent() ) {
-            if (optionalUser.get().getPassword().trim().equals(password)) {
-                List<Role> roleList = new ArrayList<>();
-                roleList.add(Role.ROLE_ADMIN);
+        if (optionalUser.isPresent() && optionalUser.get().getPassword().trim().equals(password)) {
+            List<Role> roleList = new ArrayList<>();
+            roleList.add(Role.ROLE_ADMIN);
 
-                return jwtTokenProvider.createToken(username, roleList);
-            }
+            return jwtTokenProvider.createToken(username, roleList);
         }
         return null;
     }
@@ -38,6 +36,7 @@ public class UserService {
     public String refresh(String username) {
         List<Role> roleList = new ArrayList<>();
         roleList.add(Role.ROLE_ADMIN);
+
         return jwtTokenProvider.createToken(username, roleList);
     }
 
