@@ -35,3 +35,4 @@ build/
 *.log*
 
 .m2/
+src/main/resources/application-dev.yml

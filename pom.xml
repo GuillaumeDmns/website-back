@@ -103,46 +103,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-
-            <plugin>
-                <groupId>org.jvnet.jaxb2.maven2</groupId>
-                <artifactId>maven-jaxb2-plugin</artifactId>
-                <version>0.15.1</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <schemaLanguage>WSDL</schemaLanguage>
-                    <generatePackage>com.gdamiens.website.ratp.wsdl</generatePackage>
-                    <schemaDirectory>${project.basedir}/src/main/resources/wsdl</schemaDirectory>
-                    <schemaIncludes>
-                        <include>*.wsdl</include>
-                    </schemaIncludes>
-                    <bindingDirectory>${project.basedir}/src/main/resources/bindings</bindingDirectory>
-                    <bindingIncludes>*.xml</bindingIncludes>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>java11</id>
-            <activation>
-                <jdk>[11,)</jdk>
-            </activation>
-
-            <dependencies>
-                <dependency>
-                    <groupId>org.glassfish.jaxb</groupId>
-                    <artifactId>jaxb-runtime</artifactId>
-                </dependency>
-            </dependencies>
-        </profile>
-    </profiles>
 
 </project>

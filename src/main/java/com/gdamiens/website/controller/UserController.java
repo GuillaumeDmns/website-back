@@ -1,5 +1,6 @@
 package com.gdamiens.website.controller;
 
+import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.Credentials;
 import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.idfm.IDFMResponse;
@@ -41,9 +42,12 @@ public class UserController {
 
     private final HttpComponentsClientHttpRequestFactory requestFactory;
 
-    public UserController(UserService userService) {
+    private final ApplicationProperties applicationProperties;
+
+    public UserController(UserService userService, ApplicationProperties applicationProperties) {
         this.userService = userService;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
+        this.applicationProperties = applicationProperties;
     }
 
     @PostMapping("/signin")
@@ -67,7 +71,7 @@ public class UserController {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
             headers.set("Accept-encoding", "gzip, deflate");
-            headers.set("apiKey", "");
+            headers.set("apiKey", applicationProperties.getIdfmKey());
 
             HttpEntity<String> request = new HttpEntity<>(headers);
 
