@@ -53,11 +53,18 @@ public class UserController {
     @PostMapping("/signin")
     @Operation(summary = "Get the JWT")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "400", description = "Something went wrong"),
-            @ApiResponse(responseCode = "422", description = "Invalid username/password supplied")})
+            @ApiResponse(responseCode = "200", description = "Credentials are valid"),
+            @ApiResponse(responseCode = "400", description = "Username / password not provided"),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials"),
+            @ApiResponse(responseCode = "500", description = "Server error")})
     public ResponseEntity<JwtDTO> login(@RequestBody Credentials credentials) {
 
+        if (credentials.getUsername() == null || credentials.getPassword() == null) {
+            return new ResponseEntity<>(new JwtDTO(null), HttpStatus.BAD_REQUEST);
+        }
+
         String token = userService.signIn(credentials.getUsername(), credentials.getPassword());
+
         return new ResponseEntity<>(new JwtDTO(token), token == null ? HttpStatus.UNAUTHORIZED : HttpStatus.OK);
     }
 
@@ -92,8 +99,12 @@ public class UserController {
 
     @GetMapping("/refresh")
     @Operation(summary = "Refresh the JWT", security = @SecurityRequirement(name = "Auth. Token"))
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "JWT refreshed"),
+        @ApiResponse(responseCode = "401", description = "Invalid JWT"),
+        @ApiResponse(responseCode = "500", description = "Server error")})
     public ResponseEntity<JwtDTO> refresh(HttpServletRequest req) {
+
         String token = userService.refresh(req.getRemoteUser());
         return new ResponseEntity<>(new JwtDTO(token), token == null ? HttpStatus.UNAUTHORIZED : HttpStatus.OK);
     }
