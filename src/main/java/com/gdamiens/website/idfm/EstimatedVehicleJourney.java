@@ -61,7 +61,7 @@ public class EstimatedVehicleJourney {
     @JsonProperty("JourneyNote")
     private List<JourneyNote> journeyNote = null;
     @JsonProperty("FirstOrLastJourney")
-    private String firstOrLastJourney;
+    private FirstOrLastJourneyEnum firstOrLastJourney;
     @JsonProperty("EstimatedCalls")
     private EstimatedCalls estimatedCalls;
     @JsonProperty("VehicleMode")
@@ -196,12 +196,12 @@ public class EstimatedVehicleJourney {
     }
 
     @JsonProperty("FirstOrLastJourney")
-    public String getFirstOrLastJourney() {
+    public FirstOrLastJourneyEnum getFirstOrLastJourney() {
         return firstOrLastJourney;
     }
 
     @JsonProperty("FirstOrLastJourney")
-    public void setFirstOrLastJourney(String firstOrLastJourney) {
+    public void setFirstOrLastJourney(FirstOrLastJourneyEnum firstOrLastJourney) {
         this.firstOrLastJourney = firstOrLastJourney;
     }
 

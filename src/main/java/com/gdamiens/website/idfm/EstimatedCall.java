@@ -47,7 +47,7 @@ public class EstimatedCall {
     @JsonProperty("ArrivalPlatformName")
     private ArrivalPlatformName arrivalPlatformName;
     @JsonProperty("DepartureStatus")
-    private String departureStatus;
+    private DepartureStatus departureStatus;
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -142,12 +142,12 @@ public class EstimatedCall {
     }
 
     @JsonProperty("DepartureStatus")
-    public String getDepartureStatus() {
+    public DepartureStatus getDepartureStatus() {
         return departureStatus;
     }
 
     @JsonProperty("DepartureStatus")
-    public void setDepartureStatus(String departureStatus) {
+    public void setDepartureStatus(DepartureStatus departureStatus) {
         this.departureStatus = departureStatus;
     }
 
