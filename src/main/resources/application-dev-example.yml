@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    username: root
+    password: root
+    url: jdbc:postgresql://hostname:5433/database
+
+security:
+  jwt:
+    token:
+      secret-key: abcdefghijklmnopqrstuvwxyz0123456789
+
+application:
+  idfm-key: aaAAbbBBccCCddDD
