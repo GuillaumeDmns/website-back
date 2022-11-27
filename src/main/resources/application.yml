@@ -12,6 +12,8 @@ spring:
       ddl-auto: update
     properties:
       hibernate:
+        jdbc:
+          batch_size: 50
         dialect: org.hibernate.dialect.PostgreSQL10Dialect
 
 logging:
