@@ -1,6 +1,6 @@
 package com.gdamiens.website.service;
 
-import com.gdamiens.website.controller.object.CSV;
+import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStopLine;
 import com.gdamiens.website.repository.IDFMLineRepository;
@@ -29,7 +29,7 @@ public class IDFMLineService {
         this.idfmLineRepository = idfmLineRepository;
     }
 
-    public void refreshLinesAndStops(Map<String, List<CSV>> linesAndStops) {
+    public void refreshLinesAndStops(Map<String, List<StationAndLineCSV>> linesAndStops) {
         // Update list of lines
         log.info("Start importing list of lines");
         this.idfmLineRepository.saveAll(

@@ -1,11 +1,11 @@
 package com.gdamiens.website.controller;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
-import com.gdamiens.website.controller.object.CSV;
+import com.gdamiens.website.controller.object.StationAndLineCSV;
+import com.gdamiens.website.controller.object.StationCSV;
 import com.gdamiens.website.idfm.IDFMResponse;
+import com.gdamiens.website.service.CSVReader;
 import com.gdamiens.website.service.IDFMLineService;
-import com.opencsv.bean.CsvToBean;
-import com.opencsv.bean.CsvToBeanBuilder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.http.impl.client.HttpClients;
@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +37,8 @@ public class IDFMController {
     private static final String IDFM_ESTIMATED_TIMETABLE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/estimated-timetable";
 
     private static final String IDFM_ALL_STATIONS_AND_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/perimetre-des-donnees-tr-disponibles-plateforme-idfm/download/?format=csv&timezone=Europe/Berlin&lang=fr";
+
+    private static final String IDFM_ALL_STATIONS_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/arrets/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
 
     private final HttpComponentsClientHttpRequestFactory requestFactory;
 
@@ -99,22 +100,13 @@ public class IDFMController {
     }
 
     @GetMapping("/update-stations-and-lines")
-    @Operation(summary = "Get list of all stations and lines", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> updateStationsAndLines() {
+    @Operation(summary = "Get list of all stops and lines", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Void> updateStopsAndLines() {
         try {
 
-            RestTemplate restTemplate = new RestTemplate();
+            CSVReader<StationAndLineCSV> csvReader = new CSVReader<>(StationAndLineCSV.class);
 
-            Map<String, List<CSV>> linesAndStops = restTemplate.execute(IDFM_ALL_STATIONS_AND_LINES_URL, HttpMethod.GET, null, clientHttpResponse -> {
-                InputStreamReader reader = new InputStreamReader(clientHttpResponse.getBody());
-                CsvToBean<CSV> csvToBean = new CsvToBeanBuilder<CSV>(reader)
-                    .withType(CSV.class)
-                    .withSeparator(';')
-                    .withIgnoreLeadingWhiteSpace(true)
-                    .withSkipLines(1)
-                    .build();
-                return csvToBean.stream().collect(Collectors.groupingBy(CSV::getLineRef));
-            });
+            Map<String, List<StationAndLineCSV>> linesAndStops = csvReader.readFromUrl(IDFM_ALL_STATIONS_AND_LINES_URL, StationAndLineCSV::getLineRef);
 
             if (linesAndStops != null) {
                 this.idfmLineService.refreshLinesAndStops(linesAndStops);
@@ -124,6 +116,25 @@ public class IDFMController {
 
             return new ResponseEntity<>(HttpStatus.OK);
 
+        } catch (Exception e) {
+            log.info("error during IDFM request : {}", e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/update-stops")
+    @Operation(summary = "Get list of all stops", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Void> updateStopsInformation() {
+        try {
+            CSVReader<StationCSV> csvReader = new CSVReader<>(StationCSV.class);
+
+            Map<String, List<StationCSV>> stops = csvReader.readFromUrl(IDFM_ALL_STATIONS_URL, StationCSV::getStopType);
+
+            log.info("{} types of stops", stops.size());
+
+            // TODO add stops info in database
+
+            return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             log.info("error during IDFM request : {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
