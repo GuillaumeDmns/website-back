@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.controller.object.StationCSV;
 import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.repository.IDFMStopRepository;
 import org.slf4j.Logger;
@@ -20,7 +21,11 @@ public class IDFMStopService {
         this.idfmStopRepository = idfmStopRepository;
     }
 
-    public void saveAllStop(List<Integer> stop) {
-        this.idfmStopRepository.saveAll(stop.stream().map(IDFMStop::new).collect(Collectors.toList()));
+    public void saveAllStopFromId(List<Integer> stops) {
+        this.idfmStopRepository.saveAll(stops.stream().map(IDFMStop::new).collect(Collectors.toList()));
+    }
+
+    public void saveAllStopFromCSV(List<StationCSV> stops) {
+        this.idfmStopRepository.saveAll(stops.stream().map(IDFMStop::new).collect(Collectors.toList()));
     }
 }

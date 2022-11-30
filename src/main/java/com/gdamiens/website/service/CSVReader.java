@@ -34,4 +34,17 @@ public class CSVReader<T> {
             return csvToBean.stream().collect(Collectors.groupingBy(groupingByGetter));
         });
     }
+
+    public List<T> readFromUrl(String url) {
+        return restTemplate.execute(url, HttpMethod.GET, null, clientHttpResponse -> {
+            InputStreamReader reader = new InputStreamReader(clientHttpResponse.getBody());
+            CsvToBean<T> csvToBean = new CsvToBeanBuilder<T>(reader)
+                .withType(this.type)
+                .withSeparator(';')
+                .withIgnoreLeadingWhiteSpace(true)
+                .withSkipLines(1)
+                .build();
+            return csvToBean.stream().collect(Collectors.toList());
+        });
+    }
 }

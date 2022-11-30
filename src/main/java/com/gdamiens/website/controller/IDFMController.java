@@ -6,6 +6,7 @@ import com.gdamiens.website.controller.object.StationCSV;
 import com.gdamiens.website.idfm.IDFMResponse;
 import com.gdamiens.website.service.CSVReader;
 import com.gdamiens.website.service.IDFMLineService;
+import com.gdamiens.website.service.IDFMStopService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.http.impl.client.HttpClients;
@@ -46,10 +47,13 @@ public class IDFMController {
 
     private final IDFMLineService idfmLineService;
 
-    public IDFMController(ApplicationProperties applicationProperties, IDFMLineService idfmLineService) {
+    private final IDFMStopService idfmStopService;
+
+    public IDFMController(ApplicationProperties applicationProperties, IDFMLineService idfmLineService, IDFMStopService idfmStopService) {
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
         this.applicationProperties = applicationProperties;
         this.idfmLineService = idfmLineService;
+        this.idfmStopService = idfmStopService;
     }
 
 
@@ -108,7 +112,7 @@ public class IDFMController {
 
             Map<String, List<StationAndLineCSV>> linesAndStops = csvReader.readFromUrl(IDFM_ALL_STATIONS_AND_LINES_URL, StationAndLineCSV::getLineRef);
 
-            if (linesAndStops != null) {
+            if (linesAndStops != null && !linesAndStops.isEmpty()) {
                 this.idfmLineService.refreshLinesAndStops(linesAndStops);
             } else {
                 log.info("No data has been found in the stations & lines CSV file");
@@ -128,11 +132,11 @@ public class IDFMController {
         try {
             CSVReader<StationCSV> csvReader = new CSVReader<>(StationCSV.class);
 
-            Map<String, List<StationCSV>> stops = csvReader.readFromUrl(IDFM_ALL_STATIONS_URL, StationCSV::getStopType);
+            List<StationCSV> stops = csvReader.readFromUrl(IDFM_ALL_STATIONS_URL);
 
             log.info("{} types of stops", stops.size());
 
-            // TODO add stops info in database
+            this.idfmStopService.saveAllStopFromCSV(stops);
 
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {

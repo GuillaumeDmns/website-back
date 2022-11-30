@@ -1,5 +1,7 @@
 package com.gdamiens.website.model;
 
+import com.gdamiens.website.controller.object.StationCSV;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -22,13 +24,25 @@ public class IDFMStop implements Serializable {
     @Column(name = "longitude")
     private Double longitude;
 
-
+    @Column(name = "type")
+    private String type;
 
     public IDFMStop() {
     }
 
     public IDFMStop(Integer id) {
         this.id = id;
+    }
+
+    public IDFMStop(StationCSV stationCSV) {
+        this.id = Integer.parseInt(stationCSV.getStopId());
+        this.name = stationCSV.getStopName();
+        if (stationCSV.getGps() != null && stationCSV.getGps().split(",").length == 2) {
+            String[] splittedGps = stationCSV.getGps().split(",");
+            this.latitude = Double.parseDouble(splittedGps[0]);
+            this.longitude = Double.parseDouble(splittedGps[1]);
+        }
+        this.type = stationCSV.getStopType();
     }
 
     public Integer getId() {
@@ -63,6 +77,14 @@ public class IDFMStop implements Serializable {
         this.longitude = longitude;
     }
 
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
     @Override
     public String toString() {
         return "IDFMStop{" +
@@ -70,6 +92,7 @@ public class IDFMStop implements Serializable {
             ", name='" + name + '\'' +
             ", latitude=" + latitude +
             ", longitude=" + longitude +
+            ", type='" + type + '\'' +
             '}';
     }
 }

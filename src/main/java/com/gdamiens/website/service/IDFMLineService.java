@@ -43,7 +43,7 @@ public class IDFMLineService {
         log.info("Finished importing list of lines");
 
         log.info("Start importing list of stops");
-        this.idfmStopService.saveAllStop(
+        this.idfmStopService.saveAllStopFromId(
             linesAndStops
                 .values()
                 .parallelStream()
