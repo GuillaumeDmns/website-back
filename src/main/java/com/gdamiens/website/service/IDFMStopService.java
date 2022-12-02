@@ -25,7 +25,7 @@ public class IDFMStopService {
         this.idfmStopRepository.saveAll(stops.stream().map(IDFMStop::new).collect(Collectors.toList()));
     }
 
-    public void saveAllStopFromCSV(List<StationCSV> stops) {
+    public void saveAllStopsFromCSV(List<StationCSV> stops) {
         this.idfmStopRepository.saveAll(stops.stream().map(IDFMStop::new).collect(Collectors.toList()));
     }
 }

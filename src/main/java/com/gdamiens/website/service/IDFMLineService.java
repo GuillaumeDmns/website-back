@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.controller.object.LineCSV;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStopLine;
@@ -74,5 +75,9 @@ public class IDFMLineService {
 
         });
         log.info("Finished importing stop/line pairs");
+    }
+
+    public void saveAllLinesFromCSV(List<LineCSV> stops) {
+        this.idfmLineRepository.saveAll(stops.stream().map(IDFMLine::new).collect(Collectors.toList()));
     }
 }
