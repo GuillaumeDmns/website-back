@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Collections;
 import java.util.List;
@@ -62,7 +63,7 @@ public class IDFMController {
 
     @GetMapping("/fullIDFM")
     @Operation(summary = "Get full next passages of all IDFM stops", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<String> fullIDFM() {
+    public ResponseEntity<String> fullIDFM(String lineId) {
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -74,7 +75,10 @@ public class IDFMController {
 
             HttpEntity<String> request = new HttpEntity<>(headers);
 
-            ResponseEntity<IDFMResponse> response = new RestTemplate(this.requestFactory).exchange(IDFM_ESTIMATED_TIMETABLE_URL, HttpMethod.GET, request, IDFMResponse.class);
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(IDFM_ESTIMATED_TIMETABLE_URL)
+                .queryParam("LineRef", lineId != null ? "STIF:Line::" + lineId + ":" : "ALL");
+
+            ResponseEntity<IDFMResponse> response = new RestTemplate(this.requestFactory).exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, IDFMResponse.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 IDFMResponse idfmResponse = response.getBody();
