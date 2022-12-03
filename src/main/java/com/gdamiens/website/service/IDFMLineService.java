@@ -80,4 +80,8 @@ public class IDFMLineService {
     public void saveAllLinesFromCSV(List<LineCSV> stops) {
         this.idfmLineRepository.saveAll(stops.stream().map(IDFMLine::new).collect(Collectors.toList()));
     }
+
+    public IDFMLine getLine(String lineId) {
+        return this.idfmLineRepository.findById(lineId).orElse(null);
+    }
 }

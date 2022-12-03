@@ -28,4 +28,8 @@ public class IDFMStopService {
     public void saveAllStopsFromCSV(List<StationCSV> stops) {
         this.idfmStopRepository.saveAll(stops.stream().map(IDFMStop::new).collect(Collectors.toList()));
     }
+
+    public IDFMStop getStop(Integer stopId) {
+        return this.idfmStopRepository.findById(stopId).orElse(null);
+    }
 }

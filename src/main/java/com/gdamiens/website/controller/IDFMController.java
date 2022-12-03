@@ -1,10 +1,13 @@
 package com.gdamiens.website.controller;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
+import com.gdamiens.website.controller.object.Call;
+import com.gdamiens.website.controller.object.FullIDFMDTO;
 import com.gdamiens.website.controller.object.LineCSV;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.controller.object.StationCSV;
 import com.gdamiens.website.idfm.IDFMResponse;
+import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.service.CSVReader;
 import com.gdamiens.website.service.IDFMLineService;
 import com.gdamiens.website.service.IDFMStopService;
@@ -63,7 +66,7 @@ public class IDFMController {
 
     @GetMapping("/fullIDFM")
     @Operation(summary = "Get full next passages of all IDFM stops", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<String> fullIDFM(String lineId) {
+    public ResponseEntity<FullIDFMDTO> fullIDFM(String lineId) {
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -84,7 +87,9 @@ public class IDFMController {
                 IDFMResponse idfmResponse = response.getBody();
 
                 if (idfmResponse != null) {
-                    List<String> stopIds = idfmResponse
+                    IDFMLine idfmLine = this.idfmLineService.getLine(lineId);
+
+                    Map<String, Map<String, List<Call>>> calls = idfmResponse
                         .getSiri()
                         .getServiceDelivery()
                         .getEstimatedTimetableDelivery()
@@ -93,12 +98,24 @@ public class IDFMController {
                         .get(0)
                         .getEstimatedVehicleJourney()
                         .stream()
-                        .flatMap(evj -> evj.getEstimatedCalls().getEstimatedCall().stream())
-                        .map(e -> e.getStopPointRef().getValue())
-                        .collect(Collectors.toList());
+                        .filter(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls() != null && !estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().isEmpty())
+                        .flatMap(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().stream())
+                        .filter(estimatedCall -> !estimatedCall.getDestinationDisplay().isEmpty())
+                        .collect(Collectors.groupingBy(estimatedCall -> estimatedCall.getDestinationDisplay().get(0).getValue()))
+                        .entrySet()
+                        .stream()
+                        .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue()
+                                .stream()
+                                .map(estimatedCall -> new Call(
+                                    estimatedCall,
+                                    this.idfmStopService.getStop(Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
+                                )
+                                .collect(Collectors.groupingBy(f -> f.getStop().getName()))
+                        ));
 
-                    return new ResponseEntity<>(stopIds.get(0), HttpStatus.OK);
-
+                    return new ResponseEntity<>(new FullIDFMDTO(idfmLine, calls), HttpStatus.OK);
                 }
 
                 log.info("success requesting IDFM");
@@ -107,7 +124,7 @@ public class IDFMController {
             log.info("error during IDFM next passages request");
         }
 
-        return new ResponseEntity<>("ok", HttpStatus.OK);
+        return new ResponseEntity<>(new FullIDFMDTO(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @GetMapping("/update-stations-and-lines")
