@@ -2,7 +2,6 @@ package com.gdamiens.website.controller.object;
 
 import com.gdamiens.website.idfm.DepartureStatusEnum;
 import com.gdamiens.website.idfm.EstimatedCall;
-import com.gdamiens.website.model.IDFMStop;
 
 public class Call {
 
@@ -14,14 +13,11 @@ public class Call {
 
     private String directionName;
 
-    private IDFMStop stop;
-
-    public Call(EstimatedCall estimatedCall, IDFMStop stop) {
+    public Call(EstimatedCall estimatedCall) {
         this.expectedArrivalTime = estimatedCall.getExpectedArrivalTime();
         this.expectedDepartureTime = estimatedCall.getExpectedDepartureTime();
         this.departureStatus = estimatedCall.getDepartureStatus();
         this.directionName = estimatedCall.getDestinationDisplay().get(0).getValue();
-        this.stop = stop;
     }
 
     public String getExpectedArrivalTime() {
@@ -54,13 +50,5 @@ public class Call {
 
     public void setDirectionName(String directionName) {
         this.directionName = directionName;
-    }
-
-    public IDFMStop getStop() {
-        return stop;
-    }
-
-    public void setStop(IDFMStop stop) {
-        this.stop = stop;
     }
 }

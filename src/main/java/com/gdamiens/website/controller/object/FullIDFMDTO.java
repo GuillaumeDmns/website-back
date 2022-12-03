@@ -9,9 +9,9 @@ public class FullIDFMDTO {
 
     private IDFMLine line;
 
-    private Map<String, Map<String, List<Call>>> calls;
+    private Map<Integer, NextPassagesStop> calls;
 
-    public FullIDFMDTO(IDFMLine line, Map<String, Map<String, List<Call>>> calls) {
+    public FullIDFMDTO(IDFMLine line, Map<Integer, NextPassagesStop> calls) {
         this.line = line;
         this.calls = calls;
     }
@@ -26,11 +26,11 @@ public class FullIDFMDTO {
         this.line = line;
     }
 
-    public Map<String, Map<String, List<Call>>> getCalls() {
+    public Map<Integer, NextPassagesStop> getCalls() {
         return calls;
     }
 
-    public void setCalls(Map<String, Map<String, List<Call>>> calls) {
+    public void setCalls(Map<Integer, NextPassagesStop> calls) {
         this.calls = calls;
     }
 }

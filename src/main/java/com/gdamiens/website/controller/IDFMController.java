@@ -4,6 +4,7 @@ import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.Call;
 import com.gdamiens.website.controller.object.FullIDFMDTO;
 import com.gdamiens.website.controller.object.LineCSV;
+import com.gdamiens.website.controller.object.NextPassagesStop;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.controller.object.StationCSV;
 import com.gdamiens.website.idfm.IDFMResponse;
@@ -89,7 +90,7 @@ public class IDFMController {
                 if (idfmResponse != null) {
                     IDFMLine idfmLine = this.idfmLineService.getLine(lineId);
 
-                    Map<String, Map<String, List<Call>>> calls = idfmResponse
+                    Map<Integer, NextPassagesStop> calls = idfmResponse
                         .getSiri()
                         .getServiceDelivery()
                         .getEstimatedTimetableDelivery()
@@ -101,19 +102,17 @@ public class IDFMController {
                         .filter(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls() != null && !estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().isEmpty())
                         .flatMap(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().stream())
                         .filter(estimatedCall -> !estimatedCall.getDestinationDisplay().isEmpty())
-                        .collect(Collectors.groupingBy(estimatedCall -> estimatedCall.getDestinationDisplay().get(0).getValue()))
+                        .collect(Collectors.groupingBy(estimatedCall -> Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
                         .entrySet()
                         .stream()
                         .collect(Collectors.toMap(
                             Map.Entry::getKey,
-                            e -> e.getValue()
+                            e -> new NextPassagesStop(this.idfmStopService.getStop(e.getKey()), e.getValue()
                                 .stream()
-                                .map(estimatedCall -> new Call(
-                                    estimatedCall,
-                                    this.idfmStopService.getStop(Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
-                                )
-                                .collect(Collectors.groupingBy(f -> f.getStop().getName()))
+                                .map(Call::new)
+                                .collect(Collectors.groupingBy(Call::getDirectionName)))
                         ));
+//                                    ,this.idfmStopService.getStop(Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
 
                     return new ResponseEntity<>(new FullIDFMDTO(idfmLine, calls), HttpStatus.OK);
                 }
