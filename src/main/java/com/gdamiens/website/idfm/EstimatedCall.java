@@ -48,6 +48,12 @@ public class EstimatedCall {
     private ArrivalPlatformName arrivalPlatformName;
     @JsonProperty("DepartureStatus")
     private DepartureStatusEnum departureStatus;
+
+    // Other properties for processing
+    private String recordedAtTime;
+    private String journeyNote;
+    private FirstOrLastJourneyEnum firstOrLastJourney;
+
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -149,6 +155,30 @@ public class EstimatedCall {
     @JsonProperty("DepartureStatus")
     public void setDepartureStatus(DepartureStatusEnum departureStatus) {
         this.departureStatus = departureStatus;
+    }
+
+    public String getRecordedAtTime() {
+        return recordedAtTime;
+    }
+
+    public void setRecordedAtTime(String recordedAtTime) {
+        this.recordedAtTime = recordedAtTime;
+    }
+
+    public String getJourneyNote() {
+        return journeyNote;
+    }
+
+    public void setJourneyNote(String journeyNote) {
+        this.journeyNote = journeyNote;
+    }
+
+    public FirstOrLastJourneyEnum getFirstOrLastJourney() {
+        return firstOrLastJourney;
+    }
+
+    public void setFirstOrLastJourney(FirstOrLastJourneyEnum firstOrLastJourney) {
+        this.firstOrLastJourney = firstOrLastJourney;
     }
 
     @JsonAnyGetter

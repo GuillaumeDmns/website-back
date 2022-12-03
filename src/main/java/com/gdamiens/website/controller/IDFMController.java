@@ -7,7 +7,9 @@ import com.gdamiens.website.controller.object.LineCSV;
 import com.gdamiens.website.controller.object.NextPassagesStop;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.controller.object.StationCSV;
+import com.gdamiens.website.idfm.EstimatedCall;
 import com.gdamiens.website.idfm.IDFMResponse;
+import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.service.CSVReader;
 import com.gdamiens.website.service.IDFMLineService;
@@ -100,7 +102,19 @@ public class IDFMController {
                         .getEstimatedVehicleJourney()
                         .stream()
                         .filter(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls() != null && !estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().isEmpty())
-                        .flatMap(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().stream())
+                        .flatMap(estimatedVehicleJourney -> estimatedVehicleJourney
+                            .getEstimatedCalls()
+                            .getEstimatedCall()
+                            .stream()
+                            .map(call -> {
+                                call.setRecordedAtTime(estimatedVehicleJourney.getRecordedAtTime());
+                                List<JourneyNote> journeyNote = estimatedVehicleJourney.getJourneyNote();
+                                call.setJourneyNote(journeyNote != null && !journeyNote.isEmpty() ? journeyNote.get(0).getValue() : null);
+                                call.setFirstOrLastJourney(estimatedVehicleJourney.getFirstOrLastJourney());
+
+                                return call;
+                            })
+                        )
                         .filter(estimatedCall -> !estimatedCall.getDestinationDisplay().isEmpty())
                         .collect(Collectors.groupingBy(estimatedCall -> Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
                         .entrySet()
