@@ -2,7 +2,6 @@ package com.gdamiens.website.controller.object;
 
 import com.gdamiens.website.model.IDFMLine;
 
-import java.util.List;
 import java.util.Map;
 
 public class FullIDFMDTO {

@@ -106,13 +106,11 @@ public class IDFMController {
                             .getEstimatedCalls()
                             .getEstimatedCall()
                             .stream()
-                            .map(call -> {
+                            .peek(call -> {
                                 call.setRecordedAtTime(estimatedVehicleJourney.getRecordedAtTime());
                                 List<JourneyNote> journeyNote = estimatedVehicleJourney.getJourneyNote();
                                 call.setJourneyNote(journeyNote != null && !journeyNote.isEmpty() ? journeyNote.get(0).getValue() : null);
                                 call.setFirstOrLastJourney(estimatedVehicleJourney.getFirstOrLastJourney());
-
-                                return call;
                             })
                         )
                         .filter(estimatedCall -> !estimatedCall.getDestinationDisplay().isEmpty())
