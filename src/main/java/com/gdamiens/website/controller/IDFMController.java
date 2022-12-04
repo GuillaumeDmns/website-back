@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
@@ -30,6 +31,8 @@ public class IDFMController {
     private static final Logger log = LoggerFactory.getLogger(IDFMController.class);
 
     private static final String IDFM_ESTIMATED_TIMETABLE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/estimated-timetable";
+
+    private static final String IDFM_STOP_MONITORING_URL = "https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring";
 
     private static final String IDFM_ALL_STATIONS_AND_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/perimetre-des-donnees-tr-disponibles-plateforme-idfm/download/?format=csv&timezone=Europe/Berlin&lang=fr";
 
@@ -47,7 +50,7 @@ public class IDFMController {
     }
 
 
-    @GetMapping("/fullIDFM")
+    @GetMapping("/full-idfm")
     @Operation(summary = "Get full next passages of all IDFM stops by line", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<FullIDFMDTO> getAllStopsByLine(String lineId) {
         try {
@@ -65,6 +68,24 @@ public class IDFMController {
         }
         catch (Exception e) {
             log.info("error during IDFM next passages request");
+        }
+
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @GetMapping("/get-stop-next-passages")
+    @Operation(summary = "Get next passages of a IDFM stop", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Void> getStopInformation(@NotNull Integer stopId) {
+        try {
+            this.idfmStopService.getStopNextPassage(stopId, IDFM_STOP_MONITORING_URL);
+
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (CustomException e) {
+            log.info(e.getMessage());
+
+            return new ResponseEntity<>(e.getHttpStatus());
+        } catch (Exception e) {
+            log.info("error during IDFM stop information request");
         }
 
         return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);

@@ -15,23 +15,20 @@ import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class IDFMLineService {
+public class IDFMLineService extends AbstractIDFMService {
 
     private static final Logger log = LoggerFactory.getLogger(IDFMLineService.class);
 
@@ -43,25 +40,16 @@ public class IDFMLineService {
 
     private final HttpComponentsClientHttpRequestFactory requestFactory;
 
-    private final ApplicationProperties applicationProperties;
-
     public IDFMLineService(IDFMStopService idfmStopService, IDFMStopLineService idfmStopLineService, IDFMLineRepository idfmLineRepository, ApplicationProperties applicationProperties) {
+        super(applicationProperties);
         this.idfmStopService = idfmStopService;
         this.idfmStopLineService = idfmStopLineService;
         this.idfmLineRepository = idfmLineRepository;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
-        this.applicationProperties = applicationProperties;
     }
 
     public Map<Integer, NextPassagesStop> getAllStopsByLine(String lineId, String url) {
-        HttpHeaders headers = new HttpHeaders();
-
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-        headers.set("Accept-encoding", "gzip, deflate");
-        headers.set("apiKey", applicationProperties.getIdfmKey());
-
-        HttpEntity<String> request = new HttpEntity<>(headers);
+        HttpEntity<String> request = this.prepareHttpRequest();
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(url)
             .queryParam("LineRef", lineId != null ? "STIF:Line::" + lineId + ":" : "ALL");
