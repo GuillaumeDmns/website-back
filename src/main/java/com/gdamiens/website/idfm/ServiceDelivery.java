@@ -1,4 +1,3 @@
-
 package com.gdamiens.website.idfm;
 
 import java.util.HashMap;
@@ -11,13 +10,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.gdamiens.website.idfm.EstimatedTimetableDelivery;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
     "ResponseTimestamp",
     "ProducerRef",
     "ResponseMessageIdentifier",
+    "StopMonitoringDelivery",
     "EstimatedTimetableDelivery"
 })
 @Generated("jsonschema2pojo")
@@ -29,8 +28,12 @@ public class ServiceDelivery {
     private String producerRef;
     @JsonProperty("ResponseMessageIdentifier")
     private String responseMessageIdentifier;
+    @JsonProperty("StopMonitoringDelivery")
+    private List<StopMonitoringDelivery> stopMonitoringDelivery = null;
+
     @JsonProperty("EstimatedTimetableDelivery")
     private List<EstimatedTimetableDelivery> estimatedTimetableDelivery = null;
+
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -72,6 +75,16 @@ public class ServiceDelivery {
     @JsonProperty("EstimatedTimetableDelivery")
     public void setEstimatedTimetableDelivery(List<EstimatedTimetableDelivery> estimatedTimetableDelivery) {
         this.estimatedTimetableDelivery = estimatedTimetableDelivery;
+    }
+
+    @JsonProperty("StopMonitoringDelivery")
+    public List<StopMonitoringDelivery> getStopMonitoringDelivery() {
+        return stopMonitoringDelivery;
+    }
+
+    @JsonProperty("StopMonitoringDelivery")
+    public void setStopMonitoringDelivery(List<StopMonitoringDelivery> stopMonitoringDelivery) {
+        this.stopMonitoringDelivery = stopMonitoringDelivery;
     }
 
     @JsonAnyGetter

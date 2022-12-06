@@ -5,7 +5,8 @@ import com.gdamiens.website.model.IDFMStop;
 import java.util.List;
 import java.util.Map;
 
-public class NextPassagesStop {
+
+public class NextPassagesStops {
 
     private Integer id;
     private String name;
@@ -13,9 +14,9 @@ public class NextPassagesStop {
     private Double longitude;
     private String type;
 
-    private Map<String, List<Call>> nextPassages;
+    private Map<String, List<CallGlobal>> nextPassages;
 
-    public NextPassagesStop(IDFMStop idfmStop, Map<String, List<Call>> calls) {
+    public NextPassagesStops(IDFMStop idfmStop, Map<String, List<CallGlobal>> calls) {
         this.id = idfmStop.getId();
         this.name = idfmStop.getName();
         this.latitude = idfmStop.getLatitude();
@@ -64,11 +65,11 @@ public class NextPassagesStop {
         this.type = type;
     }
 
-    public Map<String, List<Call>> getNextPassages() {
+    public Map<String, List<CallGlobal>> getNextPassages() {
         return nextPassages;
     }
 
-    public void setNextPassages(Map<String, List<Call>> nextPassages) {
+    public void setNextPassages(Map<String, List<CallGlobal>> nextPassages) {
         this.nextPassages = nextPassages;
     }
 }

@@ -1,12 +1,15 @@
 package com.gdamiens.website.controller;
 
+import com.gdamiens.website.controller.object.CallUnit;
 import com.gdamiens.website.controller.object.FullIDFMDTO;
 import com.gdamiens.website.controller.object.LineCSV;
-import com.gdamiens.website.controller.object.NextPassagesStop;
+import com.gdamiens.website.controller.object.NextPassagesStops;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.controller.object.StationCSV;
+import com.gdamiens.website.controller.object.UnitIDFMDTO;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.IDFMLine;
+import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.service.CSVReader;
 import com.gdamiens.website.service.IDFMLineService;
 import com.gdamiens.website.service.IDFMStopService;
@@ -54,7 +57,7 @@ public class IDFMController {
     @Operation(summary = "Get full next passages of all IDFM stops by line", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<FullIDFMDTO> getAllStopsByLine(String lineId) {
         try {
-            Map<Integer, NextPassagesStop> calls = this.idfmLineService.getAllStopsByLine(lineId, IDFM_ESTIMATED_TIMETABLE_URL);
+            Map<Integer, NextPassagesStops> calls = this.idfmLineService.getAllStopsByLine(lineId, IDFM_ESTIMATED_TIMETABLE_URL);
 
             IDFMLine idfmLine = this.idfmLineService.getLine(lineId);
 
@@ -75,11 +78,13 @@ public class IDFMController {
 
     @GetMapping("/get-stop-next-passages")
     @Operation(summary = "Get next passages of a IDFM stop", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> getStopInformation(@NotNull Integer stopId) {
+    public ResponseEntity<UnitIDFMDTO> getStopInformation(@NotNull Integer stopId) {
         try {
-            this.idfmStopService.getStopNextPassage(stopId, IDFM_STOP_MONITORING_URL);
+            List<CallUnit> calls = this.idfmStopService.getStopNextPassage(stopId, IDFM_STOP_MONITORING_URL);
 
-            return new ResponseEntity<>(HttpStatus.OK);
+            IDFMStop idfmStop = this.idfmStopService.getStop(stopId);
+
+            return new ResponseEntity<>(new UnitIDFMDTO(idfmStop, calls), HttpStatus.OK);
         } catch (CustomException e) {
             log.info(e.getMessage());
 

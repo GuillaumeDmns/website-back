@@ -1,9 +1,9 @@
 package com.gdamiens.website.service;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
-import com.gdamiens.website.controller.object.Call;
+import com.gdamiens.website.controller.object.CallGlobal;
 import com.gdamiens.website.controller.object.LineCSV;
-import com.gdamiens.website.controller.object.NextPassagesStop;
+import com.gdamiens.website.controller.object.NextPassagesStops;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.IDFMResponse;
@@ -48,7 +48,7 @@ public class IDFMLineService extends AbstractIDFMService {
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
     }
 
-    public Map<Integer, NextPassagesStop> getAllStopsByLine(String lineId, String url) {
+    public Map<Integer, NextPassagesStops> getAllStopsByLine(String lineId, String url) {
         HttpEntity<String> request = this.prepareHttpRequest();
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(url)
@@ -88,15 +88,15 @@ public class IDFMLineService extends AbstractIDFMService {
                     .stream()
                     .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        e -> new NextPassagesStop(this.idfmStopService.getStop(e.getKey()), e.getValue()
+                        e -> new NextPassagesStops(this.idfmStopService.getStop(e.getKey()), e.getValue()
                             .stream()
-                            .map(Call::new)
-                            .collect(Collectors.groupingBy(Call::getDirectionName)))
+                            .map(CallGlobal::new)
+                            .collect(Collectors.groupingBy(CallGlobal::getDirectionName)))
                     ));
             }
         }
 
-        throw new CustomException("IDFM response != 200 or body is null", HttpStatus.INTERNAL_SERVER_ERROR);
+        throw new CustomException("IDFM response allStopsByLine != 200 or body is null", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     public void refreshLinesAndStops(Map<String, List<StationAndLineCSV>> linesAndStops) {
