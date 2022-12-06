@@ -1,0 +1,3 @@
+## LICENSE
+
+Voir [LICENSE.MD](LICENSE.md)
