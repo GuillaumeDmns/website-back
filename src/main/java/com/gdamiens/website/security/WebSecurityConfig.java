@@ -4,8 +4,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,7 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableWebSecurity
+@EnableMethodSecurity()
 public class WebSecurityConfig {
 
   private final JwtTokenProvider jwtTokenProvider;
@@ -28,9 +30,10 @@ public class WebSecurityConfig {
 
     http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
-    http.authorizeRequests()
-      .antMatchers("/api/signin").permitAll()
-      .anyRequest().authenticated();
+    http.authorizeHttpRequests(authorize -> authorize
+            .requestMatchers("/api/signin", "/v3/api-docs/**", "/swagger-ui/**", "/configuration/**", "/webjars/**", "/public").permitAll()
+        .anyRequest().authenticated()
+    );
 
     http.exceptionHandling().accessDeniedPage("/login");
 
@@ -40,15 +43,6 @@ public class WebSecurityConfig {
     http.cors();
 
     return http.build();
-  }
-
-  @Bean
-  public WebSecurityCustomizer webSecurityCustomizer() {
-    return web -> web.ignoring().antMatchers("/v3/api-docs/**")
-      .antMatchers("/swagger-ui/**")
-      .antMatchers("/configuration/**")
-      .antMatchers("/webjars/**")
-      .antMatchers("/public");
   }
 
 

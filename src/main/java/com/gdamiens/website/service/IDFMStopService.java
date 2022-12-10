@@ -7,7 +7,7 @@ import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.IDFMResponse;
 import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.repository.IDFMStopRepository;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;

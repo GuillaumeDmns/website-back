@@ -11,7 +11,7 @@ import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStopLine;
 import com.gdamiens.website.repository.IDFMLineRepository;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -70,7 +70,8 @@ public class IDFMLineService extends AbstractIDFMService {
                     .get(0)
                     .getEstimatedVehicleJourney()
                     .stream()
-                    .filter(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls() != null && !estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().isEmpty())
+                    .filter(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls() != null
+                        && !estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().isEmpty())
                     .flatMap(estimatedVehicleJourney -> estimatedVehicleJourney
                         .getEstimatedCalls()
                         .getEstimatedCall()
@@ -82,7 +83,7 @@ public class IDFMLineService extends AbstractIDFMService {
                             call.setFirstOrLastJourney(estimatedVehicleJourney.getFirstOrLastJourney());
                         })
                     )
-                    .filter(estimatedCall -> !estimatedCall.getDestinationDisplay().isEmpty())
+                    .filter(estimatedCall -> estimatedCall.getDestinationDisplay() != null && !estimatedCall.getDestinationDisplay().isEmpty())
                     .collect(Collectors.groupingBy(estimatedCall -> Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
                     .entrySet()
                     .stream()
