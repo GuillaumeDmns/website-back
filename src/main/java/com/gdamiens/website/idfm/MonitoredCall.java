@@ -14,30 +14,55 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
+    "Order",
     "StopPointName",
     "VehicleAtStop",
     "DestinationDisplay",
+    "AimedArrivalTime",
     "ExpectedArrivalTime",
+    "ArrivalPlatformName",
+    "AimedDepartureTime",
     "ExpectedDepartureTime",
+    "ArrivalStatus",
     "DepartureStatus"
 })
 @Generated("jsonschema2pojo")
 public class MonitoredCall {
 
+    @JsonProperty("Order")
+    private Integer order;
     @JsonProperty("StopPointName")
     private List<StopPointName> stopPointName = null;
     @JsonProperty("VehicleAtStop")
     private Boolean vehicleAtStop;
     @JsonProperty("DestinationDisplay")
     private List<DestinationDisplay> destinationDisplay = null;
+    @JsonProperty("AimedArrivalTime")
+    private String aimedArrivalTime;
     @JsonProperty("ExpectedArrivalTime")
     private String expectedArrivalTime;
+    @JsonProperty("ArrivalPlatformName")
+    private ArrivalPlatformName arrivalPlatformName;
+    @JsonProperty("AimedDepartureTime")
+    private String aimedDepartureTime;
     @JsonProperty("ExpectedDepartureTime")
     private String expectedDepartureTime;
+    @JsonProperty("ArrivalStatus")
+    private DepartureStatusEnum arrivalStatus;
     @JsonProperty("DepartureStatus")
     private DepartureStatusEnum departureStatus;
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+
+    @JsonProperty("Order")
+    public Integer getOrder() {
+        return order;
+    }
+
+    @JsonProperty("Order")
+    public void setOrder(Integer order) {
+        this.order = order;
+    }
 
     @JsonProperty("StopPointName")
     public List<StopPointName> getStopPointName() {
@@ -69,6 +94,16 @@ public class MonitoredCall {
         this.destinationDisplay = destinationDisplay;
     }
 
+    @JsonProperty("AimedArrivalTime")
+    public String getAimedArrivalTime() {
+        return aimedArrivalTime;
+    }
+
+    @JsonProperty("AimedArrivalTime")
+    public void setAimedArrivalTime(String aimedArrivalTime) {
+        this.aimedArrivalTime = aimedArrivalTime;
+    }
+
     @JsonProperty("ExpectedArrivalTime")
     public String getExpectedArrivalTime() {
         return expectedArrivalTime;
@@ -79,6 +114,26 @@ public class MonitoredCall {
         this.expectedArrivalTime = expectedArrivalTime;
     }
 
+    @JsonProperty("ArrivalPlatformName")
+    public ArrivalPlatformName getArrivalPlatformName() {
+        return arrivalPlatformName;
+    }
+
+    @JsonProperty("ArrivalPlatformName")
+    public void setArrivalPlatformName(ArrivalPlatformName arrivalPlatformName) {
+        this.arrivalPlatformName = arrivalPlatformName;
+    }
+
+    @JsonProperty("AimedDepartureTime")
+    public String getAimedDepartureTime() {
+        return aimedDepartureTime;
+    }
+
+    @JsonProperty("AimedDepartureTime")
+    public void setAimedDepartureTime(String aimedDepartureTime) {
+        this.aimedDepartureTime = aimedDepartureTime;
+    }
+
     @JsonProperty("ExpectedDepartureTime")
     public String getExpectedDepartureTime() {
         return expectedDepartureTime;
@@ -87,6 +142,16 @@ public class MonitoredCall {
     @JsonProperty("ExpectedDepartureTime")
     public void setExpectedDepartureTime(String expectedDepartureTime) {
         this.expectedDepartureTime = expectedDepartureTime;
+    }
+
+    @JsonProperty("ArrivalStatus")
+    public DepartureStatusEnum getArrivalStatus() {
+        return arrivalStatus;
+    }
+
+    @JsonProperty("ArrivalStatus")
+    public void setArrivalStatus(DepartureStatusEnum arrivalStatus) {
+        this.arrivalStatus = arrivalStatus;
     }
 
     @JsonProperty("DepartureStatus")
