@@ -48,9 +48,9 @@ public class MonitoredCall {
     @JsonProperty("ExpectedDepartureTime")
     private String expectedDepartureTime;
     @JsonProperty("ArrivalStatus")
-    private DepartureStatusEnum arrivalStatus;
+    private StatusEnum arrivalStatus;
     @JsonProperty("DepartureStatus")
-    private DepartureStatusEnum departureStatus;
+    private StatusEnum departureStatus;
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -145,22 +145,22 @@ public class MonitoredCall {
     }
 
     @JsonProperty("ArrivalStatus")
-    public DepartureStatusEnum getArrivalStatus() {
+    public StatusEnum getArrivalStatus() {
         return arrivalStatus;
     }
 
     @JsonProperty("ArrivalStatus")
-    public void setArrivalStatus(DepartureStatusEnum arrivalStatus) {
+    public void setArrivalStatus(StatusEnum arrivalStatus) {
         this.arrivalStatus = arrivalStatus;
     }
 
     @JsonProperty("DepartureStatus")
-    public DepartureStatusEnum getDepartureStatus() {
+    public StatusEnum getDepartureStatus() {
         return departureStatus;
     }
 
     @JsonProperty("DepartureStatus")
-    public void setDepartureStatus(DepartureStatusEnum departureStatus) {
+    public void setDepartureStatus(StatusEnum departureStatus) {
         this.departureStatus = departureStatus;
     }
 

@@ -47,7 +47,7 @@ public class EstimatedCall {
     @JsonProperty("ArrivalPlatformName")
     private ArrivalPlatformName arrivalPlatformName;
     @JsonProperty("DepartureStatus")
-    private DepartureStatusEnum departureStatus;
+    private StatusEnum departureStatus;
 
     // Other properties for processing
     private String recordedAtTime;
@@ -148,12 +148,12 @@ public class EstimatedCall {
     }
 
     @JsonProperty("DepartureStatus")
-    public DepartureStatusEnum getDepartureStatus() {
+    public StatusEnum getDepartureStatus() {
         return departureStatus;
     }
 
     @JsonProperty("DepartureStatus")
-    public void setDepartureStatus(DepartureStatusEnum departureStatus) {
+    public void setDepartureStatus(StatusEnum departureStatus) {
         this.departureStatus = departureStatus;
     }
 

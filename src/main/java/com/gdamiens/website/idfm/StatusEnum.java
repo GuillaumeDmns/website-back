@@ -2,7 +2,7 @@ package com.gdamiens.website.idfm;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public enum DepartureStatusEnum {
+public enum StatusEnum {
     @JsonProperty("onTime")
     ON_TIME("onTime"),
 
@@ -32,7 +32,7 @@ public enum DepartureStatusEnum {
 
     public final String value;
 
-    DepartureStatusEnum(String value) {
+    StatusEnum(String value) {
         this.value = value;
     }
 }
