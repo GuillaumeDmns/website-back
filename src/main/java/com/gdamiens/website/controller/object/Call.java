@@ -1,15 +1,13 @@
 package com.gdamiens.website.controller.object;
 
-import com.gdamiens.website.idfm.StatusEnum;
-
 public abstract class Call {
     private String expectedArrivalTime;
 
     private String expectedDepartureTime;
 
-    private StatusEnum departureStatus;
+    private String departureStatus;
 
-    protected Call(String expectedArrivalTime, String expectedDepartureTime, StatusEnum departureStatus) {
+    protected Call(String expectedArrivalTime, String expectedDepartureTime, String departureStatus) {
         this.expectedArrivalTime = expectedArrivalTime;
         this.expectedDepartureTime = expectedDepartureTime;
         this.departureStatus = departureStatus;
@@ -31,11 +29,11 @@ public abstract class Call {
         this.expectedDepartureTime = expectedDepartureTime;
     }
 
-    public StatusEnum getDepartureStatus() {
+    public String getDepartureStatus() {
         return departureStatus;
     }
 
-    public void setDepartureStatus(StatusEnum departureStatus) {
+    public void setDepartureStatus(String departureStatus) {
         this.departureStatus = departureStatus;
     }
 }

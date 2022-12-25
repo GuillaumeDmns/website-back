@@ -2,7 +2,6 @@ package com.gdamiens.website.controller.object;
 
 import com.gdamiens.website.idfm.DestinationDisplay;
 import com.gdamiens.website.idfm.MonitoredCall;
-import com.gdamiens.website.idfm.StatusEnum;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.stream.Collectors;
@@ -17,7 +16,7 @@ public class CallUnit extends Call {
 
     private String aimedDepartureTime;
 
-    private StatusEnum arrivalStatus;
+    private String arrivalStatus;
 
     private Boolean vehicleAtStop;
 
@@ -73,11 +72,11 @@ public class CallUnit extends Call {
         this.aimedDepartureTime = aimedDepartureTime;
     }
 
-    public StatusEnum getArrivalStatus() {
+    public String getArrivalStatus() {
         return arrivalStatus;
     }
 
-    public void setArrivalStatus(StatusEnum arrivalStatus) {
+    public void setArrivalStatus(String arrivalStatus) {
         this.arrivalStatus = arrivalStatus;
     }
 
