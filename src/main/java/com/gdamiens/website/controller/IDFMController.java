@@ -6,12 +6,14 @@ import com.gdamiens.website.controller.object.LineCSV;
 import com.gdamiens.website.controller.object.NextPassagesStops;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.controller.object.StationCSV;
+import com.gdamiens.website.controller.object.StopAreaCSV;
 import com.gdamiens.website.controller.object.UnitIDFMDTO;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.service.CSVReader;
 import com.gdamiens.website.service.IDFMLineService;
+import com.gdamiens.website.service.IDFMStopAreaService;
 import com.gdamiens.website.service.IDFMStopService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -43,13 +45,18 @@ public class IDFMController {
 
     private static final String IDFM_ALL_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/referentiel-des-lignes/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
 
+    private static final String IDFM_STOP_AREAS_URL = "https://data.iledefrance.fr/explore/dataset/zones-d-arrets/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
+
     private final IDFMLineService idfmLineService;
 
     private final IDFMStopService idfmStopService;
 
-    public IDFMController(IDFMLineService idfmLineService, IDFMStopService idfmStopService) {
+    private final IDFMStopAreaService idfmStopAreaService;
+
+    public IDFMController(IDFMLineService idfmLineService, IDFMStopService idfmStopService, IDFMStopAreaService idfmStopAreaService) {
         this.idfmLineService = idfmLineService;
         this.idfmStopService = idfmStopService;
+        this.idfmStopAreaService = idfmStopAreaService;
     }
 
 
@@ -152,6 +159,25 @@ public class IDFMController {
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             log.info("error during IDFM update lines request : {}", e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/update-stop-areas")
+    @Operation(summary = "Update stop areas information", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Void> updateStopAreas() {
+        try {
+            CSVReader<StopAreaCSV> csvReader = new CSVReader<>(StopAreaCSV.class);
+
+            List<StopAreaCSV> lines = csvReader.readFromUrl(IDFM_STOP_AREAS_URL);
+
+            log.info("{} lines to process", lines.size());
+
+            this.idfmStopAreaService.saveAllStopAreasFromCSV(lines);
+
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            log.info("error during IDFM update stop areas request : {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
