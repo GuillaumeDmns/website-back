@@ -13,6 +13,7 @@ import com.gdamiens.website.controller.object.UnitIDFMDTO;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStop;
+import com.gdamiens.website.model.IDFMStopArea;
 import com.gdamiens.website.service.CSVReader;
 import com.gdamiens.website.service.IDFMLineService;
 import com.gdamiens.website.service.IDFMOperatorService;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
@@ -104,6 +106,12 @@ public class IDFMController {
             List<CallUnit> calls = this.idfmStopService.getStopNextPassage(stopId, IDFM_STOP_MONITORING_URL);
 
             IDFMStop idfmStop = this.idfmStopService.getStop(stopId);
+
+            if (Optional.ofNullable(idfmStop).isEmpty()) {
+                IDFMStopArea idfmStopArea = this.idfmStopAreaService.getStop(stopId);
+
+                return new ResponseEntity<>(new UnitIDFMDTO(idfmStopArea, calls), HttpStatus.OK);
+            }
 
             return new ResponseEntity<>(new UnitIDFMDTO(idfmStop, calls), HttpStatus.OK);
         } catch (CustomException e) {
