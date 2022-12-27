@@ -1,9 +1,11 @@
 package com.gdamiens.website.controller.object;
 
+import com.gdamiens.website.idfm.ArrivalPlatformName;
 import com.gdamiens.website.idfm.DestinationDisplay;
 import com.gdamiens.website.idfm.MonitoredCall;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class CallUnit extends Call {
@@ -34,7 +36,7 @@ public class CallUnit extends Call {
             ", "
         );
         this.aimedArrivalTime = monitoredCall.getAimedArrivalTime();
-        this.arrivalPlatformName = monitoredCall.getArrivalPlatformName() != null ? monitoredCall.getArrivalPlatformName().getValue() : null;
+        this.arrivalPlatformName = Optional.ofNullable(monitoredCall.getArrivalPlatformName()).map(ArrivalPlatformName::getValue).orElse(null);
         this.aimedDepartureTime = monitoredCall.getAimedDepartureTime();
         this.arrivalStatus = monitoredCall.getArrivalStatus();
         this.vehicleAtStop = monitoredCall.getVehicleAtStop();
