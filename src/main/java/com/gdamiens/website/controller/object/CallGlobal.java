@@ -1,7 +1,10 @@
 package com.gdamiens.website.controller.object;
 
+import com.gdamiens.website.idfm.ArrivalPlatformName;
 import com.gdamiens.website.idfm.EstimatedCall;
 import com.gdamiens.website.idfm.FirstOrLastJourneyEnum;
+
+import java.util.Optional;
 
 public class CallGlobal extends Call {
 
@@ -30,7 +33,7 @@ public class CallGlobal extends Call {
         this.recordedAtTime = estimatedCall.getRecordedAtTime();
         this.aimedArrivalTime = estimatedCall.getAimedArrivalTime();
         this.aimedDepartureTime = estimatedCall.getAimedDepartureTime();
-        this.arrivalPlatformName = estimatedCall.getArrivalPlatformName().getValue();
+        this.arrivalPlatformName = Optional.ofNullable(estimatedCall.getArrivalPlatformName()).map(ArrivalPlatformName::getValue).orElse(null);
         this.directionName = estimatedCall.getDestinationDisplay().get(0).getValue();
         this.journeyNote = estimatedCall.getJourneyNote();
         this.firstOrLastJourney = estimatedCall.getFirstOrLastJourney();

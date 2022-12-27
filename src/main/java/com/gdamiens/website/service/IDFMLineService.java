@@ -148,7 +148,30 @@ public class IDFMLineService extends AbstractIDFMService {
     }
 
     public void saveAllLinesFromCSV(List<LineCSV> stops) {
-        this.idfmLineRepository.saveAll(stops.stream().map(IDFMLine::new).collect(Collectors.toList()));
+        this.idfmLineRepository.saveAll(
+            stops
+                .parallelStream()
+                .filter(lineCSV -> {
+                    switch (lineCSV.getTransportMode()) {
+                        case "bus":
+                            if (lineCSV.getOperatorId() != null && lineCSV.getOperatorId() == 100 && lineCSV.getType().isEmpty()) {
+                                lineCSV.setTransportMode("Noctilien".equals(lineCSV.getNetworkName()) ? "noctilien" : "bus");
+                                return true;
+                            }
+                            return false;
+                        case "rail":
+                            lineCSV.setTransportMode(!lineCSV.getNetworkName().isEmpty() ? lineCSV.getNetworkName().toLowerCase() : "shuttle" );
+                            return true;
+                        case "metro":
+                        case "tram":
+                        case "funicular":
+                            return true;
+                        default: return false;
+                    }
+                })
+                .map(IDFMLine::new)
+                .collect(Collectors.toList())
+        );
     }
 
     public IDFMLine getLine(String lineId) {

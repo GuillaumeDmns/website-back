@@ -21,6 +21,15 @@ public class IDFMLine implements Serializable {
     @Column(name = "transport_mode")
     private String transportMode;
 
+    @Column(name = "operator_id")
+    private Integer operatorId;
+
+    @Column(name = "line_id_color")
+    private String lineIdColor;
+
+    @Column(name = "line_id_background_color")
+    private String lineIdBackgroundColor;
+
     public IDFMLine() {
     }
 
@@ -29,9 +38,12 @@ public class IDFMLine implements Serializable {
     }
 
     public IDFMLine(LineCSV lineCSV) {
-        this.id = lineCSV.getStopId();
+        this.id = lineCSV.getLineId();
         this.name = lineCSV.getName();
         this.transportMode = lineCSV.getTransportMode();
+        this.operatorId = lineCSV.getOperatorId();
+        this.lineIdColor = lineCSV.getLineIdColor();
+        this.lineIdBackgroundColor = lineCSV.getLineIdBackgroundColor();
     }
 
     public String getId() {
@@ -58,12 +70,39 @@ public class IDFMLine implements Serializable {
         this.transportMode = transportMode;
     }
 
+    public Integer getOperatorId() {
+        return operatorId;
+    }
+
+    public void setOperatorId(Integer operatorId) {
+        this.operatorId = operatorId;
+    }
+
+    public String getLineIdColor() {
+        return lineIdColor;
+    }
+
+    public void setLineIdColor(String lineIdColor) {
+        this.lineIdColor = lineIdColor;
+    }
+
+    public String getLineIdBackgroundColor() {
+        return lineIdBackgroundColor;
+    }
+
+    public void setLineIdBackgroundColor(String lineIdBackgroundColor) {
+        this.lineIdBackgroundColor = lineIdBackgroundColor;
+    }
+
     @Override
     public String toString() {
         return "IDFMLine{" +
             "id='" + id + '\'' +
             ", name='" + name + '\'' +
             ", transportMode='" + transportMode + '\'' +
+            ", operatorId=" + operatorId +
+            ", lineIdColor='" + lineIdColor + '\'' +
+            ", lineIdBackgroundColor='" + lineIdBackgroundColor + '\'' +
             '}';
     }
 }
