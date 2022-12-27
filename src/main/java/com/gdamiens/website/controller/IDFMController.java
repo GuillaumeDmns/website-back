@@ -4,6 +4,7 @@ import com.gdamiens.website.controller.object.CallUnit;
 import com.gdamiens.website.controller.object.FullIDFMDTO;
 import com.gdamiens.website.controller.object.LineCSV;
 import com.gdamiens.website.controller.object.NextPassagesStops;
+import com.gdamiens.website.controller.object.RelationsCSV;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.controller.object.StationCSV;
 import com.gdamiens.website.controller.object.StopAreaCSV;
@@ -46,6 +47,8 @@ public class IDFMController {
     private static final String IDFM_ALL_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/referentiel-des-lignes/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
 
     private static final String IDFM_STOP_AREAS_URL = "https://data.iledefrance.fr/explore/dataset/zones-d-arrets/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
+
+    private static final String IDFM_RELATIONS_URL = "https://data.iledefrance.fr/explore/dataset/relations/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
 
     private final IDFMLineService idfmLineService;
 
@@ -169,15 +172,34 @@ public class IDFMController {
         try {
             CSVReader<StopAreaCSV> csvReader = new CSVReader<>(StopAreaCSV.class);
 
-            List<StopAreaCSV> lines = csvReader.readFromUrl(IDFM_STOP_AREAS_URL);
+            List<StopAreaCSV> stopAreas = csvReader.readFromUrl(IDFM_STOP_AREAS_URL);
 
-            log.info("{} lines to process", lines.size());
+            log.info("{} stop areas to process", stopAreas.size());
 
-            this.idfmStopAreaService.saveAllStopAreasFromCSV(lines);
+            this.idfmStopAreaService.saveAllStopAreasFromCSV(stopAreas);
 
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             log.info("error during IDFM update stop areas request : {}", e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/update-stops-relations")
+    @Operation(summary = "Update stops relations information", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Void> updateStopsRelations() {
+        try {
+            CSVReader<RelationsCSV> csvReader = new CSVReader<>(RelationsCSV.class);
+
+            List<RelationsCSV> relations = csvReader.readFromUrl(IDFM_RELATIONS_URL);
+
+            log.info("{} relations to process", relations.size());
+
+            this.idfmStopService.saveStopsRelationsFromCSV(relations);
+
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            log.info("error during IDFM update stops relations request : {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

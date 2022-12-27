@@ -27,6 +27,9 @@ public class IDFMStop implements Serializable {
     @Column(name = "type")
     private String type;
 
+    @Column(name = "stop_area_id")
+    private Integer stopAreaId;
+
     public IDFMStop() {
     }
 
@@ -85,6 +88,14 @@ public class IDFMStop implements Serializable {
         this.type = type;
     }
 
+    public Integer getStopAreaId() {
+        return stopAreaId;
+    }
+
+    public void setStopAreaId(Integer stopAreaId) {
+        this.stopAreaId = stopAreaId;
+    }
+
     @Override
     public String toString() {
         return "IDFMStop{" +
@@ -93,6 +104,7 @@ public class IDFMStop implements Serializable {
             ", latitude=" + latitude +
             ", longitude=" + longitude +
             ", type='" + type + '\'' +
+            ", stopAreaId=" + stopAreaId +
             '}';
     }
 }
