@@ -4,6 +4,7 @@ import com.gdamiens.website.controller.object.CallUnit;
 import com.gdamiens.website.controller.object.FullIDFMDTO;
 import com.gdamiens.website.controller.object.LineCSV;
 import com.gdamiens.website.controller.object.NextPassagesStops;
+import com.gdamiens.website.controller.object.OperatorsCSV;
 import com.gdamiens.website.controller.object.RelationsCSV;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.controller.object.StationCSV;
@@ -14,6 +15,7 @@ import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.service.CSVReader;
 import com.gdamiens.website.service.IDFMLineService;
+import com.gdamiens.website.service.IDFMOperatorService;
 import com.gdamiens.website.service.IDFMStopAreaService;
 import com.gdamiens.website.service.IDFMStopService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,16 +52,25 @@ public class IDFMController {
 
     private static final String IDFM_RELATIONS_URL = "https://data.iledefrance.fr/explore/dataset/relations/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
 
+    private static final String IDFM_OPERATORS_URL = "https://data.iledefrance.fr/explore/dataset/liste-des-transporteurs-exploitant-des-lignes-de-transport-en-commun-en-ile-de-f/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
+
     private final IDFMLineService idfmLineService;
 
     private final IDFMStopService idfmStopService;
 
     private final IDFMStopAreaService idfmStopAreaService;
 
-    public IDFMController(IDFMLineService idfmLineService, IDFMStopService idfmStopService, IDFMStopAreaService idfmStopAreaService) {
+    private final IDFMOperatorService idfmOperatorService;
+
+    public IDFMController(IDFMLineService idfmLineService,
+                          IDFMStopService idfmStopService,
+                          IDFMStopAreaService idfmStopAreaService,
+                          IDFMOperatorService idfmOperatorService
+    ) {
         this.idfmLineService = idfmLineService;
         this.idfmStopService = idfmStopService;
         this.idfmStopAreaService = idfmStopAreaService;
+        this.idfmOperatorService = idfmOperatorService;
     }
 
 
@@ -200,6 +211,25 @@ public class IDFMController {
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             log.info("error during IDFM update stops relations request : {}", e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/update-operators")
+    @Operation(summary = "Update operator information", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Void> updateOperators() {
+        try {
+            CSVReader<OperatorsCSV> csvReader = new CSVReader<>(OperatorsCSV.class);
+
+            List<OperatorsCSV> operators = csvReader.readFromUrl(IDFM_OPERATORS_URL);
+
+            log.info("{} operators to process", operators.size());
+
+            this.idfmOperatorService.saveAllOperatorsFromCSV(operators);
+
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            log.info("error during IDFM update operators request : {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
