@@ -2,6 +2,7 @@ package com.gdamiens.website.service;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.CallUnit;
+import com.gdamiens.website.controller.object.RelationsCSV;
 import com.gdamiens.website.controller.object.StationCSV;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.IDFMResponse;
@@ -70,11 +71,28 @@ public class IDFMStopService extends AbstractIDFMService {
     }
 
     public void saveAllStopFromId(List<Integer> stops) {
-        this.idfmStopRepository.saveAll(stops.stream().map(IDFMStop::new).collect(Collectors.toList()));
+        this.idfmStopRepository.saveAll(stops.parallelStream().map(IDFMStop::new).collect(Collectors.toList()));
     }
 
     public void saveAllStopsFromCSV(List<StationCSV> stops) {
-        this.idfmStopRepository.saveAll(stops.stream().map(IDFMStop::new).collect(Collectors.toList()));
+        this.idfmStopRepository.saveAll(stops.parallelStream().map(IDFMStop::new).collect(Collectors.toList()));
+    }
+
+    public void saveStopsRelationsFromCSV(List<RelationsCSV> relations) {
+        log.info("oui");
+
+        relations
+            .stream()
+            .collect(
+                Collectors.groupingBy(
+                    RelationsCSV::getStopId,
+                    Collectors.collectingAndThen(Collectors.toList(), values -> values.get(0))
+                )
+            )
+            .values()
+            .parallelStream()
+            .forEach(relationsCSV -> idfmStopRepository.setStopArea(relationsCSV.getStopAreaId(), relationsCSV.getStopId()));
+
     }
 
     public IDFMStop getStop(Integer stopId) {
