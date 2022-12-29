@@ -10,6 +10,7 @@ import com.gdamiens.website.idfm.IDFMResponse;
 import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStopLine;
+import com.gdamiens.website.model.TransportMode;
 import com.gdamiens.website.model.mapper.LineMapper;
 import com.gdamiens.website.repository.IDFMLineRepository;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -171,5 +172,12 @@ public class IDFMLineService extends AbstractIDFMService {
 
     public IDFMLine getLine(String lineId) {
         return this.idfmLineRepository.findById(lineId).orElse(null);
+    }
+
+    public Map<TransportMode, List<IDFMLine>> getLinesByTransportMode() {
+        return this.idfmLineRepository
+            .findAll()
+            .stream()
+            .collect(Collectors.groupingBy(IDFMLine::getTransportMode));
     }
 }
