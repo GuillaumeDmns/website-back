@@ -10,6 +10,7 @@ import com.gdamiens.website.idfm.IDFMResponse;
 import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStopLine;
+import com.gdamiens.website.model.mapper.LineMapper;
 import com.gdamiens.website.repository.IDFMLineRepository;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
@@ -154,14 +155,8 @@ public class IDFMLineService extends AbstractIDFMService {
                 .filter(lineCSV -> {
                     switch (lineCSV.getTransportMode()) {
                         case "bus":
-                            if (lineCSV.getOperatorId() != null && lineCSV.getOperatorId() == 100 && lineCSV.getType().isEmpty()) {
-                                lineCSV.setTransportMode("Noctilien".equals(lineCSV.getNetworkName()) ? "noctilien" : "bus");
-                                return true;
-                            }
-                            return false;
+                            return lineCSV.getOperatorId() != null && lineCSV.getOperatorId() == 100 && lineCSV.getType().isEmpty();
                         case "rail":
-                            lineCSV.setTransportMode(!lineCSV.getNetworkName().isEmpty() ? lineCSV.getNetworkName().toLowerCase() : "shuttle" );
-                            return true;
                         case "metro":
                         case "tram":
                         case "funicular":
@@ -169,7 +164,7 @@ public class IDFMLineService extends AbstractIDFMService {
                         default: return false;
                     }
                 })
-                .map(IDFMLine::new)
+                .map(LineMapper::csvToDb)
                 .collect(Collectors.toList())
         );
     }
