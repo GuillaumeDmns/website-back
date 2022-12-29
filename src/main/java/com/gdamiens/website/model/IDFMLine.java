@@ -1,9 +1,9 @@
 package com.gdamiens.website.model;
 
-import com.gdamiens.website.controller.object.LineCSV;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.io.Serializable;
@@ -19,7 +19,8 @@ public class IDFMLine implements Serializable {
     private String name;
 
     @Column(name = "transport_mode")
-    private String transportMode;
+    @Enumerated(EnumType.STRING)
+    private TransportMode transportMode;
 
     @Column(name = "operator_id")
     private Integer operatorId;
@@ -35,15 +36,6 @@ public class IDFMLine implements Serializable {
 
     public IDFMLine(String id) {
         this.id = id;
-    }
-
-    public IDFMLine(LineCSV lineCSV) {
-        this.id = lineCSV.getLineId();
-        this.name = lineCSV.getName();
-        this.transportMode = lineCSV.getTransportMode();
-        this.operatorId = lineCSV.getOperatorId();
-        this.lineIdColor = lineCSV.getLineIdColor();
-        this.lineIdBackgroundColor = lineCSV.getLineIdBackgroundColor();
     }
 
     public String getId() {
@@ -62,11 +54,11 @@ public class IDFMLine implements Serializable {
         this.name = name;
     }
 
-    public String getTransportMode() {
+    public TransportMode getTransportMode() {
         return transportMode;
     }
 
-    public void setTransportMode(String transportMode) {
+    public void setTransportMode(TransportMode transportMode) {
         this.transportMode = transportMode;
     }
 

@@ -19,6 +19,7 @@ import com.gdamiens.website.service.IDFMLineService;
 import com.gdamiens.website.service.IDFMOperatorService;
 import com.gdamiens.website.service.IDFMStopAreaService;
 import com.gdamiens.website.service.IDFMStopService;
+import com.gdamiens.website.utils.Constants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.slf4j.Logger;
@@ -39,22 +40,6 @@ import java.util.Optional;
 public class IDFMController {
 
     private static final Logger log = LoggerFactory.getLogger(IDFMController.class);
-
-    private static final String IDFM_ESTIMATED_TIMETABLE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/estimated-timetable";
-
-    private static final String IDFM_STOP_MONITORING_URL = "https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring";
-
-    private static final String IDFM_ALL_STATIONS_AND_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/perimetre-des-donnees-tr-disponibles-plateforme-idfm/download/?format=csv&timezone=Europe/Berlin&lang=fr";
-
-    private static final String IDFM_ALL_STATIONS_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/arrets/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
-
-    private static final String IDFM_ALL_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/referentiel-des-lignes/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
-
-    private static final String IDFM_STOP_AREAS_URL = "https://data.iledefrance.fr/explore/dataset/zones-d-arrets/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
-
-    private static final String IDFM_RELATIONS_URL = "https://data.iledefrance.fr/explore/dataset/relations/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
-
-    private static final String IDFM_OPERATORS_URL = "https://data.iledefrance.fr/explore/dataset/liste-des-transporteurs-exploitant-des-lignes-de-transport-en-commun-en-ile-de-f/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
 
     private final IDFMLineService idfmLineService;
 
@@ -80,7 +65,7 @@ public class IDFMController {
     @Operation(summary = "Get full next passages of all IDFM stops by line", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<FullIDFMDTO> getAllStopsByLine(String lineId) {
         try {
-            Map<Integer, NextPassagesStops> calls = this.idfmLineService.getAllStopsByLine(lineId, IDFM_ESTIMATED_TIMETABLE_URL);
+            Map<Integer, NextPassagesStops> calls = this.idfmLineService.getAllStopsByLine(lineId, Constants.IDFM_ESTIMATED_TIMETABLE_URL);
 
             IDFMLine idfmLine = this.idfmLineService.getLine(lineId);
 
@@ -103,7 +88,7 @@ public class IDFMController {
     @Operation(summary = "Get next passages of a IDFM stop", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<UnitIDFMDTO> getStopInformation(@NotNull Integer stopId) {
         try {
-            List<CallUnit> calls = this.idfmStopService.getStopNextPassage(stopId, IDFM_STOP_MONITORING_URL);
+            List<CallUnit> calls = this.idfmStopService.getStopNextPassage(stopId, Constants.IDFM_STOP_MONITORING_URL);
 
             IDFMStop idfmStop = this.idfmStopService.getStop(stopId);
 
@@ -131,7 +116,7 @@ public class IDFMController {
         try {
             CSVReader<StationAndLineCSV> csvReader = new CSVReader<>(StationAndLineCSV.class);
 
-            Map<String, List<StationAndLineCSV>> linesAndStops = csvReader.readFromUrl(IDFM_ALL_STATIONS_AND_LINES_URL, StationAndLineCSV::getLineRef);
+            Map<String, List<StationAndLineCSV>> linesAndStops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_AND_LINES_URL, StationAndLineCSV::getLineRef);
 
             if (linesAndStops != null && !linesAndStops.isEmpty()) {
                 this.idfmLineService.refreshLinesAndStops(linesAndStops);
@@ -153,7 +138,7 @@ public class IDFMController {
         try {
             CSVReader<StationCSV> csvReader = new CSVReader<>(StationCSV.class);
 
-            List<StationCSV> stops = csvReader.readFromUrl(IDFM_ALL_STATIONS_URL);
+            List<StationCSV> stops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_URL);
 
             log.info("{} stops to process", stops.size());
 
@@ -172,7 +157,7 @@ public class IDFMController {
         try {
             CSVReader<LineCSV> csvReader = new CSVReader<>(LineCSV.class);
 
-            List<LineCSV> lines = csvReader.readFromUrl(IDFM_ALL_LINES_URL);
+            List<LineCSV> lines = csvReader.readFromUrl(Constants.IDFM_ALL_LINES_URL);
 
             log.info("{} lines to process", lines.size());
 
@@ -191,7 +176,7 @@ public class IDFMController {
         try {
             CSVReader<StopAreaCSV> csvReader = new CSVReader<>(StopAreaCSV.class);
 
-            List<StopAreaCSV> stopAreas = csvReader.readFromUrl(IDFM_STOP_AREAS_URL);
+            List<StopAreaCSV> stopAreas = csvReader.readFromUrl(Constants.IDFM_STOP_AREAS_URL);
 
             log.info("{} stop areas to process", stopAreas.size());
 
@@ -210,7 +195,7 @@ public class IDFMController {
         try {
             CSVReader<RelationsCSV> csvReader = new CSVReader<>(RelationsCSV.class);
 
-            List<RelationsCSV> relations = csvReader.readFromUrl(IDFM_RELATIONS_URL);
+            List<RelationsCSV> relations = csvReader.readFromUrl(Constants.IDFM_RELATIONS_URL);
 
             log.info("{} relations to process", relations.size());
 
@@ -229,7 +214,7 @@ public class IDFMController {
         try {
             CSVReader<OperatorsCSV> csvReader = new CSVReader<>(OperatorsCSV.class);
 
-            List<OperatorsCSV> operators = csvReader.readFromUrl(IDFM_OPERATORS_URL);
+            List<OperatorsCSV> operators = csvReader.readFromUrl(Constants.IDFM_OPERATORS_URL);
 
             log.info("{} operators to process", operators.size());
 
