@@ -1,16 +1,31 @@
 package com.gdamiens.website.controller.object;
 
 public abstract class Call {
-    private String expectedArrivalTime;
 
     private String expectedDepartureTime;
 
+    private String expectedArrivalTime;
+
+    private String aimedDepartureTime;
+
+    private String aimedArrivalTime;
+
     private String departureStatus;
 
-    protected Call(String expectedArrivalTime, String expectedDepartureTime, String departureStatus) {
-        this.expectedArrivalTime = expectedArrivalTime;
+    protected Call(String expectedDepartureTime, String expectedArrivalTime, String aimedDepartureTime, String aimedArrivalTime, String departureStatus) {
         this.expectedDepartureTime = expectedDepartureTime;
+        this.expectedArrivalTime = expectedArrivalTime;
+        this.aimedDepartureTime = aimedDepartureTime;
+        this.aimedArrivalTime = aimedArrivalTime;
         this.departureStatus = departureStatus;
+    }
+
+    public String getExpectedDepartureTime() {
+        return expectedDepartureTime;
+    }
+
+    public void setExpectedDepartureTime(String expectedDepartureTime) {
+        this.expectedDepartureTime = expectedDepartureTime;
     }
 
     public String getExpectedArrivalTime() {
@@ -21,12 +36,20 @@ public abstract class Call {
         this.expectedArrivalTime = expectedArrivalTime;
     }
 
-    public String getExpectedDepartureTime() {
-        return expectedDepartureTime;
+    public String getAimedDepartureTime() {
+        return aimedDepartureTime;
     }
 
-    public void setExpectedDepartureTime(String expectedDepartureTime) {
-        this.expectedDepartureTime = expectedDepartureTime;
+    public void setAimedDepartureTime(String aimedDepartureTime) {
+        this.aimedDepartureTime = aimedDepartureTime;
+    }
+
+    public String getAimedArrivalTime() {
+        return aimedArrivalTime;
+    }
+
+    public void setAimedArrivalTime(String aimedArrivalTime) {
+        this.aimedArrivalTime = aimedArrivalTime;
     }
 
     public String getDepartureStatus() {

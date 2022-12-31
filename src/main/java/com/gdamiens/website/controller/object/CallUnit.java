@@ -12,11 +12,7 @@ public class CallUnit extends Call {
 
     private String destinationDisplay;
 
-    private String aimedArrivalTime;
-
     private String arrivalPlatformName;
-
-    private String aimedDepartureTime;
 
     private String arrivalStatus;
 
@@ -24,9 +20,12 @@ public class CallUnit extends Call {
 
     public CallUnit(MonitoredCall monitoredCall) {
         super(
-            monitoredCall.getExpectedArrivalTime(),
             monitoredCall.getExpectedDepartureTime(),
-            monitoredCall.getDepartureStatus());
+            monitoredCall.getExpectedArrivalTime(),
+            monitoredCall.getAimedDepartureTime(),
+            monitoredCall.getAimedArrivalTime(),
+            monitoredCall.getDepartureStatus()
+        );
         this.destinationDisplay = StringUtils.join(
             monitoredCall
                 .getDestinationDisplay()
@@ -35,9 +34,7 @@ public class CallUnit extends Call {
                 .collect(Collectors.toList()),
             ", "
         );
-        this.aimedArrivalTime = monitoredCall.getAimedArrivalTime();
         this.arrivalPlatformName = Optional.ofNullable(monitoredCall.getArrivalPlatformName()).map(ArrivalPlatformName::getValue).orElse(null);
-        this.aimedDepartureTime = monitoredCall.getAimedDepartureTime();
         this.arrivalStatus = monitoredCall.getArrivalStatus();
         this.vehicleAtStop = monitoredCall.getVehicleAtStop();
     }
@@ -50,28 +47,12 @@ public class CallUnit extends Call {
         this.destinationDisplay = destinationDisplay;
     }
 
-    public String getAimedArrivalTime() {
-        return aimedArrivalTime;
-    }
-
-    public void setAimedArrivalTime(String aimedArrivalTime) {
-        this.aimedArrivalTime = aimedArrivalTime;
-    }
-
     public String getArrivalPlatformName() {
         return arrivalPlatformName;
     }
 
     public void setArrivalPlatformName(String arrivalPlatformName) {
         this.arrivalPlatformName = arrivalPlatformName;
-    }
-
-    public String getAimedDepartureTime() {
-        return aimedDepartureTime;
-    }
-
-    public void setAimedDepartureTime(String aimedDepartureTime) {
-        this.aimedDepartureTime = aimedDepartureTime;
     }
 
     public String getArrivalStatus() {

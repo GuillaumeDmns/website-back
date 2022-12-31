@@ -4,6 +4,10 @@ import com.gdamiens.website.model.IDFMLine;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface IDFMLineRepository extends JpaRepository<IDFMLine, String> {
+
+    List<IDFMLine> findAllByOrderByNameAsc();
 }

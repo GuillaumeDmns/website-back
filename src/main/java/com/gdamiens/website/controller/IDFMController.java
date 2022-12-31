@@ -110,8 +110,8 @@ public class IDFMController {
         return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @GetMapping("/update-stations-and-lines")
-    @Operation(summary = "Get list of all stops and lines", security = @SecurityRequirement(name = "Auth. Token"))
+    @GetMapping("/update-stops-and-lines")
+    @Operation(summary = "Update stops and lines information", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Void> updateStopsAndLines() {
         try {
             CSVReader<StationAndLineCSV> csvReader = new CSVReader<>(StationAndLineCSV.class);
@@ -133,7 +133,7 @@ public class IDFMController {
     }
 
     @GetMapping("/update-stops")
-    @Operation(summary = "Get list of all stops", security = @SecurityRequirement(name = "Auth. Token"))
+    @Operation(summary = "Update stops information", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Void> updateStopsInformation() {
         try {
             CSVReader<StationCSV> csvReader = new CSVReader<>(StationCSV.class);
@@ -152,7 +152,7 @@ public class IDFMController {
     }
 
     @GetMapping("/update-lines")
-    @Operation(summary = "Get list of all stops", security = @SecurityRequirement(name = "Auth. Token"))
+    @Operation(summary = "Update lines information", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Void> updateLinesInformation() {
         try {
             CSVReader<LineCSV> csvReader = new CSVReader<>(LineCSV.class);
@@ -209,7 +209,7 @@ public class IDFMController {
     }
 
     @GetMapping("/update-operators")
-    @Operation(summary = "Update operator information", security = @SecurityRequirement(name = "Auth. Token"))
+    @Operation(summary = "Update operators information", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Void> updateOperators() {
         try {
             CSVReader<OperatorsCSV> csvReader = new CSVReader<>(OperatorsCSV.class);

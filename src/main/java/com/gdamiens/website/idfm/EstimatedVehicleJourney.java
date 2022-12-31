@@ -18,9 +18,12 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "LineRef",
     "DirectionRef",
     "DatedVehicleJourneyRef",
+    "VehicleMode",
     "RouteRef",
     "PublishedLineName",
+    "DirectionName",
     "OriginRef",
+    "OriginName",
     "DestinationRef",
     "DestinationName",
     "OperatorRef",
@@ -28,9 +31,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "JourneyNote",
     "FirstOrLastJourney",
     "EstimatedCalls",
-    "VehicleMode",
-    "DirectionName",
-    "OriginName",
     "VehicleJourneyName"
 })
 @Generated("jsonschema2pojo")
@@ -44,12 +44,18 @@ public class EstimatedVehicleJourney {
     private DirectionRef directionRef;
     @JsonProperty("DatedVehicleJourneyRef")
     private DatedVehicleJourneyRef datedVehicleJourneyRef;
+    @JsonProperty("VehicleMode")
+    private List<String> vehicleMode = null;
     @JsonProperty("RouteRef")
     private RouteRef routeRef;
     @JsonProperty("PublishedLineName")
     private List<PublishedLineName> publishedLineName = null;
+    @JsonProperty("DirectionName")
+    private List<DirectionName> directionName = null;
     @JsonProperty("OriginRef")
     private OriginRef originRef;
+    @JsonProperty("OriginName")
+    private List<Object> originName = null;
     @JsonProperty("DestinationRef")
     private DestinationRef destinationRef;
     @JsonProperty("DestinationName")
@@ -64,12 +70,6 @@ public class EstimatedVehicleJourney {
     private FirstOrLastJourneyEnum firstOrLastJourney;
     @JsonProperty("EstimatedCalls")
     private EstimatedCalls estimatedCalls;
-    @JsonProperty("VehicleMode")
-    private List<String> vehicleMode = null;
-    @JsonProperty("DirectionName")
-    private List<DirectionName> directionName = null;
-    @JsonProperty("OriginName")
-    private List<OriginName> originName = null;
     @JsonProperty("VehicleJourneyName")
     private List<VehicleJourneyName> vehicleJourneyName = null;
     @JsonIgnore
@@ -115,6 +115,16 @@ public class EstimatedVehicleJourney {
         this.datedVehicleJourneyRef = datedVehicleJourneyRef;
     }
 
+    @JsonProperty("VehicleMode")
+    public List<String> getVehicleMode() {
+        return vehicleMode;
+    }
+
+    @JsonProperty("VehicleMode")
+    public void setVehicleMode(List<String> vehicleMode) {
+        this.vehicleMode = vehicleMode;
+    }
+
     @JsonProperty("RouteRef")
     public RouteRef getRouteRef() {
         return routeRef;
@@ -135,6 +145,16 @@ public class EstimatedVehicleJourney {
         this.publishedLineName = publishedLineName;
     }
 
+    @JsonProperty("DirectionName")
+    public List<DirectionName> getDirectionName() {
+        return directionName;
+    }
+
+    @JsonProperty("DirectionName")
+    public void setDirectionName(List<DirectionName> directionName) {
+        this.directionName = directionName;
+    }
+
     @JsonProperty("OriginRef")
     public OriginRef getOriginRef() {
         return originRef;
@@ -143,6 +163,16 @@ public class EstimatedVehicleJourney {
     @JsonProperty("OriginRef")
     public void setOriginRef(OriginRef originRef) {
         this.originRef = originRef;
+    }
+
+    @JsonProperty("OriginName")
+    public List<Object> getOriginName() {
+        return originName;
+    }
+
+    @JsonProperty("OriginName")
+    public void setOriginName(List<Object> originName) {
+        this.originName = originName;
     }
 
     @JsonProperty("DestinationRef")
@@ -213,36 +243,6 @@ public class EstimatedVehicleJourney {
     @JsonProperty("EstimatedCalls")
     public void setEstimatedCalls(EstimatedCalls estimatedCalls) {
         this.estimatedCalls = estimatedCalls;
-    }
-
-    @JsonProperty("VehicleMode")
-    public List<String> getVehicleMode() {
-        return vehicleMode;
-    }
-
-    @JsonProperty("VehicleMode")
-    public void setVehicleMode(List<String> vehicleMode) {
-        this.vehicleMode = vehicleMode;
-    }
-
-    @JsonProperty("DirectionName")
-    public List<DirectionName> getDirectionName() {
-        return directionName;
-    }
-
-    @JsonProperty("DirectionName")
-    public void setDirectionName(List<DirectionName> directionName) {
-        this.directionName = directionName;
-    }
-
-    @JsonProperty("OriginName")
-    public List<OriginName> getOriginName() {
-        return originName;
-    }
-
-    @JsonProperty("OriginName")
-    public void setOriginName(List<OriginName> originName) {
-        this.originName = originName;
     }
 
     @JsonProperty("VehicleJourneyName")

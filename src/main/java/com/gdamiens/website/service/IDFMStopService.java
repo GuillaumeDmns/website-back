@@ -6,6 +6,10 @@ import com.gdamiens.website.controller.object.RelationsCSV;
 import com.gdamiens.website.controller.object.StationCSV;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.IDFMResponse;
+import com.gdamiens.website.idfm.MonitoredStopVisit;
+import com.gdamiens.website.idfm.ServiceDelivery;
+import com.gdamiens.website.idfm.Siri;
+import com.gdamiens.website.idfm.StopMonitoringDelivery;
 import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.repository.IDFMStopRepository;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -21,6 +25,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,27 +52,29 @@ public class IDFMStopService extends AbstractIDFMService {
 
         ResponseEntity<IDFMResponse> response = new RestTemplate(this.requestFactory).exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, IDFMResponse.class);
 
-        if (response.getStatusCode().is2xxSuccessful()) {
-            IDFMResponse idfmResponse = response.getBody();
-
-            if (idfmResponse != null) {
-                return idfmResponse
-                    .getSiri()
-                    .getServiceDelivery()
-                    .getStopMonitoringDelivery()
-                    .get(0)
-                    .getMonitoredStopVisit()
-                    .stream()
-                    .map(monitoredStopVisit -> monitoredStopVisit
-                        .getMonitoredVehicleJourney()
-                        .getMonitoredCall()
-                    )
-                    .map(CallUnit::new)
-                    .collect(Collectors.toList());
-            }
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new CustomException("IDFM response getNextPassage != 200", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        throw new CustomException("IDFM response getNextPassage != 200 or body is null", HttpStatus.INTERNAL_SERVER_ERROR);
+        Optional<IDFMResponse> optionalIDFMResponse = Optional.ofNullable(response.getBody());
+
+        List<MonitoredStopVisit> monitoredStopVisits = optionalIDFMResponse
+            .map(IDFMResponse::getSiri)
+            .map(Siri::getServiceDelivery)
+            .map(ServiceDelivery::getStopMonitoringDelivery)
+            .filter(l -> !l.isEmpty())
+            .map(stopMonitoringDeliveries -> stopMonitoringDeliveries.get(0))
+            .map(StopMonitoringDelivery::getMonitoredStopVisit)
+            .orElseThrow(() -> new CustomException("IDFM response body does not contain any stop visit", HttpStatus.INTERNAL_SERVER_ERROR));
+
+        return monitoredStopVisits
+            .stream()
+            .map(monitoredStopVisit -> monitoredStopVisit
+                .getMonitoredVehicleJourney()
+                .getMonitoredCall()
+            )
+            .map(CallUnit::new)
+            .collect(Collectors.toList());
     }
 
     public void saveAllStopFromId(List<Integer> stops) {

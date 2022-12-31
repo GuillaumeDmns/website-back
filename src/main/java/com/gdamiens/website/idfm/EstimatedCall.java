@@ -30,24 +30,24 @@ public class EstimatedCall {
 
     @JsonProperty("StopPointRef")
     private StopPointRef stopPointRef;
-    @JsonProperty("ExpectedArrivalTime")
-    private String expectedArrivalTime;
     @JsonProperty("ExpectedDepartureTime")
     private String expectedDepartureTime;
-    @JsonProperty("AimedArrivalTime")
-    private String aimedArrivalTime;
-    @JsonProperty("AimedDepartureTime")
-    private String aimedDepartureTime;
     @JsonProperty("DestinationDisplay")
     private List<DestinationDisplay> destinationDisplay = null;
-    @JsonProperty("ArrivalStatus")
-    private String arrivalStatus;
-    @JsonProperty("ArrivalProximityText")
-    private ArrivalProximityText arrivalProximityText;
-    @JsonProperty("ArrivalPlatformName")
-    private ArrivalPlatformName arrivalPlatformName;
     @JsonProperty("DepartureStatus")
     private String departureStatus;
+    @JsonProperty("ArrivalPlatformName")
+    private ArrivalPlatformName arrivalPlatformName;
+    @JsonProperty("ExpectedArrivalTime")
+    private String expectedArrivalTime;
+    @JsonProperty("AimedArrivalTime")
+    private String aimedArrivalTime;
+    @JsonProperty("ArrivalStatus")
+    private String arrivalStatus;
+    @JsonProperty("AimedDepartureTime")
+    private String aimedDepartureTime;
+    @JsonProperty("ArrivalProximityText")
+    private ArrivalProximityText arrivalProximityText;
 
     // Other properties for processing
     private String recordedAtTime;
@@ -67,16 +67,6 @@ public class EstimatedCall {
         this.stopPointRef = stopPointRef;
     }
 
-    @JsonProperty("ExpectedArrivalTime")
-    public String getExpectedArrivalTime() {
-        return expectedArrivalTime;
-    }
-
-    @JsonProperty("ExpectedArrivalTime")
-    public void setExpectedArrivalTime(String expectedArrivalTime) {
-        this.expectedArrivalTime = expectedArrivalTime;
-    }
-
     @JsonProperty("ExpectedDepartureTime")
     public String getExpectedDepartureTime() {
         return expectedDepartureTime;
@@ -85,26 +75,6 @@ public class EstimatedCall {
     @JsonProperty("ExpectedDepartureTime")
     public void setExpectedDepartureTime(String expectedDepartureTime) {
         this.expectedDepartureTime = expectedDepartureTime;
-    }
-
-    @JsonProperty("AimedArrivalTime")
-    public String getAimedArrivalTime() {
-        return aimedArrivalTime;
-    }
-
-    @JsonProperty("AimedArrivalTime")
-    public void setAimedArrivalTime(String aimedArrivalTime) {
-        this.aimedArrivalTime = aimedArrivalTime;
-    }
-
-    @JsonProperty("AimedDepartureTime")
-    public String getAimedDepartureTime() {
-        return aimedDepartureTime;
-    }
-
-    @JsonProperty("AimedDepartureTime")
-    public void setAimedDepartureTime(String aimedDepartureTime) {
-        this.aimedDepartureTime = aimedDepartureTime;
     }
 
     @JsonProperty("DestinationDisplay")
@@ -117,24 +87,14 @@ public class EstimatedCall {
         this.destinationDisplay = destinationDisplay;
     }
 
-    @JsonProperty("ArrivalStatus")
-    public String getArrivalStatus() {
-        return arrivalStatus;
+    @JsonProperty("DepartureStatus")
+    public String getDepartureStatus() {
+        return departureStatus;
     }
 
-    @JsonProperty("ArrivalStatus")
-    public void setArrivalStatus(String arrivalStatus) {
-        this.arrivalStatus = arrivalStatus;
-    }
-
-    @JsonProperty("ArrivalProximityText")
-    public ArrivalProximityText getArrivalProximityText() {
-        return arrivalProximityText;
-    }
-
-    @JsonProperty("ArrivalProximityText")
-    public void setArrivalProximityText(ArrivalProximityText arrivalProximityText) {
-        this.arrivalProximityText = arrivalProximityText;
+    @JsonProperty("DepartureStatus")
+    public void setDepartureStatus(String departureStatus) {
+        this.departureStatus = departureStatus;
     }
 
     @JsonProperty("ArrivalPlatformName")
@@ -147,14 +107,54 @@ public class EstimatedCall {
         this.arrivalPlatformName = arrivalPlatformName;
     }
 
-    @JsonProperty("DepartureStatus")
-    public String getDepartureStatus() {
-        return departureStatus;
+    @JsonProperty("ExpectedArrivalTime")
+    public String getExpectedArrivalTime() {
+        return expectedArrivalTime;
     }
 
-    @JsonProperty("DepartureStatus")
-    public void setDepartureStatus(String departureStatus) {
-        this.departureStatus = departureStatus;
+    @JsonProperty("ExpectedArrivalTime")
+    public void setExpectedArrivalTime(String expectedArrivalTime) {
+        this.expectedArrivalTime = expectedArrivalTime;
+    }
+
+    @JsonProperty("AimedArrivalTime")
+    public String getAimedArrivalTime() {
+        return aimedArrivalTime;
+    }
+
+    @JsonProperty("AimedArrivalTime")
+    public void setAimedArrivalTime(String aimedArrivalTime) {
+        this.aimedArrivalTime = aimedArrivalTime;
+    }
+
+    @JsonProperty("ArrivalStatus")
+    public String getArrivalStatus() {
+        return arrivalStatus;
+    }
+
+    @JsonProperty("ArrivalStatus")
+    public void setArrivalStatus(String arrivalStatus) {
+        this.arrivalStatus = arrivalStatus;
+    }
+
+    @JsonProperty("AimedDepartureTime")
+    public String getAimedDepartureTime() {
+        return aimedDepartureTime;
+    }
+
+    @JsonProperty("AimedDepartureTime")
+    public void setAimedDepartureTime(String aimedDepartureTime) {
+        this.aimedDepartureTime = aimedDepartureTime;
+    }
+
+    @JsonProperty("ArrivalProximityText")
+    public ArrivalProximityText getArrivalProximityText() {
+        return arrivalProximityText;
+    }
+
+    @JsonProperty("ArrivalProximityText")
+    public void setArrivalProximityText(ArrivalProximityText arrivalProximityText) {
+        this.arrivalProximityText = arrivalProximityText;
     }
 
     public String getRecordedAtTime() {

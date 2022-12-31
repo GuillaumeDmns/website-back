@@ -6,9 +6,16 @@ import com.gdamiens.website.controller.object.LineCSV;
 import com.gdamiens.website.controller.object.NextPassagesStops;
 import com.gdamiens.website.controller.object.StationAndLineCSV;
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.idfm.EstimatedCalls;
+import com.gdamiens.website.idfm.EstimatedJourneyVersionFrame;
+import com.gdamiens.website.idfm.EstimatedTimetableDelivery;
+import com.gdamiens.website.idfm.EstimatedVehicleJourney;
 import com.gdamiens.website.idfm.IDFMResponse;
 import com.gdamiens.website.idfm.JourneyNote;
+import com.gdamiens.website.idfm.ServiceDelivery;
+import com.gdamiens.website.idfm.Siri;
 import com.gdamiens.website.model.IDFMLine;
+import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.model.IDFMStopLine;
 import com.gdamiens.website.model.TransportMode;
 import com.gdamiens.website.model.mapper.LineMapper;
@@ -25,8 +32,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,48 +67,61 @@ public class IDFMLineService extends AbstractIDFMService {
 
         ResponseEntity<IDFMResponse> response = new RestTemplate(this.requestFactory).exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, IDFMResponse.class);
 
-        if (response.getStatusCode().is2xxSuccessful()) {
-            IDFMResponse idfmResponse = response.getBody();
-
-            if (idfmResponse != null) {
-
-                return idfmResponse
-                    .getSiri()
-                    .getServiceDelivery()
-                    .getEstimatedTimetableDelivery()
-                    .get(0)
-                    .getEstimatedJourneyVersionFrame()
-                    .get(0)
-                    .getEstimatedVehicleJourney()
-                    .stream()
-                    .filter(estimatedVehicleJourney -> estimatedVehicleJourney.getEstimatedCalls() != null
-                        && !estimatedVehicleJourney.getEstimatedCalls().getEstimatedCall().isEmpty())
-                    .flatMap(estimatedVehicleJourney -> estimatedVehicleJourney
-                        .getEstimatedCalls()
-                        .getEstimatedCall()
-                        .stream()
-                        .peek(call -> {
-                            call.setRecordedAtTime(estimatedVehicleJourney.getRecordedAtTime());
-                            List<JourneyNote> journeyNote = estimatedVehicleJourney.getJourneyNote();
-                            call.setJourneyNote(journeyNote != null && !journeyNote.isEmpty() ? journeyNote.get(0).getValue() : null);
-                            call.setFirstOrLastJourney(estimatedVehicleJourney.getFirstOrLastJourney());
-                        })
-                    )
-                    .filter(estimatedCall -> estimatedCall.getDestinationDisplay() != null && !estimatedCall.getDestinationDisplay().isEmpty())
-                    .collect(Collectors.groupingBy(estimatedCall -> Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
-                    .entrySet()
-                    .stream()
-                    .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> new NextPassagesStops(this.idfmStopService.getStop(e.getKey()), e.getValue()
-                            .stream()
-                            .map(CallGlobal::new)
-                            .collect(Collectors.groupingBy(CallGlobal::getDirectionName)))
-                    ));
-            }
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new CustomException("IDFM response allStopsByLine != 200", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        throw new CustomException("IDFM response allStopsByLine != 200 or body is null", HttpStatus.INTERNAL_SERVER_ERROR);
+        Optional<IDFMResponse> optionalIDFMResponse = Optional.ofNullable(response.getBody());
+
+        List<EstimatedVehicleJourney> estimatedVehicleJourneys = optionalIDFMResponse
+            .map(IDFMResponse::getSiri)
+            .map(Siri::getServiceDelivery)
+            .map(ServiceDelivery::getEstimatedTimetableDelivery)
+            .filter(l -> !l.isEmpty())
+            .map(estimatedTimetableDeliveries -> estimatedTimetableDeliveries.get(0))
+            .map(EstimatedTimetableDelivery::getEstimatedJourneyVersionFrame)
+            .filter(l -> !l.isEmpty())
+            .map(estimatedJourneyVersionFrames -> estimatedJourneyVersionFrames.get(0))
+            .map(EstimatedJourneyVersionFrame::getEstimatedVehicleJourney)
+            .orElseThrow(() -> new CustomException("IDFM response body does not contain any journey", HttpStatus.INTERNAL_SERVER_ERROR));
+
+        return estimatedVehicleJourneys
+            .stream()
+            .map(Optional::ofNullable)
+            .flatMap(estimatedVehicleJourney -> estimatedVehicleJourney
+                .map(EstimatedVehicleJourney::getEstimatedCalls)
+                .map(EstimatedCalls::getEstimatedCall)
+                .orElse(new ArrayList<>())
+                .stream()
+                .peek(call -> {
+                    call.setRecordedAtTime(estimatedVehicleJourney.map(EstimatedVehicleJourney::getRecordedAtTime).orElse(null));
+                    call.setJourneyNote(estimatedVehicleJourney
+                        .map(EstimatedVehicleJourney::getJourneyNote)
+                        .filter(l -> !l.isEmpty())
+                        .map(journeyNotes -> journeyNotes.get(0))
+                        .map(JourneyNote::getValue)
+                        .orElse(null)
+                    );
+                    call.setFirstOrLastJourney(estimatedVehicleJourney.map(EstimatedVehicleJourney::getFirstOrLastJourney).orElse(null));
+                }))
+            .filter(estimatedCall -> estimatedCall.getDestinationDisplay() != null && !estimatedCall.getDestinationDisplay().isEmpty())
+            .collect(Collectors.groupingBy(estimatedCall -> Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> {
+                    IDFMStop idfmStop = this.idfmStopService.getStop(e.getKey());
+
+                    return new NextPassagesStops(
+                        idfmStop != null ? idfmStop : new IDFMStop(),
+                        e.getValue()
+                            .stream()
+                            .map(CallGlobal::new)
+                            .collect(Collectors.groupingBy(CallGlobal::getDirectionName))
+                    );
+                }
+            ));
     }
 
     public void refreshLinesAndStops(Map<String, List<StationAndLineCSV>> linesAndStops) {
@@ -107,11 +129,11 @@ public class IDFMLineService extends AbstractIDFMService {
         log.info("Start importing list of lines");
         this.idfmLineRepository.saveAll(
             linesAndStops
-            .keySet()
-            .parallelStream()
-            .filter(line -> "STIF".equals(line.split(":")[0]))
-            .map(line -> new IDFMLine(line.split(":")[3]))
-            .collect(Collectors.toList())
+                .keySet()
+                .parallelStream()
+                .filter(line -> "STIF".equals(line.split(":")[0]))
+                .map(line -> new IDFMLine(line.split(":")[3]))
+                .collect(Collectors.toList())
         );
         log.info("Finished importing list of lines");
 
@@ -145,7 +167,7 @@ public class IDFMLineService extends AbstractIDFMService {
                         .collect(Collectors.toList())
                 );
 
-        });
+            });
         log.info("Finished importing stop/line pairs");
     }
 
@@ -176,7 +198,7 @@ public class IDFMLineService extends AbstractIDFMService {
 
     public Map<TransportMode, List<IDFMLine>> getLinesByTransportMode() {
         return this.idfmLineRepository
-            .findAll()
+            .findAllByOrderByNameAsc()
             .stream()
             .collect(Collectors.groupingBy(IDFMLine::getTransportMode));
     }
