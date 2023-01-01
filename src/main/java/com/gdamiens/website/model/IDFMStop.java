@@ -33,10 +33,6 @@ public class IDFMStop implements Serializable {
     public IDFMStop() {
     }
 
-    public IDFMStop(Integer id) {
-        this.id = id;
-    }
-
     public IDFMStop(StationCSV stationCSV) {
         this.id = Integer.parseInt(stationCSV.getStopId());
         this.name = stationCSV.getStopName();

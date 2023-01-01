@@ -125,32 +125,11 @@ public class IDFMLineService extends AbstractIDFMService {
     }
 
     public void refreshLinesAndStops(Map<String, List<StationAndLineCSV>> linesAndStops) {
-        // Update list of lines
-        log.info("Start importing list of lines");
-        this.idfmLineRepository.saveAll(
-            linesAndStops
-                .keySet()
-                .parallelStream()
-                .filter(line -> "STIF".equals(line.split(":")[0]))
-                .map(line -> new IDFMLine(line.split(":")[3]))
-                .collect(Collectors.toList())
-        );
-        log.info("Finished importing list of lines");
-
-        log.info("Start importing list of stops");
-        this.idfmStopService.saveAllStopFromId(
-            linesAndStops
-                .values()
-                .parallelStream()
-                .flatMap(List::stream)
-                .filter(stop -> "STIF".equals(stop.getMonitoringRefZDE().split(":")[0]))
-                .map(stop -> Integer.parseInt(stop.getMonitoringRefZDE().split(":")[3]))
-                .distinct()
-                .collect(Collectors.toList())
-        );
-        log.info("Finished importing list of stops");
 
         log.info("Start importing stop/line pairs");
+
+        List<IDFMLine> allLines = this.idfmLineRepository.findAll();
+
         linesAndStops
             .entrySet()
             .parallelStream()
@@ -158,15 +137,16 @@ public class IDFMLineService extends AbstractIDFMService {
             .forEach(lineAndStop -> {
                 String lineId = lineAndStop.getKey().split(":")[3];
 
-                this.idfmStopLineService.saveAllStopLine(
-                    lineAndStop
-                        .getValue()
-                        .stream()
-                        .filter(stop -> "STIF".equals(stop.getMonitoringRefZDE().split(":")[0]))
-                        .map(stop -> new IDFMStopLine(lineId, Integer.parseInt(stop.getMonitoringRefZDE().split(":")[3])))
-                        .collect(Collectors.toList())
-                );
-
+                if (allLines.stream().anyMatch(idfmLine -> idfmLine.getId().equals(lineId))) {
+                    this.idfmStopLineService.saveAllStopLine(
+                        lineAndStop
+                            .getValue()
+                            .stream()
+                            .filter(stop -> "STIF".equals(stop.getMonitoringRefZDE().split(":")[0]))
+                            .map(stop -> new IDFMStopLine(lineId, Integer.parseInt(stop.getMonitoringRefZDE().split(":")[3])))
+                            .collect(Collectors.toList())
+                    );
+                }
             });
         log.info("Finished importing stop/line pairs");
     }

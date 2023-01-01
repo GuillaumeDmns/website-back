@@ -77,10 +77,6 @@ public class IDFMStopService extends AbstractIDFMService {
             .collect(Collectors.toList());
     }
 
-    public void saveAllStopFromId(List<Integer> stops) {
-        this.idfmStopRepository.saveAll(stops.parallelStream().map(IDFMStop::new).collect(Collectors.toList()));
-    }
-
     public void saveAllStopsFromCSV(List<StationCSV> stops) {
         this.idfmStopRepository.saveAll(stops.parallelStream().map(IDFMStop::new).collect(Collectors.toList()));
     }
