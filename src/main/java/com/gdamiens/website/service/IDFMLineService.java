@@ -33,6 +33,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -160,10 +161,11 @@ public class IDFMLineService extends AbstractIDFMService {
                         case "bus":
                             return lineCSV.getOperatorId() != null && lineCSV.getOperatorId() == 100 && lineCSV.getType().isEmpty();
                         case "rail":
+                            return !Arrays.asList("C00563", "C01388").contains(lineCSV.getLineId());
                         case "metro":
                         case "tram":
-                        case "funicular":
                             return true;
+                        case "funicular":
                         default: return false;
                     }
                 })

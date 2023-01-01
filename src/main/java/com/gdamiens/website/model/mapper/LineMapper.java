@@ -22,16 +22,12 @@ public class LineMapper {
                 if ("TER".equals(lineCSV.getNetworkName())) idfmLine.setTransportMode(TransportMode.TER);
                 else if ("Transilien".equals(lineCSV.getNetworkName())) idfmLine.setTransportMode(TransportMode.TRANSILIEN);
                 else if ("RER".equals(lineCSV.getNetworkName())) idfmLine.setTransportMode(TransportMode.RER);
-                else idfmLine.setTransportMode(TransportMode.SHUTTLE);
                 break;
             case "metro":
                 idfmLine.setTransportMode(TransportMode.METRO);
                 break;
             case "tram":
                 idfmLine.setTransportMode(TransportMode.TRAM);
-                break;
-            case "funicular":
-                idfmLine.setTransportMode(TransportMode.FUNICULAR);
                 break;
             default:
                 idfmLine.setTransportMode(TransportMode.BUS);

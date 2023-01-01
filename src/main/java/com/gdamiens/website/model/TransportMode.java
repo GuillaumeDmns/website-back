@@ -7,7 +7,5 @@ public enum TransportMode {
     TRAM,
     TER,
     TRANSILIEN,
-    RER,
-    SHUTTLE,
-    FUNICULAR;
+    RER;
 }
