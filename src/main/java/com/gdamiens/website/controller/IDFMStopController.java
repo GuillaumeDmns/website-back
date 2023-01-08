@@ -33,7 +33,7 @@ public class IDFMStopController {
 
     }
 
-    @GetMapping("/stops")
+    @GetMapping("/stops-by-line")
     @Operation(summary = "Get list of stops by their line ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<StopsByLineDTO> getStopsByLineId(String lineId) {
         try {
