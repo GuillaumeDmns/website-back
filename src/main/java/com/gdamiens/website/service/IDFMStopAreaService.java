@@ -30,4 +30,8 @@ public class IDFMStopAreaService {
     public IDFMStopArea getStop(Integer stopAreaId) {
         return this.idfmStopAreaRepository.findById(stopAreaId).orElse(null);
     }
+
+    public List<IDFMStopArea> getStopAreasFromLineId(String lineId) {
+        return this.idfmStopAreaRepository.getStopAreasFromLineId(lineId);
+    }
 }
