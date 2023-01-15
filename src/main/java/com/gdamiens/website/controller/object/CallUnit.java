@@ -2,7 +2,13 @@ package com.gdamiens.website.controller.object;
 
 import com.gdamiens.website.idfm.ArrivalPlatformName;
 import com.gdamiens.website.idfm.DestinationDisplay;
+import com.gdamiens.website.idfm.DestinationName;
+import com.gdamiens.website.idfm.DirectionName;
+import com.gdamiens.website.idfm.LineRef;
 import com.gdamiens.website.idfm.MonitoredCall;
+import com.gdamiens.website.idfm.MonitoredStopVisit;
+import com.gdamiens.website.idfm.MonitoredVehicleJourney;
+import com.gdamiens.website.idfm.OperatorRef;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Optional;
@@ -18,25 +24,48 @@ public class CallUnit extends Call {
 
     private Boolean vehicleAtStop;
 
-    public CallUnit(MonitoredCall monitoredCall) {
-        super(
-            monitoredCall.getExpectedDepartureTime(),
-            monitoredCall.getExpectedArrivalTime(),
-            monitoredCall.getAimedDepartureTime(),
-            monitoredCall.getAimedArrivalTime(),
-            monitoredCall.getDepartureStatus()
-        );
-        this.destinationDisplay = StringUtils.join(
-            monitoredCall
-                .getDestinationDisplay()
-                .stream()
-                .map(DestinationDisplay::getValue)
-                .collect(Collectors.toList()),
-            ", "
-        );
-        this.arrivalPlatformName = Optional.ofNullable(monitoredCall.getArrivalPlatformName()).map(ArrivalPlatformName::getValue).orElse(null);
-        this.arrivalStatus = monitoredCall.getArrivalStatus();
-        this.vehicleAtStop = monitoredCall.getVehicleAtStop();
+    private String lineId;
+
+    private String operatorId;
+
+    private String directionName;
+
+    private String destinationName;
+
+
+    public CallUnit(MonitoredStopVisit monitoredStopVisit) {
+        super(monitoredStopVisit);
+
+        Optional<MonitoredVehicleJourney> optionalMonitoredVehicleJourney = Optional.ofNullable(monitoredStopVisit)
+            .map(MonitoredStopVisit::getMonitoredVehicleJourney);
+        Optional<MonitoredCall> optionalMonitoredCall = optionalMonitoredVehicleJourney
+            .map(MonitoredVehicleJourney::getMonitoredCall);
+
+        if (optionalMonitoredCall.isPresent()) {
+            MonitoredCall monitoredCall = optionalMonitoredCall.get();
+
+            this.destinationDisplay = StringUtils.join(
+                monitoredCall
+                    .getDestinationDisplay()
+                    .stream()
+                    .map(DestinationDisplay::getValue)
+                    .collect(Collectors.toList()),
+                ", "
+            );
+            this.arrivalPlatformName = Optional.ofNullable(monitoredCall.getArrivalPlatformName()).map(ArrivalPlatformName::getValue).orElse(null);
+            this.arrivalStatus = monitoredCall.getArrivalStatus();
+            this.vehicleAtStop = monitoredCall.getVehicleAtStop();
+        }
+
+        if (optionalMonitoredVehicleJourney.isPresent()) {
+            MonitoredVehicleJourney monitoredVehicleJourney = optionalMonitoredVehicleJourney.get();
+
+            this.lineId = Optional.ofNullable(monitoredVehicleJourney.getLineRef()).map(LineRef::getValue).orElse(null);
+            this.operatorId = Optional.ofNullable(monitoredVehicleJourney.getOperatorRef()).map(OperatorRef::getValue).orElse(null);
+            this.directionName = Optional.ofNullable(monitoredVehicleJourney.getDirectionName()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(DirectionName::getValue).orElse(null);
+            this.destinationName = Optional.ofNullable(monitoredVehicleJourney.getDestinationName()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(DestinationName::getValue).orElse(null);
+        }
+
     }
 
     public String getDestinationDisplay() {
@@ -69,5 +98,37 @@ public class CallUnit extends Call {
 
     public void setVehicleAtStop(Boolean vehicleAtStop) {
         this.vehicleAtStop = vehicleAtStop;
+    }
+
+    public String getLineId() {
+        return lineId;
+    }
+
+    public void setLineId(String lineId) {
+        this.lineId = lineId;
+    }
+
+    public String getOperatorId() {
+        return operatorId;
+    }
+
+    public void setOperatorId(String operatorId) {
+        this.operatorId = operatorId;
+    }
+
+    public String getDirectionName() {
+        return directionName;
+    }
+
+    public void setDirectionName(String directionName) {
+        this.directionName = directionName;
+    }
+
+    public String getDestinationName() {
+        return destinationName;
+    }
+
+    public void setDestinationName(String destinationName) {
+        this.destinationName = destinationName;
     }
 }

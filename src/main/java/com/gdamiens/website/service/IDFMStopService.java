@@ -44,7 +44,7 @@ public class IDFMStopService extends AbstractIDFMService {
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
     }
 
-    public List<CallUnit> getStopNextPassage(Integer stopId, String url) {
+    public List<CallUnit> getStopNextPassage(Integer stopId, String lineId, String url) {
         HttpEntity<String> request = this.prepareHttpRequest();
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(url)
@@ -69,11 +69,10 @@ public class IDFMStopService extends AbstractIDFMService {
 
         return monitoredStopVisits
             .stream()
-            .map(monitoredStopVisit -> monitoredStopVisit
-                .getMonitoredVehicleJourney()
-                .getMonitoredCall()
-            )
             .map(CallUnit::new)
+            .filter(callUnit -> Optional.ofNullable(callUnit.getLineId())
+                .map(callUnitLineId -> lineId == null || callUnitLineId.contains(lineId))
+                .orElse(false))
             .collect(Collectors.toList());
     }
 

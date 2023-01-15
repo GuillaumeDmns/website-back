@@ -73,9 +73,9 @@ public class IDFMTimetableController {
 
     @GetMapping("/get-stop-next-passages")
     @Operation(summary = "Get next passages of a IDFM stop", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<UnitIDFMDTO> getStopInformation(@NotNull Integer stopId) {
+    public ResponseEntity<UnitIDFMDTO> getStopInformation(@NotNull Integer stopId, String lineId) {
         try {
-            List<CallUnit> calls = this.idfmStopService.getStopNextPassage(stopId, Constants.IDFM_STOP_MONITORING_URL);
+            List<CallUnit> calls = this.idfmStopService.getStopNextPassage(stopId, lineId, Constants.IDFM_STOP_MONITORING_URL);
 
             IDFMStop idfmStop = this.idfmStopService.getStop(stopId);
 
