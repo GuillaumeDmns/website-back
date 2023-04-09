@@ -34,6 +34,9 @@ public class ServiceDelivery {
     @JsonProperty("EstimatedTimetableDelivery")
     private List<EstimatedTimetableDelivery> estimatedTimetableDelivery = null;
 
+    @JsonProperty("GeneralMessageDelivery")
+    private List<GeneralMessageDelivery> generalMessageDelivery;
+
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -85,6 +88,16 @@ public class ServiceDelivery {
     @JsonProperty("StopMonitoringDelivery")
     public void setStopMonitoringDelivery(List<StopMonitoringDelivery> stopMonitoringDelivery) {
         this.stopMonitoringDelivery = stopMonitoringDelivery;
+    }
+
+    @JsonProperty("GeneralMessageDelivery")
+    public List<GeneralMessageDelivery> getGeneralMessageDelivery() {
+        return generalMessageDelivery;
+    }
+
+    @JsonProperty("GeneralMessageDelivery")
+    public void setGeneralMessageDelivery(List<GeneralMessageDelivery> generalMessageDelivery) {
+        this.generalMessageDelivery = generalMessageDelivery;
     }
 
     @JsonAnyGetter
