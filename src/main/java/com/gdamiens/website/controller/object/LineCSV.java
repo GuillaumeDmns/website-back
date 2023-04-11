@@ -7,25 +7,25 @@ public class LineCSV {
     @CsvBindByPosition(position = 0)
     private String lineId;
 
-    @CsvBindByPosition(position = 2)
+    @CsvBindByPosition(position = 1)
     private String name;
 
-    @CsvBindByPosition(position = 6)
+    @CsvBindByPosition(position = 3)
     private String transportMode;
 
-    @CsvBindByPosition(position = 8)
+    @CsvBindByPosition(position = 5)
     private String type;
 
-    @CsvBindByPosition(position = 9)
+    @CsvBindByPosition(position = 6)
     private Integer operatorId;
 
-    @CsvBindByPosition(position = 12)
+    @CsvBindByPosition(position = 9)
     private String networkName;
 
-    @CsvBindByPosition(position = 13)
+    @CsvBindByPosition(position = 10)
     private String lineIdBackgroundColor;
 
-    @CsvBindByPosition(position = 14)
+    @CsvBindByPosition(position = 11)
     private String lineIdColor;
 
     public String getLineId() {
