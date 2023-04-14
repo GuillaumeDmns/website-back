@@ -20,6 +20,7 @@ import com.gdamiens.website.model.IDFMStopLine;
 import com.gdamiens.website.model.TransportMode;
 import com.gdamiens.website.model.mapper.LineMapper;
 import com.gdamiens.website.repository.IDFMLineRepository;
+import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,14 +35,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-public class IDFMLineService extends AbstractIDFMService {
+public class IDFMLineService extends AbstractIDFMService implements IDFMServiceInterface {
 
     private static final Logger log = LoggerFactory.getLogger(IDFMLineService.class);
 
@@ -59,6 +59,13 @@ public class IDFMLineService extends AbstractIDFMService {
         this.idfmStopLineService = idfmStopLineService;
         this.idfmLineRepository = idfmLineRepository;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
+    }
+
+    @Override
+    public void truncateTable() {
+        log.info("Start deleting all lines");
+        this.idfmLineRepository.deleteAllInBatch();
+        log.info("Finish deleting all lines");
     }
 
     public Map<Integer, NextPassagesStops> getAllStopsByLine(String lineId, String url) {
@@ -126,9 +133,18 @@ public class IDFMLineService extends AbstractIDFMService {
             ));
     }
 
-    public void refreshLinesAndStops(Map<String, List<StationAndLineCSV>> linesAndStops) {
+    public void refreshLinesAndStops() {
+        CSVReader<StationAndLineCSV> csvReader = new CSVReader<>(StationAndLineCSV.class);
 
-        log.info("Start importing stop/line pairs");
+        Map<String, List<StationAndLineCSV>> linesAndStops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_AND_LINES_URL, StationAndLineCSV::getLineRef);
+
+        if (linesAndStops == null || linesAndStops.isEmpty()) {
+            log.info("No data has been found in the stations & lines CSV file");
+            return;
+        }
+
+        log.info("Start importing stops-lines pairs");
+        log.info("{} stops-lines pairs to import", linesAndStops.size());
 
         List<IDFMLine> allLines = this.idfmLineRepository.findAll();
 
@@ -150,12 +166,19 @@ public class IDFMLineService extends AbstractIDFMService {
                     );
                 }
             });
-        log.info("Finished importing stop/line pairs");
+        log.info("Finish importing stops-lines pairs");
     }
 
-    public void saveAllLinesFromCSV(List<LineCSV> stops) {
+    public void saveAllLinesFromCSV() {
+        CSVReader<LineCSV> csvReader = new CSVReader<>(LineCSV.class);
+
+        List<LineCSV> lines = csvReader.readFromUrl(Constants.IDFM_ALL_LINES_URL);
+
+        log.info("Start importing lines");
+        log.info("{} lines to process", lines.size());
+
         this.idfmLineRepository.saveAll(
-            stops
+            lines
                 .parallelStream()
                 .filter(lineCSV -> {
                     switch (lineCSV.getTransportMode()) {
@@ -167,12 +190,14 @@ public class IDFMLineService extends AbstractIDFMService {
                         case "tram":
                             return true;
                         case "funicular":
-                        default: return false;
+                        default:
+                            return false;
                     }
                 })
                 .map(LineMapper::csvToDb)
                 .collect(Collectors.toList())
         );
+        log.info("Finish importing lines");
     }
 
     public IDFMLine getLine(String lineId) {

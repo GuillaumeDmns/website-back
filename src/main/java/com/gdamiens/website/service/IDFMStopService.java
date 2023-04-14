@@ -12,6 +12,7 @@ import com.gdamiens.website.idfm.Siri;
 import com.gdamiens.website.idfm.StopMonitoringDelivery;
 import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.repository.IDFMStopRepository;
+import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-public class IDFMStopService extends AbstractIDFMService {
+public class IDFMStopService extends AbstractIDFMService implements IDFMServiceInterface {
 
     private static final Logger log = LoggerFactory.getLogger(IDFMStopService.class);
 
@@ -42,6 +43,13 @@ public class IDFMStopService extends AbstractIDFMService {
         super(applicationProperties);
         this.idfmStopRepository = idfmStopRepository;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
+    }
+
+    @Override
+    public void truncateTable() {
+        log.info("Start deleting all stops");
+        this.idfmStopRepository.deleteAllInBatch();
+        log.info("Finish deleting all stops");
     }
 
     public List<CallUnit> getStopNextPassage(Integer stopId, String lineId, String url) {
@@ -76,12 +84,26 @@ public class IDFMStopService extends AbstractIDFMService {
             .collect(Collectors.toList());
     }
 
-    public void saveAllStopsFromCSV(List<StationCSV> stops) {
+    public void saveAllStopsFromCSV() {
+        CSVReader<StationCSV> csvReader = new CSVReader<>(StationCSV.class);
+
+        List<StationCSV> stops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_URL);
+
+        log.info("Start importing stops");
+        log.info("{} stops to process", stops.size());
+
         this.idfmStopRepository.saveAll(stops.parallelStream().map(IDFMStop::new).collect(Collectors.toList()));
+
+        log.info("Finish importing stops");
     }
 
-    public void saveStopsRelationsFromCSV(List<RelationsCSV> relations) {
-        log.info("oui");
+    public void saveStopsRelationsFromCSV() {
+        CSVReader<RelationsCSV> csvReader = new CSVReader<>(RelationsCSV.class);
+
+        List<RelationsCSV> relations = csvReader.readFromUrl(Constants.IDFM_RELATIONS_URL);
+
+        log.info("Start importing stops-stop areas relations");
+        log.info("{} relations to process", relations.size());
 
         relations
             .stream()
@@ -95,6 +117,7 @@ public class IDFMStopService extends AbstractIDFMService {
             .parallelStream()
             .forEach(relationsCSV -> idfmStopRepository.setStopArea(relationsCSV.getStopAreaId(), relationsCSV.getStopId()));
 
+        log.info("Finish importing stops-stop areas relations");
     }
 
     public IDFMStop getStop(Integer stopId) {
