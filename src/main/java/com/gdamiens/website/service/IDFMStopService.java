@@ -107,6 +107,7 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
 
         relations
             .stream()
+            .filter(relationsCSV -> relationsCSV.getStopId() != null)
             .collect(
                 Collectors.groupingBy(
                     RelationsCSV::getStopId,

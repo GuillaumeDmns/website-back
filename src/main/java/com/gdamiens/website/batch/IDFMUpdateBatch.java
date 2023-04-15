@@ -29,7 +29,7 @@ public class IDFMUpdateBatch {
         this.idfmStopService = idfmStopService;
     }
 
-    @Scheduled(cron = "0 3 * * * ?")
+    @Scheduled(cron = "0 3 * * ?")
     public void launchFullUpdateBatch() {
         log.info("Start cron : Full IDFM update");
 
