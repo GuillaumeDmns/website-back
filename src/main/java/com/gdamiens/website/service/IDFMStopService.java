@@ -11,7 +11,9 @@ import com.gdamiens.website.idfm.ServiceDelivery;
 import com.gdamiens.website.idfm.Siri;
 import com.gdamiens.website.idfm.StopMonitoringDelivery;
 import com.gdamiens.website.model.IDFMStop;
+import com.gdamiens.website.model.Test;
 import com.gdamiens.website.repository.IDFMStopRepository;
+import com.gdamiens.website.repository.TestRepository;
 import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
@@ -36,12 +38,15 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
 
     private final IDFMStopRepository idfmStopRepository;
 
+    private final TestRepository testRepository;
+
     private final HttpComponentsClientHttpRequestFactory requestFactory;
 
 
-    public IDFMStopService(IDFMStopRepository idfmStopRepository, ApplicationProperties applicationProperties) {
+    public IDFMStopService(IDFMStopRepository idfmStopRepository, TestRepository testRepository, ApplicationProperties applicationProperties) {
         super(applicationProperties);
         this.idfmStopRepository = idfmStopRepository;
+        this.testRepository = testRepository;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
     }
 
@@ -123,5 +128,13 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
 
     public IDFMStop getStop(Integer stopId) {
         return this.idfmStopRepository.findById(stopId).orElse(null);
+    }
+
+    public void createOrUpdate(Test test) {
+        this.testRepository.save(test);
+    }
+
+    public Test get(Integer id) {
+        return this.testRepository.findById(id).orElse(null);
     }
 }

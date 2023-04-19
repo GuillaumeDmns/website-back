@@ -3,15 +3,22 @@ package com.gdamiens.website.controller;
 import com.gdamiens.website.controller.object.StopsByLineDTO;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStopArea;
+import com.gdamiens.website.model.Test;
 import com.gdamiens.website.service.IDFMLineService;
 import com.gdamiens.website.service.IDFMStopAreaService;
+import com.gdamiens.website.service.IDFMStopService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,11 +31,13 @@ public class IDFMStopController {
     private static final Logger log = LoggerFactory.getLogger(IDFMStopController.class);
 
     private final IDFMStopAreaService idfmStopAreaService;
+    private final IDFMStopService idfmStopService;
 
     private final IDFMLineService idfmLineService;
 
-    public IDFMStopController(IDFMStopAreaService idfmStopAreaService, IDFMLineService idfmLineService) {
+    public IDFMStopController(IDFMStopAreaService idfmStopAreaService, IDFMStopService idfmStopService, IDFMLineService idfmLineService) {
         this.idfmStopAreaService = idfmStopAreaService;
+        this.idfmStopService = idfmStopService;
         this.idfmLineService = idfmLineService;
 
     }
@@ -49,6 +58,42 @@ public class IDFMStopController {
 
         } catch (Exception e) {
             log.info("error during IDFM get stops by lineId request");
+        }
+
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @PostMapping("/test")
+    @Operation(summary = "Test", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Void> createOrUpdate(Double lat, Double lon) {
+        try {
+            Test test = new Test();
+            GeometryFactory geometryFactory = new GeometryFactory();
+            Coordinate coordinate = new Coordinate(lat, lon);
+            Point point = geometryFactory.createPoint(coordinate);
+            test.se
+
+            this.idfmStopService.createOrUpdate(test);
+
+            return new ResponseEntity<>(HttpStatus.OK);
+
+        } catch (Exception e) {
+            log.info(e.getMessage());
+        }
+
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @GetMapping("/test")
+    @Operation(summary = "Test a", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Coordinate[]> get(Integer id) {
+        try {
+            Test test = this.idfmStopService.get(id);
+
+            return new ResponseEntity<>(test.getGeog().getCoordinates(), HttpStatus.OK);
+
+        } catch (Exception e) {
+            log.info(e.getMessage());
         }
 
         return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
