@@ -130,8 +130,8 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
         return this.idfmStopRepository.findById(stopId).orElse(null);
     }
 
-    public void createOrUpdate(Test test) {
-        this.testRepository.save(test);
+    public Test createOrUpdate(Test test) {
+        return this.testRepository.save(test);
     }
 
     public Test get(Integer id) {

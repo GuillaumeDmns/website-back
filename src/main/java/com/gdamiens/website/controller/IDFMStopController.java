@@ -65,17 +65,18 @@ public class IDFMStopController {
 
     @PostMapping("/test")
     @Operation(summary = "Test", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> createOrUpdate(Double lat, Double lon) {
+    public ResponseEntity<Coordinate[]> createOrUpdate(Double lat, Double lon) {
         try {
             Test test = new Test();
+            test.setId(3);
             GeometryFactory geometryFactory = new GeometryFactory();
             Coordinate coordinate = new Coordinate(lat, lon);
             Point point = geometryFactory.createPoint(coordinate);
-            test.se
+            test.setGeog(point);
 
-            this.idfmStopService.createOrUpdate(test);
+            Test createdTest = this.idfmStopService.createOrUpdate(test);
 
-            return new ResponseEntity<>(HttpStatus.OK);
+            return new ResponseEntity<>(createdTest.getGeog().getCoordinates(), HttpStatus.OK);
 
         } catch (Exception e) {
             log.info(e.getMessage());
