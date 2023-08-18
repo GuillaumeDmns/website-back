@@ -10,10 +10,10 @@ public class StationCSV {
     @CsvBindByPosition(position = 4)
     private String stopName;
 
-    @CsvBindByPosition(position = 7)
+    @CsvBindByPosition(position = 8)
     private String stopType;
 
-    @CsvBindByPosition(position = 14)
+    @CsvBindByPosition(position = 16)
     private String gps;
 
     public String getStopId() {

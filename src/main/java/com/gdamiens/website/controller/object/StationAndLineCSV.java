@@ -7,7 +7,7 @@ public class StationAndLineCSV {
     @CsvBindByPosition(position = 0)
     private String monitoringRefZDE;
 
-    @CsvBindByPosition(position = 1)
+    @CsvBindByPosition(position = 2)
     private String lineRef;
 
     public String getMonitoringRefZDE() {
