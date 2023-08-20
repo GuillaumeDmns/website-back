@@ -1,10 +1,7 @@
 package com.gdamiens.website.controller;
 
 import com.gdamiens.website.batch.IDFMUpdateBatch;
-import com.gdamiens.website.service.IDFMLineService;
-import com.gdamiens.website.service.IDFMOperatorService;
-import com.gdamiens.website.service.IDFMStopAreaService;
-import com.gdamiens.website.service.IDFMStopService;
+import com.gdamiens.website.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.slf4j.Logger;
@@ -31,17 +28,21 @@ public class IDFMBatchController {
 
     private final IDFMUpdateBatch idfmUpdateBatch;
 
+    private final IDFMRelationsService idfmRelationsService;
+
     public IDFMBatchController(IDFMLineService idfmLineService,
                                IDFMStopService idfmStopService,
                                IDFMStopAreaService idfmStopAreaService,
                                IDFMOperatorService idfmOperatorService,
-                               IDFMUpdateBatch idfmUpdateBatch
+                               IDFMUpdateBatch idfmUpdateBatch,
+                               IDFMRelationsService idfmRelationsService
     ) {
         this.idfmLineService = idfmLineService;
         this.idfmStopService = idfmStopService;
         this.idfmStopAreaService = idfmStopAreaService;
         this.idfmOperatorService = idfmOperatorService;
         this.idfmUpdateBatch = idfmUpdateBatch;
+        this.idfmRelationsService = idfmRelationsService;
     }
 
     @PostMapping("full-db-upgrade")
@@ -129,6 +130,19 @@ public class IDFMBatchController {
     public ResponseEntity<Void> updateOperators() {
         try {
             this.idfmOperatorService.saveAllOperatorsFromCSV();
+
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            log.info("error during IDFM update operators request : {}", e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/relations")
+    @Operation(summary = "Update relations information", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Void> updateRelations() {
+        try {
+            this.idfmRelationsService.saveRelationsFromCSV();
 
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {

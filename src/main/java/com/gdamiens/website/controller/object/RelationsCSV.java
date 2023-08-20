@@ -16,6 +16,12 @@ public class RelationsCSV {
     @CsvBindByPosition(position = 7)
     private String stopVersion;
 
+    @CsvBindByPosition(position = 8)
+    private Integer stopOperatorId;
+
+    @CsvBindByPosition(position = 9)
+    private String stopOperatorVersion;
+
     public Integer getStopAreaId() {
         return stopAreaId;
     }
@@ -46,5 +52,21 @@ public class RelationsCSV {
 
     public void setStopVersion(String stopVersion) {
         this.stopVersion = stopVersion;
+    }
+
+    public Integer getStopOperatorId() {
+        return stopOperatorId;
+    }
+
+    public void setStopOperatorId(Integer stopOperatorId) {
+        this.stopOperatorId = stopOperatorId;
+    }
+
+    public String getStopOperatorVersion() {
+        return stopOperatorVersion;
+    }
+
+    public void setStopOperatorVersion(String stopOperatorVersion) {
+        this.stopOperatorVersion = stopOperatorVersion;
     }
 }

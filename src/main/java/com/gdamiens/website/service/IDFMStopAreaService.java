@@ -54,4 +54,8 @@ public class IDFMStopAreaService implements IDFMServiceInterface {
     public List<IDFMStopArea> getStopAreasFromLineId(String lineId) {
         return this.idfmStopAreaRepository.getStopAreasFromLineId(lineId);
     }
+
+    public void saveStops(List<IDFMStopArea> stops) {
+        this.idfmStopAreaRepository.saveAll(stops);
+    }
 }

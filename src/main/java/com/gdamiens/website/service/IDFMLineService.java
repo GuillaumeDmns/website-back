@@ -136,7 +136,7 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
     public void refreshLinesAndStops() {
         CSVReader<StationAndLineCSV> csvReader = new CSVReader<>(StationAndLineCSV.class);
 
-        Map<String, List<StationAndLineCSV>> linesAndStops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_AND_LINES_URL, StationAndLineCSV::getLineRef);
+        Map<String, List<StationAndLineCSV>> linesAndStops = csvReader.readFromUrl(Constants.IDFM_ALL_STOPS_AND_LINES_URL, StationAndLineCSV::getLineRef);
 
         if (linesAndStops == null || linesAndStops.isEmpty()) {
             log.info("No data has been found in the stations & lines CSV file");
@@ -156,14 +156,19 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
                 String lineId = lineAndStop.getKey().split(":")[3];
 
                 if (allLines.stream().anyMatch(idfmLine -> idfmLine.getId().equals(lineId))) {
-                    this.idfmStopLineService.saveAllStopLine(
-                        lineAndStop
-                            .getValue()
-                            .stream()
-                            .filter(stop -> "STIF".equals(stop.getMonitoringRefZDE().split(":")[0]))
-                            .map(stop -> new IDFMStopLine(lineId, Integer.parseInt(stop.getMonitoringRefZDE().split(":")[3])))
-                            .collect(Collectors.toList())
-                    );
+                    try {
+                        this.idfmStopLineService.saveAllStopLine(
+                            lineAndStop
+                                .getValue()
+                                .stream()
+                                .filter(stop -> "STIF".equals(stop.getMonitoringRefZDE().split(":")[0]))
+                                .map(stop -> new IDFMStopLine(lineId, Integer.parseInt(stop.getMonitoringRefZDE().split(":")[3])))
+                                .collect(Collectors.toList())
+                        );
+                    }
+                    catch (Exception e) {
+                        log.error(e.getMessage());
+                    }
                 }
             });
         log.info("Finish importing stops-lines pairs");

@@ -1,6 +1,5 @@
 package com.gdamiens.website.model;
 
-import com.gdamiens.website.controller.object.StopAreaCSV;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,9 +7,9 @@ import jakarta.persistence.Table;
 
 import java.io.Serializable;
 
-@Entity(name = "IDFMStopArea")
-@Table(schema = "public", name = "idfm_stop_area")
-public class IDFMStopArea implements Serializable {
+@Entity(name = "IDFMStopOperator")
+@Table(schema = "public", name = "idfm_stop_operator")
+public class IDFMStopOperator implements Serializable {
 
     @Id
     private Integer id;
@@ -24,23 +23,15 @@ public class IDFMStopArea implements Serializable {
     @Column(name = "longitude")
     private Double longitude;
 
-    @Column(name = "type")
-    private String type;
+    @Column(name = "stop_id")
+    private Integer stopId;
 
-    public IDFMStopArea() {
+    public IDFMStopOperator() {
     }
 
-    public IDFMStopArea(Integer stopAreaId) {
-        this.id = stopAreaId;
-    }
-
-    public IDFMStopArea(StopAreaCSV stopAreaCSV) {
-
-        this.id = Integer.parseInt(stopAreaCSV.getStopAreaId());
-        this.name = stopAreaCSV.getName();
-        this.latitude = stopAreaCSV.getLatitude();
-        this.longitude = stopAreaCSV.getLongitude();
-        this.type = stopAreaCSV.getType();
+    public IDFMStopOperator(Integer stopId, Integer stopOperatorId) {
+        this.stopId = stopId;
+        this.id = stopOperatorId;
     }
 
     public Integer getId() {
@@ -75,11 +66,11 @@ public class IDFMStopArea implements Serializable {
         this.longitude = longitude;
     }
 
-    public String getType() {
-        return type;
+    public Integer getStopId() {
+        return stopId;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setStopId(Integer stopId) {
+        this.stopId = stopId;
     }
 }
