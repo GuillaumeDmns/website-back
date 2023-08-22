@@ -1,6 +1,6 @@
 package com.gdamiens.website.utils;
 
-import com.gdamiens.website.controller.object.StopAreaCSV;
+import com.gdamiens.website.controller.object.StopCSV;
 import org.locationtech.proj4j.CRSFactory;
 import org.locationtech.proj4j.CoordinateReferenceSystem;
 import org.locationtech.proj4j.CoordinateTransform;
@@ -13,7 +13,7 @@ public class GeoUtils {
 
     private GeoUtils() {}
 
-    public static void convertLambert94ToLatLong(List<StopAreaCSV> stopAreas) {
+    public static <T extends StopCSV> void convertLambert94ToLatLong(List<T> stops) {
 
         CRSFactory crsFactory = new CRSFactory();
         CoordinateReferenceSystem lambert93 = crsFactory.createFromName("epsg:2154");
@@ -22,11 +22,11 @@ public class GeoUtils {
         CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
         CoordinateTransform wgsToUtm = ctFactory.createTransform(lambert93, wgs84);
 
-        stopAreas.parallelStream().forEach(stopAreaCSV -> {
+        stops.parallelStream().forEach(stop -> {
             ProjCoordinate result = new ProjCoordinate();
-            wgsToUtm.transform(new ProjCoordinate(stopAreaCSV.getLongitude(), stopAreaCSV.getLatitude()), result);
-            stopAreaCSV.setLongitude(result.x);
-            stopAreaCSV.setLatitude(result.y);
+            wgsToUtm.transform(new ProjCoordinate(stop.getLongitude(), stop.getLatitude()), result);
+            stop.setLongitude(result.x);
+            stop.setLatitude(result.y);
             }
         );
     }

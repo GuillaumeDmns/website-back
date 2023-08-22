@@ -1,12 +1,11 @@
 package com.gdamiens.website.service;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
-import com.gdamiens.website.controller.object.CallUnit;
-import com.gdamiens.website.controller.object.RelationsCSV;
-import com.gdamiens.website.controller.object.StationCSV;
+import com.gdamiens.website.controller.object.*;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.*;
 import com.gdamiens.website.model.IDFMStop;
+import com.gdamiens.website.model.IDFMStopArea;
 import com.gdamiens.website.model.IDFMStopOperator;
 import com.gdamiens.website.model.Test;
 import com.gdamiens.website.repository.IDFMStopOperatorRepository;
@@ -25,6 +24,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.gdamiens.website.utils.GeoUtils.convertLambert94ToLatLong;
+
 @Service
 public class IDFMStopOperatorService extends AbstractIDFMService implements IDFMServiceInterface {
 
@@ -42,6 +43,23 @@ public class IDFMStopOperatorService extends AbstractIDFMService implements IDFM
         log.info("Start deleting all stops operator");
         this.idfmStopOperatorRepository.deleteAllInBatch();
         log.info("Finish deleting all stops operator");
+    }
+
+    public void saveAllStopsOperatorFromCSV() {
+        CSVReader<StopOperatorCSV> csvReader = new CSVReader<>(StopOperatorCSV.class);
+
+        List<StopOperatorCSV> stopsOperator = csvReader.readFromUrl(Constants.IDFM_STOPS_OPERATOR_URL);
+
+        log.info("Start importing stops operator");
+        log.info("{} stops operator to process", stopsOperator.size());
+
+        convertLambert94ToLatLong(stopsOperator);
+
+        this.idfmStopOperatorRepository.saveAll(
+            stopsOperator.parallelStream().map(IDFMStopOperator::new).collect(Collectors.toList())
+        );
+
+        log.info("Finish importing stop areas");
     }
 
     public void saveStops(List<IDFMStopOperator> stops) {

@@ -2,29 +2,32 @@ package com.gdamiens.website.controller.object;
 
 import com.opencsv.bean.CsvBindByPosition;
 
-public class StopAreaCSV extends StopCSV {
+public class StopOperatorCSV extends StopCSV {
 
     @CsvBindByPosition(position = 0)
-    private String stopAreaId;
-
-    @CsvBindByPosition(position = 4)
-    private String name;
-
-    @CsvBindByPosition(position = 5)
-    private Double longitude;
+    private String stopOperatorId;
 
     @CsvBindByPosition(position = 6)
-    private Double latitude;
+    private String name;
+
+    @CsvBindByPosition(position = 7)
+    private Double longitude;
 
     @CsvBindByPosition(position = 8)
+    private Double latitude;
+
+    @CsvBindByPosition(position = 9)
+    private Integer stopId;
+
+    @CsvBindByPosition(position = 10)
     private String type;
 
-    public String getStopAreaId() {
-        return stopAreaId;
+    public String getStopOperatorId() {
+        return stopOperatorId;
     }
 
-    public void setStopAreaId(String stopAreaId) {
-        this.stopAreaId = stopAreaId;
+    public void setStopOperatorId(String stopOperatorId) {
+        this.stopOperatorId = stopOperatorId;
     }
 
     public String getName() {
@@ -49,6 +52,14 @@ public class StopAreaCSV extends StopCSV {
 
     public void setLatitude(Double latitude) {
         this.latitude = latitude;
+    }
+
+    public Integer getStopId() {
+        return stopId;
+    }
+
+    public void setStopId(Integer stopId) {
+        this.stopId = stopId;
     }
 
     public String getType() {

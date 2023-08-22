@@ -11,6 +11,7 @@ public final class Constants {
     public static final String IDFM_ALL_STATIONS_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/arrets/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_ALL_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/referentiel-des-lignes/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_STOP_AREAS_URL = "https://data.iledefrance.fr/explore/dataset/zones-d-arrets/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
+    public static final String IDFM_STOPS_OPERATOR_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/arrets-transporteur/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_RELATIONS_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/relations/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_OPERATORS_URL = "https://data.iledefrance.fr/explore/dataset/liste-des-transporteurs-exploitant-des-lignes-de-transport-en-commun-en-ile-de-f/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
 

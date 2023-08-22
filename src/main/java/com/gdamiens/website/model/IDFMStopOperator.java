@@ -1,5 +1,6 @@
 package com.gdamiens.website.model;
 
+import com.gdamiens.website.controller.object.StopOperatorCSV;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -23,6 +24,9 @@ public class IDFMStopOperator implements Serializable {
     @Column(name = "longitude")
     private Double longitude;
 
+    @Column(name = "type")
+    private String type;
+
     @Column(name = "stop_id")
     private Integer stopId;
 
@@ -32,6 +36,15 @@ public class IDFMStopOperator implements Serializable {
     public IDFMStopOperator(Integer stopId, Integer stopOperatorId) {
         this.stopId = stopId;
         this.id = stopOperatorId;
+    }
+
+    public IDFMStopOperator(StopOperatorCSV stopOperator) {
+        this.id = Integer.parseInt(stopOperator.getStopOperatorId());
+        this.name = stopOperator.getName();
+        this.latitude = stopOperator.getLatitude();
+        this.longitude = stopOperator.getLongitude();
+        this.type = stopOperator.getType();
+        this.stopId = stopOperator.getStopId();
     }
 
     public Integer getId() {
@@ -64,6 +77,14 @@ public class IDFMStopOperator implements Serializable {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public Integer getStopId() {

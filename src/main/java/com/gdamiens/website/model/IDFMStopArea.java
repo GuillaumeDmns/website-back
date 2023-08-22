@@ -35,7 +35,6 @@ public class IDFMStopArea implements Serializable {
     }
 
     public IDFMStopArea(StopAreaCSV stopAreaCSV) {
-
         this.id = Integer.parseInt(stopAreaCSV.getStopAreaId());
         this.name = stopAreaCSV.getName();
         this.latitude = stopAreaCSV.getLatitude();

@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
@@ -40,45 +39,29 @@ public class IDFMRelationsService {
         log.info("Start importing relations between stops");
         log.info("{} relations to process", relations.size());
 
-        Map<Integer, Map<Integer, Integer>> relationsMap = relations
-            .stream()
-            .filter(relationsCSV -> relationsCSV.getStopId() != null)
-            .collect(
-                Collectors.groupingBy(
-                    RelationsCSV::getStopAreaId,
-                    Collectors.groupingBy(
-                        RelationsCSV::getStopId,
-                        Collectors.collectingAndThen(Collectors.toList(), values -> values.get(0).getStopOperatorId()))
-                )
-            );
-
         // Save stop areas first...
 
-        List<IDFMStopArea> stopAreasList = relationsMap
-            .keySet()
+        List<IDFMStopArea> stopAreasList = relations
             .stream()
-            .map(IDFMStopArea::new)
+            .map(relation -> new IDFMStopArea(relation.getStopAreaId()))
             .collect(Collectors.toList());
 
         idfmStopAreaService.saveStops(stopAreasList);
 
         // ...then save stops...
 
-        List<IDFMStop> stopsList = relationsMap
-            .entrySet()
+        List<IDFMStop> stopsList = relations
             .stream()
-            .map(entry -> new IDFMStop(entry.getKey(), entry.getValue().get(0)))
+            .map(relation -> new IDFMStop(relation.getStopAreaId(), relation.getStopId()))
             .collect(Collectors.toList());
 
         idfmStopService.saveStops(stopsList);
 
         // ...and finally save operator stops...
 
-        List<IDFMStopOperator> stopsOperatorList = relationsMap
-            .values()
+        List<IDFMStopOperator> stopsOperatorList = relations
             .stream()
-            .flatMap(entry -> entry.entrySet().stream())
-            .map(entry -> new IDFMStopOperator(entry.getKey(), entry.getValue()))
+            .map(relation -> new IDFMStopOperator(relation.getStopId(), relation.getStopOperatorId()))
             .collect(Collectors.toList());
 
         idfmStopOperatorService.saveStops(stopsOperatorList);
