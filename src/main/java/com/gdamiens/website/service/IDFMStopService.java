@@ -3,7 +3,7 @@ package com.gdamiens.website.service;
 import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.CallUnit;
 import com.gdamiens.website.controller.object.RelationsCSV;
-import com.gdamiens.website.controller.object.StationCSV;
+import com.gdamiens.website.controller.object.StopCSV;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.IDFMResponse;
 import com.gdamiens.website.idfm.MonitoredStopVisit;
@@ -30,6 +30,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.gdamiens.website.utils.GeoUtils.convertLambert94ToLatLong;
 
 @Service
 public class IDFMStopService extends AbstractIDFMService implements IDFMServiceInterface {
@@ -90,14 +92,28 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
     }
 
     public void saveAllStopsFromCSV() {
-        CSVReader<StationCSV> csvReader = new CSVReader<>(StationCSV.class);
+        CSVReader<StopCSV> csvReader = new CSVReader<>(StopCSV.class);
 
-        List<StationCSV> stops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_URL);
+        List<StopCSV> stops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_URL);
 
         log.info("Start importing stops");
         log.info("{} stops to process", stops.size());
 
-        this.idfmStopRepository.saveAll(stops.parallelStream().map(IDFMStop::new).collect(Collectors.toList()));
+        convertLambert94ToLatLong(stops);
+
+        stops
+            .parallelStream()
+            .forEach(stop -> {
+                if (this.idfmStopRepository.partialUpdate(
+                    Integer.parseInt(stop.getStopId()),
+                    stop.getStopName(),
+                    stop.getLatitude(),
+                    stop.getLongitude(),
+                    stop.getStopType()
+                ) == 0) {
+                    this.idfmStopRepository.save(new IDFMStop(stop));
+                }
+            });
 
         log.info("Finish importing stops");
     }

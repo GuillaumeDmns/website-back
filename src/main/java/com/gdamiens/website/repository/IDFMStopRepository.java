@@ -16,4 +16,9 @@ public interface IDFMStopRepository extends JpaRepository<IDFMStop, Integer> {
     @Query(value = "UPDATE idfm_stop SET stop_area_id = :stopAreaId WHERE id = :stopId", nativeQuery = true)
     void setStopArea(@Param("stopAreaId") Integer stopAreaId, @Param("stopId") Integer stopId);
 
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE idfm_stop SET name = :name, latitude = :latitude, longitude = :longitude, type = :type WHERE id = :stopId", nativeQuery = true)
+    int partialUpdate(@Param("stopId") Integer stopId, @Param("name") String name, @Param("latitude") Double latitude, @Param("longitude") Double longitude, @Param("type") String type);
+
 }

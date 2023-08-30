@@ -1,6 +1,6 @@
 package com.gdamiens.website.utils;
 
-import com.gdamiens.website.controller.object.StopCSV;
+import com.gdamiens.website.controller.object.StopAbstractCSV;
 import org.locationtech.proj4j.CRSFactory;
 import org.locationtech.proj4j.CoordinateReferenceSystem;
 import org.locationtech.proj4j.CoordinateTransform;
@@ -13,7 +13,7 @@ public class GeoUtils {
 
     private GeoUtils() {}
 
-    public static <T extends StopCSV> void convertLambert94ToLatLong(List<T> stops) {
+    public static <T extends StopAbstractCSV> void convertLambert94ToLatLong(List<T> stops) {
 
         CRSFactory crsFactory = new CRSFactory();
         CoordinateReferenceSystem lambert93 = crsFactory.createFromName("epsg:2154");

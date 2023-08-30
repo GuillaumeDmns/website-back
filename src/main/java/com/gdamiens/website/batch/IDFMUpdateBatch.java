@@ -17,34 +17,46 @@ public class IDFMUpdateBatch {
 
     private final IDFMStopAreaService idfmStopAreaService;
 
-    private final IDFMStopLineService idfmStopLineService;
+    private final IDFMStopInLineService idfmStopInLineService;
+
+    private final IDFMStopAreaInLineService idfmStopAreaInLineService;
 
     private final IDFMStopService idfmStopService;
 
-    public IDFMUpdateBatch(IDFMLineService idfmLineService, IDFMOperatorService idfmOperatorService, IDFMStopAreaService idfmStopAreaService, IDFMStopLineService idfmStopLineService, IDFMStopService idfmStopService) {
+    private final IDFMStopOperatorService idfmStopOperatorService;
+
+    private final IDFMRelationsService idfmRelationsService;
+
+    public IDFMUpdateBatch(IDFMLineService idfmLineService, IDFMOperatorService idfmOperatorService, IDFMStopAreaService idfmStopAreaService, IDFMStopInLineService idfmStopInLineService, IDFMStopAreaInLineService idfmStopAreaInLineService, IDFMStopService idfmStopService, IDFMStopOperatorService idfmStopOperatorService, IDFMRelationsService idfmRelationsService) {
         this.idfmLineService = idfmLineService;
         this.idfmOperatorService = idfmOperatorService;
         this.idfmStopAreaService = idfmStopAreaService;
-        this.idfmStopLineService = idfmStopLineService;
+        this.idfmStopInLineService = idfmStopInLineService;
+        this.idfmStopAreaInLineService = idfmStopAreaInLineService;
         this.idfmStopService = idfmStopService;
+        this.idfmStopOperatorService = idfmStopOperatorService;
+        this.idfmRelationsService = idfmRelationsService;
     }
 
     @Scheduled(cron = "0 0 3 * * ?")
     public void launchFullUpdateBatch() {
         log.info("Start cron : Full IDFM update");
 
-        this.idfmStopLineService.truncateTable();
+        this.idfmStopInLineService.truncateTable();
+        this.idfmStopAreaInLineService.truncateTable();
+        this.idfmStopOperatorService.truncateTable();
         this.idfmStopService.truncateTable();
-        this.idfmLineService.truncateTable();
         this.idfmStopAreaService.truncateTable();
+        this.idfmLineService.truncateTable();
         this.idfmOperatorService.truncateTable();
 
+        this.idfmRelationsService.saveRelationsFromCSV();
         this.idfmOperatorService.saveAllOperatorsFromCSV();
-        this.idfmStopAreaService.saveAllStopAreasFromCSV();
         this.idfmLineService.saveAllLinesFromCSV();
+        this.idfmStopAreaService.saveAllStopAreasFromCSV();
         this.idfmStopService.saveAllStopsFromCSV();
+        this.idfmStopOperatorService.saveAllStopsOperatorFromCSV();
         this.idfmLineService.refreshLinesAndStops();
-        this.idfmStopService.saveStopsRelationsFromCSV();
 
         log.info("End cron : Full IDFM update");
     }

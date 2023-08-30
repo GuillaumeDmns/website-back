@@ -42,7 +42,7 @@ public class IDFMRelationsService {
         // Save stop areas first...
 
         List<IDFMStopArea> stopAreasList = relations
-            .stream()
+            .parallelStream()
             .map(relation -> new IDFMStopArea(relation.getStopAreaId()))
             .collect(Collectors.toList());
 
@@ -51,7 +51,7 @@ public class IDFMRelationsService {
         // ...then save stops...
 
         List<IDFMStop> stopsList = relations
-            .stream()
+            .parallelStream()
             .map(relation -> new IDFMStop(relation.getStopAreaId(), relation.getStopId()))
             .collect(Collectors.toList());
 
@@ -60,7 +60,8 @@ public class IDFMRelationsService {
         // ...and finally save operator stops...
 
         List<IDFMStopOperator> stopsOperatorList = relations
-            .stream()
+            .parallelStream()
+            .filter(relation -> relation.getStopOperatorId() != null && relation.getStopOperatorVersion() != null)
             .map(relation -> new IDFMStopOperator(relation.getStopId(), relation.getStopOperatorId()))
             .collect(Collectors.toList());
 

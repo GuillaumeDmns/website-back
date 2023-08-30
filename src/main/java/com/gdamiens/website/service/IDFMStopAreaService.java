@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.gdamiens.website.utils.GeoUtils.convertLambert94ToLatLong;
 
@@ -40,9 +39,19 @@ public class IDFMStopAreaService implements IDFMServiceInterface {
 
         convertLambert94ToLatLong(stopAreas);
 
-        this.idfmStopAreaRepository.saveAll(
-            stopAreas.parallelStream().map(IDFMStopArea::new).collect(Collectors.toList())
-        );
+        stopAreas
+            .parallelStream()
+            .forEach(stopArea -> {
+                if (this.idfmStopAreaRepository.partialUpdate(
+                    Integer.parseInt(stopArea.getStopAreaId()),
+                    stopArea.getName(),
+                    stopArea.getLatitude(),
+                    stopArea.getLongitude(),
+                    stopArea.getType()
+                ) == 0) {
+                    this.idfmStopAreaRepository.save(new IDFMStopArea(stopArea));
+                }
+            });
 
         log.info("Finish importing stop areas");
     }
@@ -53,6 +62,10 @@ public class IDFMStopAreaService implements IDFMServiceInterface {
 
     public List<IDFMStopArea> getStopAreasFromLineId(String lineId) {
         return this.idfmStopAreaRepository.getStopAreasFromLineId(lineId);
+    }
+
+    public List<IDFMStopArea> getRailStopAreasFromLineId(String lineId) {
+        return this.idfmStopAreaRepository.getRailStopAreasFromLineId(lineId);
     }
 
     public void saveStops(List<IDFMStopArea> stops) {

@@ -10,7 +10,6 @@ import com.gdamiens.website.service.IDFMStopService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.slf4j.Logger;
@@ -32,14 +31,12 @@ public class IDFMStopController {
 
     private final IDFMStopAreaService idfmStopAreaService;
     private final IDFMStopService idfmStopService;
-
     private final IDFMLineService idfmLineService;
 
     public IDFMStopController(IDFMStopAreaService idfmStopAreaService, IDFMStopService idfmStopService, IDFMLineService idfmLineService) {
         this.idfmStopAreaService = idfmStopAreaService;
         this.idfmStopService = idfmStopService;
         this.idfmLineService = idfmLineService;
-
     }
 
     @GetMapping("/stops-by-line")
@@ -52,7 +49,19 @@ public class IDFMStopController {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
 
-            List<IDFMStopArea> idfmStopAreas = this.idfmStopAreaService.getStopAreasFromLineId(lineId);
+            List<IDFMStopArea> idfmStopAreas;
+
+            switch (requestedLine.getTransportMode()) {
+                case RER:
+                case TER:
+                case TRAM:
+                case METRO:
+                case TRANSILIEN:
+                    idfmStopAreas = this.idfmStopAreaService.getRailStopAreasFromLineId(requestedLine.getId());
+                    break;
+                default:
+                    idfmStopAreas = this.idfmStopAreaService.getStopAreasFromLineId(requestedLine.getId());
+            }
 
             return new ResponseEntity<>(new StopsByLineDTO(idfmStopAreas), HttpStatus.OK);
 

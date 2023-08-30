@@ -2,7 +2,7 @@ package com.gdamiens.website.controller.object;
 
 import com.opencsv.bean.CsvBindByPosition;
 
-public class StopOperatorCSV extends StopCSV {
+public class StopOperatorCSV extends StopAbstractCSV {
 
     @CsvBindByPosition(position = 0)
     private String stopOperatorId;

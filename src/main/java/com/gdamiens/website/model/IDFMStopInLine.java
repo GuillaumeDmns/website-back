@@ -1,6 +1,6 @@
 package com.gdamiens.website.model;
 
-import com.gdamiens.website.model.id.IDFMStopLineId;
+import com.gdamiens.website.model.id.IDFMStopInLineId;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,10 +8,10 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import java.io.Serializable;
 
-@Entity(name = "IDFMStopLine")
-@Table(schema = "public", name = "idfm_stop_line")
-@IdClass(IDFMStopLineId.class)
-public class IDFMStopLine implements Serializable {
+@Entity(name = "IDFMStopInLine")
+@Table(schema = "public", name = "idfm_stop_in_line")
+@IdClass(IDFMStopInLineId.class)
+public class IDFMStopInLine implements Serializable {
 
     @Id
     private String lineId;
@@ -19,10 +19,10 @@ public class IDFMStopLine implements Serializable {
     @Id
     private Integer stopId;
 
-    public IDFMStopLine() {
+    public IDFMStopInLine() {
     }
 
-    public IDFMStopLine(String lineId, Integer stopId) {
+    public IDFMStopInLine(String lineId, Integer stopId) {
         this.lineId = lineId;
         this.stopId = stopId;
     }

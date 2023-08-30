@@ -1,10 +1,7 @@
 package com.gdamiens.website.service;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
-import com.gdamiens.website.controller.object.CallGlobal;
-import com.gdamiens.website.controller.object.LineCSV;
-import com.gdamiens.website.controller.object.NextPassagesStops;
-import com.gdamiens.website.controller.object.StationAndLineCSV;
+import com.gdamiens.website.controller.object.*;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.EstimatedCalls;
 import com.gdamiens.website.idfm.EstimatedJourneyVersionFrame;
@@ -14,10 +11,7 @@ import com.gdamiens.website.idfm.IDFMResponse;
 import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.idfm.ServiceDelivery;
 import com.gdamiens.website.idfm.Siri;
-import com.gdamiens.website.model.IDFMLine;
-import com.gdamiens.website.model.IDFMStop;
-import com.gdamiens.website.model.IDFMStopLine;
-import com.gdamiens.website.model.TransportMode;
+import com.gdamiens.website.model.*;
 import com.gdamiens.website.model.mapper.LineMapper;
 import com.gdamiens.website.repository.IDFMLineRepository;
 import com.gdamiens.website.utils.Constants;
@@ -47,17 +41,20 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
 
     private final IDFMStopService idfmStopService;
 
-    private final IDFMStopLineService idfmStopLineService;
+    private final IDFMStopInLineService idfmStopInLineService;
+
+    private final IDFMStopAreaInLineService idfmStopAreaInLineService;
 
     private final IDFMLineRepository idfmLineRepository;
 
     private final HttpComponentsClientHttpRequestFactory requestFactory;
 
-    public IDFMLineService(IDFMStopService idfmStopService, IDFMStopLineService idfmStopLineService, IDFMLineRepository idfmLineRepository, ApplicationProperties applicationProperties) {
+    public IDFMLineService(IDFMStopService idfmStopService, IDFMStopInLineService idfmStopInLineService, IDFMLineRepository idfmLineRepository, ApplicationProperties applicationProperties, IDFMStopAreaInLineService idfmStopAreaInLineService) {
         super(applicationProperties);
         this.idfmStopService = idfmStopService;
-        this.idfmStopLineService = idfmStopLineService;
+        this.idfmStopInLineService = idfmStopInLineService;
         this.idfmLineRepository = idfmLineRepository;
+        this.idfmStopAreaInLineService = idfmStopAreaInLineService;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
     }
 
@@ -134,16 +131,16 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
     }
 
     public void refreshLinesAndStops() {
-        CSVReader<StationAndLineCSV> csvReader = new CSVReader<>(StationAndLineCSV.class);
+        CSVReader<StopAndLineCSV> csvReader = new CSVReader<>(StopAndLineCSV.class);
 
-        Map<String, List<StationAndLineCSV>> linesAndStops = csvReader.readFromUrl(Constants.IDFM_ALL_STOPS_AND_LINES_URL, StationAndLineCSV::getLineRef);
+        Map<String, List<StopAndLineCSV>> linesAndStops = csvReader.readFromUrl(Constants.IDFM_STOPS_AND_LINES_URL, StopAndLineCSV::getLineRef);
 
         if (linesAndStops == null || linesAndStops.isEmpty()) {
             log.info("No data has been found in the stations & lines CSV file");
             return;
         }
 
-        log.info("Start importing stops-lines pairs");
+        log.info("Start importing stops-lines pairs 1/2");
         log.info("{} stops-lines pairs to import", linesAndStops.size());
 
         List<IDFMLine> allLines = this.idfmLineRepository.findAll();
@@ -151,18 +148,52 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
         linesAndStops
             .entrySet()
             .parallelStream()
-            .filter(lineAndStop -> "STIF".equals(lineAndStop.getKey().split(":")[0]))
             .forEach(lineAndStop -> {
-                String lineId = lineAndStop.getKey().split(":")[3];
+                String lineId = lineAndStop.getKey().split(":")[1];
 
                 if (allLines.stream().anyMatch(idfmLine -> idfmLine.getId().equals(lineId))) {
                     try {
-                        this.idfmStopLineService.saveAllStopLine(
-                            lineAndStop
+                        if (lineAndStop.getValue().stream().findFirst().get().getStopId().split(":").length == 2) {
+                            this.idfmStopInLineService.saveAllStopLine(
+                                lineAndStop
+                                    .getValue()
+                                    .stream()
+                                    .map(stop -> new IDFMStopInLine(lineId, Integer.parseInt(stop.getStopId().split(":")[1])))
+                                    .collect(Collectors.toList())
+                            );
+                        }
+                    }
+                    catch (Exception e) {
+                        log.error(e.getMessage());
+                    }
+                }
+            });
+        log.info("Finish importing stops-lines pairs 1/2");
+
+
+        CSVReader<RailStopAndLineCSV> railCsvReader = new CSVReader<>(RailStopAndLineCSV.class);
+
+        Map<String, List<RailStopAndLineCSV>> linesAndRailStops = railCsvReader.readFromUrl(Constants.IDFM_RAIL_STOPS_AND_LINES_URL, RailStopAndLineCSV::getLineRef);
+
+        if (linesAndRailStops == null || linesAndRailStops.isEmpty()) {
+            log.info("No data has been found in the rail stops & lines CSV file");
+            return;
+        }
+
+        log.info("{} rail stops-lines pairs to import", linesAndRailStops.size());
+        log.info("Start importing rail stops-lines pairs 2/2");
+
+        linesAndRailStops
+            .entrySet()
+            .parallelStream()
+            .forEach(lineAndRailStop -> {
+                if (allLines.stream().anyMatch(idfmLine -> idfmLine.getId().equals(lineAndRailStop.getKey()))) {
+                    try {
+                        this.idfmStopAreaInLineService.saveAllStopLine(
+                            lineAndRailStop
                                 .getValue()
                                 .stream()
-                                .filter(stop -> "STIF".equals(stop.getMonitoringRefZDE().split(":")[0]))
-                                .map(stop -> new IDFMStopLine(lineId, Integer.parseInt(stop.getMonitoringRefZDE().split(":")[3])))
+                                .map(stop -> new IDFMStopAreaInLine(lineAndRailStop.getKey(), stop.getStopAreaId()))
                                 .collect(Collectors.toList())
                         );
                     }
@@ -171,7 +202,8 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
                     }
                 }
             });
-        log.info("Finish importing stops-lines pairs");
+
+        log.info("Finish importing stops-lines pairs 2/2");
     }
 
     public void saveAllLinesFromCSV() {

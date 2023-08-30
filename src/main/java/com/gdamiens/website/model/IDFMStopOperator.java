@@ -44,7 +44,6 @@ public class IDFMStopOperator implements Serializable {
         this.latitude = stopOperator.getLatitude();
         this.longitude = stopOperator.getLongitude();
         this.type = stopOperator.getType();
-        this.stopId = stopOperator.getStopId();
     }
 
     public Integer getId() {

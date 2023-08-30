@@ -1,6 +1,6 @@
 package com.gdamiens.website.model;
 
-import com.gdamiens.website.controller.object.StationCSV;
+import com.gdamiens.website.controller.object.StopCSV;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -38,15 +38,12 @@ public class IDFMStop implements Serializable {
         this.id = stopId;
     }
 
-    public IDFMStop(StationCSV stationCSV) {
-        this.id = Integer.parseInt(stationCSV.getStopId());
-        this.name = stationCSV.getStopName();
-        if (stationCSV.getGps() != null && stationCSV.getGps().split(",").length == 2) {
-            String[] splittedGps = stationCSV.getGps().split(",");
-            this.latitude = Double.parseDouble(splittedGps[0]);
-            this.longitude = Double.parseDouble(splittedGps[1]);
-        }
-        this.type = stationCSV.getStopType();
+    public IDFMStop(StopCSV stopCSV) {
+        this.id = Integer.parseInt(stopCSV.getStopId());
+        this.name = stopCSV.getStopName();
+        this.latitude = stopCSV.getLatitude();
+        this.longitude = stopCSV.getLongitude();
+        this.type = stopCSV.getStopType();
     }
 
     public Integer getId() {
