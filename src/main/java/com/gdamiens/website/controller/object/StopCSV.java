@@ -4,19 +4,19 @@ import com.opencsv.bean.CsvBindByPosition;
 
 public class StopCSV extends StopAbstractCSV {
 
-    @CsvBindByPosition(position = 0)
+    @CsvBindByPosition(position = 6)
     private String stopId;
 
-    @CsvBindByPosition(position = 4)
+    @CsvBindByPosition(position = 3)
     private String stopName;
 
-    @CsvBindByPosition(position = 5)
+    @CsvBindByPosition(position = 7)
     private Double longitude;
 
-    @CsvBindByPosition(position = 6)
+    @CsvBindByPosition(position = 8)
     private Double latitude;
 
-    @CsvBindByPosition(position = 7)
+    @CsvBindByPosition(position = 4)
     private String stopType;
 
     public String getStopId() {
