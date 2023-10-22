@@ -11,8 +11,15 @@ public abstract class AbstractIDFMService {
 
     private final ApplicationProperties applicationProperties;
 
+    private final String idfmStaticKey;
+
     protected AbstractIDFMService(ApplicationProperties applicationProperties) {
         this.applicationProperties = applicationProperties;
+        this.idfmStaticKey = this.applicationProperties.getIdfmStaticKey();
+    }
+
+    public String getIdfmStaticKey() {
+        return idfmStaticKey;
     }
 
     protected HttpEntity<String> prepareHttpRequest() {

@@ -1,0 +1,28 @@
+package com.gdamiens.website.controller.object;
+
+import com.opencsv.bean.CsvBindByPosition;
+
+public class GTFSCSV {
+
+    @CsvBindByPosition(position = 0)
+    private String filename;
+
+    @CsvBindByPosition(position = 1)
+    private String url;
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public void setFilename(String filename) {
+        this.filename = filename;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+}

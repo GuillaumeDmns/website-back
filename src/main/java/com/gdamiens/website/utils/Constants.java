@@ -4,6 +4,7 @@ public final class Constants {
 
     // URLs
 
+    public static final String IDFM_GTFS_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/offre-horaires-tc-gtfs-idfm/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_ESTIMATED_TIMETABLE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/estimated-timetable";
     public static final String IDFM_STOP_MONITORING_URL = "https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring";
     public static final String IDFM_GENERAL_MESSAGE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/general-message";
