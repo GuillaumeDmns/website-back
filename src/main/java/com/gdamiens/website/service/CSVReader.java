@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.zip.ZipInputStream;
 
 public class CSVReader<T> {
 
@@ -69,9 +70,8 @@ public class CSVReader<T> {
         return csvToBean.stream().collect(Collectors.toList());
     }
 
-    public List<T> readFromZipInputStream(String url) {
-        return restTemplate.execute(url, HttpMethod.GET, null, clientHttpResponse -> {
-            InputStreamReader reader = new InputStreamReader(clientHttpResponse.getBody());
+    public List<T> readFromZipInputStream(ZipInputStream zipInputStream) {
+            InputStreamReader reader = new InputStreamReader(zipInputStream);
             CsvToBean<T> csvToBean = new CsvToBeanBuilder<T>(reader)
                 .withType(this.type)
                 .withSeparator(',')
@@ -79,6 +79,5 @@ public class CSVReader<T> {
                 .withSkipLines(1)
                 .build();
             return csvToBean.stream().collect(Collectors.toList());
-        });
     }
 }

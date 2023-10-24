@@ -16,15 +16,6 @@ public class AgencyCSV {
     @CsvBindByPosition(position = 3)
     private String agency_timezone;
 
-    @CsvBindByPosition(position = 4)
-    private String agency_lang;
-
-    @CsvBindByPosition(position = 5)
-    private String agency_phone;
-
-    @CsvBindByPosition(position = 6)
-    private String agency_email;
-
     public String getAgency_id() {
         return agency_id;
     }
@@ -57,27 +48,4 @@ public class AgencyCSV {
         this.agency_timezone = agency_timezone;
     }
 
-    public String getAgency_lang() {
-        return agency_lang;
-    }
-
-    public void setAgency_lang(String agency_lang) {
-        this.agency_lang = agency_lang;
-    }
-
-    public String getAgency_phone() {
-        return agency_phone;
-    }
-
-    public void setAgency_phone(String agency_phone) {
-        this.agency_phone = agency_phone;
-    }
-
-    public String getAgency_email() {
-        return agency_email;
-    }
-
-    public void setAgency_email(String agency_email) {
-        this.agency_email = agency_email;
-    }
 }

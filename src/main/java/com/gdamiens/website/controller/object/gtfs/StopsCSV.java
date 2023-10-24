@@ -15,10 +15,10 @@ public class StopsCSV {
     @CsvBindByPosition(position = 3)
     private String stop_desc;
 
-    @CsvBindByPosition(position = 4)
+    @CsvBindByPosition(position = 5)
     private Double stop_lat;
 
-    @CsvBindByPosition(position = 5)
+    @CsvBindByPosition(position = 4)
     private Double stop_lon;
 
     @CsvBindByPosition(position = 6)
@@ -33,13 +33,13 @@ public class StopsCSV {
     @CsvBindByPosition(position = 9)
     private String parent_station;
 
-    @CsvBindByPosition(position = 10)
+    @CsvBindByPosition(position = 12)
     private Integer wheelchair_boarding;
 
-    @CsvBindByPosition(position = 11)
+    @CsvBindByPosition(position = 10)
     private String stop_timezone;
 
-    @CsvBindByPosition(position = 12)
+    @CsvBindByPosition(position = 11)
     private String level_id;
 
     @CsvBindByPosition(position = 13)

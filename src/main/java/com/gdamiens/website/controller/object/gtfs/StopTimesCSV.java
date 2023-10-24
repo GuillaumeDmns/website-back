@@ -19,21 +19,6 @@ public class StopTimesCSV {
     @CsvBindByPosition(position = 4)
     private Integer stop_sequence;
 
-    @CsvBindByPosition(position = 5)
-    private Integer pickup_type;
-
-    @CsvBindByPosition(position = 6)
-    private Integer drop_off_type;
-
-    @CsvBindByPosition(position = 7)
-    private String local_zone_id;
-
-    @CsvBindByPosition(position = 8)
-    private String stop_headsign;
-
-    @CsvBindByPosition(position = 9)
-    private Integer timepoint;
-
     public String getTrip_id() {
         return trip_id;
     }
@@ -72,45 +57,5 @@ public class StopTimesCSV {
 
     public void setStop_sequence(Integer stop_sequence) {
         this.stop_sequence = stop_sequence;
-    }
-
-    public Integer getPickup_type() {
-        return pickup_type;
-    }
-
-    public void setPickup_type(Integer pickup_type) {
-        this.pickup_type = pickup_type;
-    }
-
-    public Integer getDrop_off_type() {
-        return drop_off_type;
-    }
-
-    public void setDrop_off_type(Integer drop_off_type) {
-        this.drop_off_type = drop_off_type;
-    }
-
-    public String getLocal_zone_id() {
-        return local_zone_id;
-    }
-
-    public void setLocal_zone_id(String local_zone_id) {
-        this.local_zone_id = local_zone_id;
-    }
-
-    public String getStop_headsign() {
-        return stop_headsign;
-    }
-
-    public void setStop_headsign(String stop_headsign) {
-        this.stop_headsign = stop_headsign;
-    }
-
-    public Integer getTimepoint() {
-        return timepoint;
-    }
-
-    public void setTimepoint(Integer timepoint) {
-        this.timepoint = timepoint;
     }
 }
