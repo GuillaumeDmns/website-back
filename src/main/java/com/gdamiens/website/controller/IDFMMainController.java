@@ -27,10 +27,14 @@ public class IDFMMainController {
     private final IDFMAgencyService idfmAgencyService;
 
     private final IDFMRouteService idfmRouteService;
-    public IDFMMainController(IDFMMainService idfmMainService, IDFMAgencyService idfmAgencyService, IDFMRouteService idfmRouteService) {
+
+    private final IDFMTripService idfmTripService;
+
+    public IDFMMainController(IDFMMainService idfmMainService, IDFMAgencyService idfmAgencyService, IDFMRouteService idfmRouteService, IDFMTripService idfmTripService) {
         this.idfmMainService = idfmMainService;
         this.idfmAgencyService = idfmAgencyService;
         this.idfmRouteService = idfmRouteService;
+        this.idfmTripService = idfmTripService;
     }
 
     @PostMapping("/gtfs")
@@ -91,6 +95,7 @@ public class IDFMMainController {
                     case "trips.txt":
                         CSVReader<TripsCSV> csvReaderTrips = new CSVReader<>(TripsCSV.class);
                         List<TripsCSV> tripsCSVList = csvReaderTrips.readFromZipInputStream(zipInputStream);
+                        this.idfmTripService.saveAllTripsFromTripsCSVList(tripsCSVList);
                         break;
                     default:
                         break;

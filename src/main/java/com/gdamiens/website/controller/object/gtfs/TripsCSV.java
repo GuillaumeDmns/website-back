@@ -20,7 +20,7 @@ public class TripsCSV {
     private String trip_short_name;
 
     @CsvBindByPosition(position = 5)
-    private Boolean direction_id;
+    private Integer direction_id;
 
     @CsvBindByPosition(position = 6)
     private String block_id;
@@ -74,11 +74,11 @@ public class TripsCSV {
         this.trip_short_name = trip_short_name;
     }
 
-    public Boolean getDirection_id() {
+    public Integer getDirection_id() {
         return direction_id;
     }
 
-    public void setDirection_id(Boolean direction_id) {
+    public void setDirection_id(Integer direction_id) {
         this.direction_id = direction_id;
     }
 
