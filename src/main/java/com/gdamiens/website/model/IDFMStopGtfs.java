@@ -1,6 +1,5 @@
 package com.gdamiens.website.model;
 
-import com.gdamiens.website.controller.object.StopOperatorCSV;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,12 +7,12 @@ import jakarta.persistence.Table;
 
 import java.io.Serializable;
 
-@Entity(name = "IDFMStopOperator")
-@Table(schema = "public", name = "idfm_stop_operator")
-public class IDFMStopOperator implements Serializable {
+@Entity(name = "IDFMStopGtfs")
+@Table(schema = "public", name = "idfm_stop_gtfs")
+public class IDFMStopGtfs implements Serializable {
 
     @Id
-    private Integer id;
+    private String id;
 
     @Column(name = "name")
     private String name;
@@ -27,30 +26,17 @@ public class IDFMStopOperator implements Serializable {
     @Column(name = "type")
     private String type;
 
-    @Column(name = "stop_id")
-    private Integer stopId;
+    @Column(name = "parent_station")
+    private String parentStation;
 
-    public IDFMStopOperator() {
-    }
+    @Column(name = "route_id")
+    private String routeId;
 
-    public IDFMStopOperator(Integer stopId, Integer stopOperatorId) {
-        this.stopId = stopId;
-        this.id = stopOperatorId;
-    }
-
-    public IDFMStopOperator(StopOperatorCSV stopOperator) {
-        this.id = Integer.parseInt(stopOperator.getStopOperatorId());
-        this.name = stopOperator.getName();
-        this.latitude = stopOperator.getLatitude();
-        this.longitude = stopOperator.getLongitude();
-        this.type = stopOperator.getType();
-    }
-
-    public Integer getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -86,11 +72,31 @@ public class IDFMStopOperator implements Serializable {
         this.type = type;
     }
 
-    public Integer getStopId() {
-        return stopId;
+    public String getParentStation() {
+        return parentStation;
     }
 
-    public void setStopId(Integer stopId) {
-        this.stopId = stopId;
+    public void setParentStation(String parentStation) {
+        this.parentStation = parentStation;
+    }
+
+    public String getRouteId() {
+        return routeId;
+    }
+
+    public void setRouteId(String routeId) {
+        this.routeId = routeId;
+    }
+
+    @Override
+    public String toString() {
+        return "IDFMStopGtfs{" +
+            "id='" + id + '\'' +
+            ", name='" + name + '\'' +
+            ", latitude=" + latitude +
+            ", longitude=" + longitude +
+            ", type='" + type + '\'' +
+            ", parentStation='" + parentStation + '\'' +
+            '}';
     }
 }

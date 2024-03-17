@@ -34,9 +34,18 @@ public class IDFMTripService extends AbstractIDFMService implements IDFMServiceI
         log.info("Start importing trips");
         log.info("{} trips to process", tripsCSVList.size());
 
-        this.idfmTripRepository.saveAll(
-            tripsCSVList.parallelStream().map(IDFMTrip::new).collect(Collectors.toList())
-        );
+        tripsCSVList
+            .parallelStream()
+            .map(IDFMTrip::new)
+            .forEach(trip -> {
+                try {
+                    this.idfmTripRepository.save(trip);
+                }
+                catch (Exception e) {
+                    log.error("Cannot import trip {} : {}", trip.getId(), e.getMessage());
+                }
+            });
+
 
         log.info("Finish importing trips");
     }

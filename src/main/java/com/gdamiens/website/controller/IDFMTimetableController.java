@@ -4,10 +4,9 @@ import com.gdamiens.website.controller.object.*;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStop;
-import com.gdamiens.website.model.IDFMStopArea;
+import com.gdamiens.website.model.IDFMStopGtfs;
 import com.gdamiens.website.service.IDFMGeneralMessageService;
 import com.gdamiens.website.service.IDFMLineService;
-import com.gdamiens.website.service.IDFMStopAreaService;
 import com.gdamiens.website.service.IDFMStopService;
 import com.gdamiens.website.utils.Constants;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,18 +32,14 @@ public class IDFMTimetableController {
 
     private final IDFMStopService idfmStopService;
 
-    private final IDFMStopAreaService idfmStopAreaService;
-
     private final IDFMGeneralMessageService idfmGeneralMessageService;
 
     public IDFMTimetableController(IDFMLineService idfmLineService,
                           IDFMStopService idfmStopService,
-                          IDFMStopAreaService idfmStopAreaService,
                           IDFMGeneralMessageService idfmGeneralMessageService
     ) {
         this.idfmLineService = idfmLineService;
         this.idfmStopService = idfmStopService;
-        this.idfmStopAreaService = idfmStopAreaService;
         this.idfmGeneralMessageService = idfmGeneralMessageService;
     }
 
@@ -80,9 +75,9 @@ public class IDFMTimetableController {
             IDFMStop idfmStop = this.idfmStopService.getStop(stopId);
 
             if (Optional.ofNullable(idfmStop).isEmpty()) {
-                IDFMStopArea idfmStopArea = this.idfmStopAreaService.getStop(stopId);
+                IDFMStopGtfs idfmStopGtfs = new IDFMStopGtfs(); // TODO implement
 
-                return new ResponseEntity<>(new UnitIDFMDTO(idfmStopArea, calls), HttpStatus.OK);
+                return new ResponseEntity<>(new UnitIDFMDTO(idfmStopGtfs, calls), HttpStatus.OK);
             }
 
             return new ResponseEntity<>(new UnitIDFMDTO(idfmStop, calls), HttpStatus.OK);

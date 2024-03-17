@@ -2,10 +2,9 @@ package com.gdamiens.website.controller;
 
 import com.gdamiens.website.controller.object.StopsByLineDTO;
 import com.gdamiens.website.model.IDFMLine;
-import com.gdamiens.website.model.IDFMStopArea;
+import com.gdamiens.website.model.IDFMStopGtfs;
 import com.gdamiens.website.model.Test;
 import com.gdamiens.website.service.IDFMLineService;
-import com.gdamiens.website.service.IDFMStopAreaService;
 import com.gdamiens.website.service.IDFMStopService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -21,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -29,12 +29,10 @@ public class IDFMStopController {
 
     private static final Logger log = LoggerFactory.getLogger(IDFMStopController.class);
 
-    private final IDFMStopAreaService idfmStopAreaService;
     private final IDFMStopService idfmStopService;
     private final IDFMLineService idfmLineService;
 
-    public IDFMStopController(IDFMStopAreaService idfmStopAreaService, IDFMStopService idfmStopService, IDFMLineService idfmLineService) {
-        this.idfmStopAreaService = idfmStopAreaService;
+    public IDFMStopController(IDFMStopService idfmStopService, IDFMLineService idfmLineService) {
         this.idfmStopService = idfmStopService;
         this.idfmLineService = idfmLineService;
     }
@@ -49,7 +47,7 @@ public class IDFMStopController {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
 
-            List<IDFMStopArea> idfmStopAreas;
+            List<IDFMStopGtfs> idfmStops;
 
             switch (requestedLine.getTransportMode()) {
                 case RER:
@@ -57,13 +55,13 @@ public class IDFMStopController {
                 case TRAM:
                 case METRO:
                 case TRANSILIEN:
-                    idfmStopAreas = this.idfmStopAreaService.getRailStopAreasFromLineId(requestedLine.getId());
+                    idfmStops = new ArrayList<>(); // TODO implement
                     break;
                 default:
-                    idfmStopAreas = this.idfmStopAreaService.getStopAreasFromLineId(requestedLine.getId());
+                    idfmStops = new ArrayList<>(); // TODO implement
             }
 
-            return new ResponseEntity<>(new StopsByLineDTO(idfmStopAreas), HttpStatus.OK);
+            return new ResponseEntity<>(new StopsByLineDTO(idfmStops), HttpStatus.OK);
 
         } catch (Exception e) {
             log.info("error during IDFM get stops by lineId request");

@@ -17,12 +17,12 @@ public class IDFMStopInLine implements Serializable {
     private String lineId;
 
     @Id
-    private Integer stopId;
+    private String stopId;
 
     public IDFMStopInLine() {
     }
 
-    public IDFMStopInLine(String lineId, Integer stopId) {
+    public IDFMStopInLine(String lineId, String stopId) {
         this.lineId = lineId;
         this.stopId = stopId;
     }
@@ -35,11 +35,11 @@ public class IDFMStopInLine implements Serializable {
         this.lineId = lineId;
     }
 
-    public Integer getStopId() {
+    public String getStopId() {
         return stopId;
     }
 
-    public void setStopId(Integer stopId) {
+    public void setStopId(String stopId) {
         this.stopId = stopId;
     }
 

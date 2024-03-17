@@ -8,7 +8,7 @@ public class StopAndLineCSV {
     private String stopId;
 
     @CsvBindByPosition(position = 0)
-    private String lineRef;
+    private String routeId;
 
     public String getStopId() {
         return stopId;
@@ -18,11 +18,11 @@ public class StopAndLineCSV {
         this.stopId = stopId;
     }
 
-    public String getLineRef() {
-        return lineRef;
+    public String getRouteId() {
+        return routeId;
     }
 
-    public void setLineRef(String lineRef) {
-        this.lineRef = lineRef;
+    public void setRouteId(String routeId) {
+        this.routeId = routeId;
     }
 }

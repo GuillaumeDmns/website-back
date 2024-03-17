@@ -7,12 +7,12 @@ public class IDFMStopInLineId implements Serializable {
 
     private String lineId;
 
-    private Integer stopId;
+    private String stopId;
 
     public IDFMStopInLineId() {
     }
 
-    public IDFMStopInLineId(String lineId, Integer stopId) {
+    public IDFMStopInLineId(String lineId, String stopId) {
         this.lineId = lineId;
         this.stopId = stopId;
     }

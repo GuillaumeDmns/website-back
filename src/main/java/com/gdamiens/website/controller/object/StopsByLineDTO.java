@@ -1,22 +1,22 @@
 package com.gdamiens.website.controller.object;
 
-import com.gdamiens.website.model.IDFMStopArea;
+import com.gdamiens.website.model.IDFMStopGtfs;
 
 import java.util.List;
 
 public class StopsByLineDTO {
 
-    private List<IDFMStopArea> stops;
+    private List<IDFMStopGtfs> stops;
 
-    public StopsByLineDTO(List<IDFMStopArea> stops) {
+    public StopsByLineDTO(List<IDFMStopGtfs> stops) {
         this.stops = stops;
     }
 
-    public List<IDFMStopArea> getStops() {
+    public List<IDFMStopGtfs> getStops() {
         return stops;
     }
 
-    public void setStops(List<IDFMStopArea> stops) {
+    public void setStops(List<IDFMStopGtfs> stops) {
         this.stops = stops;
     }
 }

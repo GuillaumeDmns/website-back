@@ -91,55 +91,7 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
             .collect(Collectors.toList());
     }
 
-    public void saveAllStopsFromCSV() {
-        CSVReader<StopCSV> csvReader = new CSVReader<>(StopCSV.class);
-
-        List<StopCSV> stops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_URL);
-
-        log.info("Start importing stops");
-        log.info("{} stops to process", stops.size());
-
-        convertLambert94ToLatLong(stops);
-
-        stops
-            .parallelStream()
-            .forEach(stop -> {
-                if (this.idfmStopRepository.partialUpdate(
-                    Integer.parseInt(stop.getStopId()),
-                    stop.getStopName(),
-                    stop.getLatitude(),
-                    stop.getLongitude(),
-                    stop.getStopType()
-                ) == 0) {
-                    this.idfmStopRepository.save(new IDFMStop(stop));
-                }
-            });
-
-        log.info("Finish importing stops");
-    }
-
     public void saveStopsRelationsFromCSV() {
-        CSVReader<RelationsCSV> csvReader = new CSVReader<>(RelationsCSV.class);
-
-        List<RelationsCSV> relations = csvReader.readFromUrl(Constants.IDFM_RELATIONS_URL);
-
-        log.info("Start importing stops-stop areas relations");
-        log.info("{} relations to process", relations.size());
-
-        relations
-            .stream()
-            .filter(relationsCSV -> relationsCSV.getStopId() != null)
-            .collect(
-                Collectors.groupingBy(
-                    RelationsCSV::getStopId,
-                    Collectors.collectingAndThen(Collectors.toList(), values -> values.get(0))
-                )
-            )
-            .values()
-            .parallelStream()
-            .forEach(relationsCSV -> idfmStopRepository.setStopArea(relationsCSV.getStopAreaId(), relationsCSV.getStopId()));
-
-        log.info("Finish importing stops-stop areas relations");
     }
 
     public IDFMStop getStop(Integer stopId) {
@@ -152,9 +104,5 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
 
     public Test get(Integer id) {
         return this.testRepository.findById(id).orElse(null);
-    }
-
-    public void saveStops(List<IDFMStop> stops) {
-        this.idfmStopRepository.saveAll(stops);
     }
 }
