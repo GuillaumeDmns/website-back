@@ -1,6 +1,5 @@
 package com.gdamiens.website.model;
 
-import com.gdamiens.website.controller.object.StopAreaCSV;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,12 +7,12 @@ import jakarta.persistence.Table;
 
 import java.io.Serializable;
 
-@Entity(name = "IDFMStopArea")
-@Table(schema = "public", name = "idfm_stop_area")
-public class IDFMStopArea implements Serializable {
+@Entity(name = "IDFMStopGtfs")
+@Table(schema = "public", name = "idfm_stop_gtfs")
+public class IDFMStopGtfs implements Serializable {
 
     @Id
-    private Integer id;
+    private String id;
 
     @Column(name = "name")
     private String name;
@@ -24,26 +23,14 @@ public class IDFMStopArea implements Serializable {
     @Column(name = "longitude")
     private Double longitude;
 
-    @Column(name = "type")
-    private String type;
+    @Column(name = "parent_station")
+    private String parentStation;
 
-    public IDFMStopArea() {
-    }
-
-    public IDFMStopArea(StopAreaCSV stopAreaCSV) {
-
-        this.id = Integer.parseInt(stopAreaCSV.getStopAreaId());
-        this.name = stopAreaCSV.getName();
-        this.latitude = stopAreaCSV.getLatitude();
-        this.longitude = stopAreaCSV.getLongitude();
-        this.type = stopAreaCSV.getType();
-    }
-
-    public Integer getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -71,11 +58,22 @@ public class IDFMStopArea implements Serializable {
         this.longitude = longitude;
     }
 
-    public String getType() {
-        return type;
+    public String getParentStation() {
+        return parentStation;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setParentStation(String parentStation) {
+        this.parentStation = parentStation;
+    }
+
+    @Override
+    public String toString() {
+        return "IDFMStopGtfs{" +
+            "id='" + id + '\'' +
+            ", name='" + name + '\'' +
+            ", latitude=" + latitude +
+            ", longitude=" + longitude +
+            ", parentStation='" + parentStation + '\'' +
+            '}';
     }
 }

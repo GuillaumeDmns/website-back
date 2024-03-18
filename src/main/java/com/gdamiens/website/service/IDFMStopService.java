@@ -3,7 +3,7 @@ package com.gdamiens.website.service;
 import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.CallUnit;
 import com.gdamiens.website.controller.object.RelationsCSV;
-import com.gdamiens.website.controller.object.StationCSV;
+import com.gdamiens.website.controller.object.StopCSV;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.IDFMResponse;
 import com.gdamiens.website.idfm.MonitoredStopVisit;
@@ -11,7 +11,9 @@ import com.gdamiens.website.idfm.ServiceDelivery;
 import com.gdamiens.website.idfm.Siri;
 import com.gdamiens.website.idfm.StopMonitoringDelivery;
 import com.gdamiens.website.model.IDFMStop;
+import com.gdamiens.website.model.Test;
 import com.gdamiens.website.repository.IDFMStopRepository;
+import com.gdamiens.website.repository.TestRepository;
 import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
@@ -29,6 +31,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.gdamiens.website.utils.GeoUtils.convertLambert94ToLatLong;
+
 @Service
 public class IDFMStopService extends AbstractIDFMService implements IDFMServiceInterface {
 
@@ -36,12 +40,15 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
 
     private final IDFMStopRepository idfmStopRepository;
 
+    private final TestRepository testRepository;
+
     private final HttpComponentsClientHttpRequestFactory requestFactory;
 
 
-    public IDFMStopService(IDFMStopRepository idfmStopRepository, ApplicationProperties applicationProperties) {
+    public IDFMStopService(IDFMStopRepository idfmStopRepository, TestRepository testRepository, ApplicationProperties applicationProperties) {
         super(applicationProperties);
         this.idfmStopRepository = idfmStopRepository;
+        this.testRepository = testRepository;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
     }
 
@@ -84,44 +91,18 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
             .collect(Collectors.toList());
     }
 
-    public void saveAllStopsFromCSV() {
-        CSVReader<StationCSV> csvReader = new CSVReader<>(StationCSV.class);
-
-        List<StationCSV> stops = csvReader.readFromUrl(Constants.IDFM_ALL_STATIONS_URL);
-
-        log.info("Start importing stops");
-        log.info("{} stops to process", stops.size());
-
-        this.idfmStopRepository.saveAll(stops.parallelStream().map(IDFMStop::new).collect(Collectors.toList()));
-
-        log.info("Finish importing stops");
-    }
-
     public void saveStopsRelationsFromCSV() {
-        CSVReader<RelationsCSV> csvReader = new CSVReader<>(RelationsCSV.class);
-
-        List<RelationsCSV> relations = csvReader.readFromUrl(Constants.IDFM_RELATIONS_URL);
-
-        log.info("Start importing stops-stop areas relations");
-        log.info("{} relations to process", relations.size());
-
-        relations
-            .stream()
-            .filter(relationsCSV -> relationsCSV.getStopId() != null)
-            .collect(
-                Collectors.groupingBy(
-                    RelationsCSV::getStopId,
-                    Collectors.collectingAndThen(Collectors.toList(), values -> values.get(0))
-                )
-            )
-            .values()
-            .parallelStream()
-            .forEach(relationsCSV -> idfmStopRepository.setStopArea(relationsCSV.getStopAreaId(), relationsCSV.getStopId()));
-
-        log.info("Finish importing stops-stop areas relations");
     }
 
     public IDFMStop getStop(Integer stopId) {
         return this.idfmStopRepository.findById(stopId).orElse(null);
+    }
+
+    public Test createOrUpdate(Test test) {
+        return this.testRepository.save(test);
+    }
+
+    public Test get(Integer id) {
+        return this.testRepository.findById(id).orElse(null);
     }
 }

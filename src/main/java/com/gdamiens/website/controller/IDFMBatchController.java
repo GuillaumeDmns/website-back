@@ -1,10 +1,7 @@
 package com.gdamiens.website.controller;
 
 import com.gdamiens.website.batch.IDFMUpdateBatch;
-import com.gdamiens.website.service.IDFMLineService;
-import com.gdamiens.website.service.IDFMOperatorService;
-import com.gdamiens.website.service.IDFMStopAreaService;
-import com.gdamiens.website.service.IDFMStopService;
+import com.gdamiens.website.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.slf4j.Logger;
@@ -23,23 +20,15 @@ public class IDFMBatchController {
 
     private final IDFMLineService idfmLineService;
 
-    private final IDFMStopService idfmStopService;
-
-    private final IDFMStopAreaService idfmStopAreaService;
-
     private final IDFMOperatorService idfmOperatorService;
 
     private final IDFMUpdateBatch idfmUpdateBatch;
 
     public IDFMBatchController(IDFMLineService idfmLineService,
-                               IDFMStopService idfmStopService,
-                               IDFMStopAreaService idfmStopAreaService,
                                IDFMOperatorService idfmOperatorService,
                                IDFMUpdateBatch idfmUpdateBatch
     ) {
         this.idfmLineService = idfmLineService;
-        this.idfmStopService = idfmStopService;
-        this.idfmStopAreaService = idfmStopAreaService;
         this.idfmOperatorService = idfmOperatorService;
         this.idfmUpdateBatch = idfmUpdateBatch;
     }
@@ -62,25 +51,12 @@ public class IDFMBatchController {
     @Operation(summary = "Update stops and lines information", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Void> updateStopsAndLines() {
         try {
-            this.idfmLineService.refreshLinesAndStops();
+            this.idfmLineService.refreshStopsInLines();
 
             return new ResponseEntity<>(HttpStatus.OK);
 
         } catch (Exception e) {
             log.info("error during IDFM update stations & stops request : {}", e.getMessage());
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @PostMapping("/update-stops")
-    @Operation(summary = "Update stops information", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> updateStopsInformation() {
-        try {
-            this.idfmStopService.saveAllStopsFromCSV();
-
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (Exception e) {
-            log.info("error during IDFM update stops request : {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -94,32 +70,6 @@ public class IDFMBatchController {
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             log.info("error during IDFM update lines request : {}", e.getMessage());
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @PostMapping("/update-stop-areas")
-    @Operation(summary = "Update stop areas information", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> updateStopAreas() {
-        try {
-            this.idfmStopAreaService.saveAllStopAreasFromCSV();
-
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (Exception e) {
-            log.info("error during IDFM update stop areas request : {}", e.getMessage());
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @PostMapping("/update-stops-relations")
-    @Operation(summary = "Update stops relations information", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> updateStopsRelations() {
-        try {
-            this.idfmStopService.saveStopsRelationsFromCSV();
-
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (Exception e) {
-            log.info("error during IDFM update stops relations request : {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

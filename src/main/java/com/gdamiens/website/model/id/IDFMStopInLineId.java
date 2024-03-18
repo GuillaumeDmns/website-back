@@ -3,16 +3,16 @@ package com.gdamiens.website.model.id;
 import java.io.Serializable;
 import java.util.Objects;
 
-public class IDFMStopLineId implements Serializable {
+public class IDFMStopInLineId implements Serializable {
 
     private String lineId;
 
-    private Integer stopId;
+    private String stopId;
 
-    public IDFMStopLineId() {
+    public IDFMStopInLineId() {
     }
 
-    public IDFMStopLineId(String lineId, Integer stopId) {
+    public IDFMStopInLineId(String lineId, String stopId) {
         this.lineId = lineId;
         this.stopId = stopId;
     }
@@ -21,7 +21,7 @@ public class IDFMStopLineId implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        IDFMStopLineId that = (IDFMStopLineId) o;
+        IDFMStopInLineId that = (IDFMStopInLineId) o;
         return Objects.equals(lineId, that.lineId) && Objects.equals(stopId, that.stopId);
     }
 

@@ -1,7 +1,7 @@
 package com.gdamiens.website.controller.object;
 
 import com.gdamiens.website.model.IDFMStop;
-import com.gdamiens.website.model.IDFMStopArea;
+import com.gdamiens.website.model.IDFMStopGtfs;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,7 +10,7 @@ public class UnitIDFMDTO {
 
     private IDFMStop stop;
 
-    private IDFMStopArea stopArea;
+    private IDFMStopGtfs stopGtfs;
 
     private List<CallUnit> nextPassages;
 
@@ -22,8 +22,8 @@ public class UnitIDFMDTO {
         this.nextPassageDestinations = nextPassages.stream().map(CallUnit::getDestinationDisplay).distinct().collect(Collectors.toList());
     }
 
-    public UnitIDFMDTO(IDFMStopArea idfmStopArea, List<CallUnit> nextPassages) {
-        this.stopArea = idfmStopArea;
+    public UnitIDFMDTO(IDFMStopGtfs stopGtfs, List<CallUnit> nextPassages) {
+        this.stopGtfs = stopGtfs;
         this.nextPassages = nextPassages;
         this.nextPassageDestinations = nextPassages.stream().map(CallUnit::getDestinationDisplay).distinct().collect(Collectors.toList());
     }
@@ -38,12 +38,12 @@ public class UnitIDFMDTO {
         this.stop = stop;
     }
 
-    public IDFMStopArea getStopArea() {
-        return stopArea;
+    public IDFMStopGtfs getStopGtfs() {
+        return stopGtfs;
     }
 
-    public void setStopArea(IDFMStopArea stopArea) {
-        this.stopArea = stopArea;
+    public void setStopGtfs(IDFMStopGtfs stopGtfs) {
+        this.stopGtfs = stopGtfs;
     }
 
     public List<CallUnit> getNextPassages() {
