@@ -146,15 +146,13 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
 
                 if (allLines.stream().anyMatch(idfmLine -> idfmLine.getId().equals(lineId))) {
                     try {
-                        if (stopInLine.getValue().stream().findFirst().get().getStopId().split(":").length == 2) {
-                            this.idfmStopInLineService.saveAllStopLine(
-                                stopInLine
-                                    .getValue()
-                                    .stream()
-                                    .map(stop -> new IDFMStopInLine(lineId, stop.getStopId()))
-                                    .collect(Collectors.toList())
-                            );
-                        }
+                        this.idfmStopInLineService.saveAllStopLine(
+                            stopInLine
+                                .getValue()
+                                .stream()
+                                .map(stop -> new IDFMStopInLine(lineId, stop.getStopId()))
+                                .collect(Collectors.toList())
+                        );
                     }
                     catch (Exception e) {
                         log.error(e.getMessage());

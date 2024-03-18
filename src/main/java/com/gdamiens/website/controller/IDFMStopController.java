@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -54,15 +53,18 @@ public class IDFMStopController {
             List<IDFMStopGtfs> idfmStops;
 
             switch (requestedLine.getTransportMode()) {
-                case RER:
+                case BUS:
+                case METRO:
+                case NOCTILIEN:
                 case TER:
                 case TRAM:
-                case METRO:
-                case TRANSILIEN:
-                    idfmStops = this.idfmStopGtfsService.getStopAreasFromLineId(requestedLine.getId());
+                    idfmStops = this.idfmStopGtfsService.getParentStopsFromLineId(requestedLine.getId()); // with parents
                     break;
+                case RER:
+                case TRANSILIEN:
                 default:
-                    idfmStops = new ArrayList<>(); // TODO implement
+                    idfmStops = this.idfmStopGtfsService.getStopsFromLineId(requestedLine.getId());
+                    break;
             }
 
             return new ResponseEntity<>(new StopsByLineDTO(idfmStops), HttpStatus.OK);

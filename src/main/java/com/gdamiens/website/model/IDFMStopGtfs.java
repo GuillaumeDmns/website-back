@@ -23,14 +23,8 @@ public class IDFMStopGtfs implements Serializable {
     @Column(name = "longitude")
     private Double longitude;
 
-    @Column(name = "type")
-    private String type;
-
     @Column(name = "parent_station")
     private String parentStation;
-
-    @Column(name = "route_id")
-    private String routeId;
 
     public String getId() {
         return id;
@@ -64,28 +58,12 @@ public class IDFMStopGtfs implements Serializable {
         this.longitude = longitude;
     }
 
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
     public String getParentStation() {
         return parentStation;
     }
 
     public void setParentStation(String parentStation) {
         this.parentStation = parentStation;
-    }
-
-    public String getRouteId() {
-        return routeId;
-    }
-
-    public void setRouteId(String routeId) {
-        this.routeId = routeId;
     }
 
     @Override
@@ -95,7 +73,6 @@ public class IDFMStopGtfs implements Serializable {
             ", name='" + name + '\'' +
             ", latitude=" + latitude +
             ", longitude=" + longitude +
-            ", type='" + type + '\'' +
             ", parentStation='" + parentStation + '\'' +
             '}';
     }
