@@ -20,7 +20,7 @@
         <jjwt-api.version>0.11.5</jjwt-api.version>
         <jjwt-impl.version>0.11.5</jjwt-impl.version>
         <jjwt-jackson.version>0.11.5</jjwt-jackson.version>
-        <postgresql.version>42.6.0</postgresql.version>
+        <postgresql.version>42.6.1</postgresql.version>
         <commons-lang3.version>3.13.0</commons-lang3.version>
         <swagger-parser.version>2.1.16</swagger-parser.version>
         <opencsv.version>5.8</opencsv.version>
