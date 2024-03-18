@@ -47,7 +47,7 @@ public class IDFMUpdateBatch {
 
         this.idfmOperatorService.saveAllOperatorsFromCSV();
         this.idfmLineService.saveAllLinesFromCSV();
-        this.idfmLineService.refreshLinesAndStops();
+        this.idfmLineService.refreshStopsInLines();
 
         log.info("End cron : Full IDFM update");
     }

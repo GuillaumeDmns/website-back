@@ -8,8 +8,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Repository
 public interface IDFMStopGtfsRepository extends JpaRepository<IDFMStopGtfs, String> {
+
+    @Query(value = "SELECT DISTINCT s.* FROM idfm_stop_in_line isil INNER JOIN idfm_stop_gtfs s ON s.id = isil.stop_id WHERE isil.line_id = :lineId ORDER BY s.name", nativeQuery = true)
+    List<IDFMStopGtfs> getStopsFromLineId(@Param("lineId") String lineId);
 
     @Transactional
     @Modifying

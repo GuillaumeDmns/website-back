@@ -5,6 +5,7 @@ import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStopGtfs;
 import com.gdamiens.website.model.Test;
 import com.gdamiens.website.service.IDFMLineService;
+import com.gdamiens.website.service.IDFMStopGtfsService;
 import com.gdamiens.website.service.IDFMStopService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,10 +31,13 @@ public class IDFMStopController {
     private static final Logger log = LoggerFactory.getLogger(IDFMStopController.class);
 
     private final IDFMStopService idfmStopService;
+
+    private final IDFMStopGtfsService idfmStopGtfsService;
     private final IDFMLineService idfmLineService;
 
-    public IDFMStopController(IDFMStopService idfmStopService, IDFMLineService idfmLineService) {
+    public IDFMStopController(IDFMStopService idfmStopService, IDFMStopGtfsService idfmStopGtfsService, IDFMLineService idfmLineService) {
         this.idfmStopService = idfmStopService;
+        this.idfmStopGtfsService = idfmStopGtfsService;
         this.idfmLineService = idfmLineService;
     }
 
@@ -55,7 +59,7 @@ public class IDFMStopController {
                 case TRAM:
                 case METRO:
                 case TRANSILIEN:
-                    idfmStops = new ArrayList<>(); // TODO implement
+                    idfmStops = this.idfmStopGtfsService.getStopAreasFromLineId(requestedLine.getId());
                     break;
                 default:
                     idfmStops = new ArrayList<>(); // TODO implement

@@ -51,7 +51,7 @@ public class IDFMBatchController {
     @Operation(summary = "Update stops and lines information", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Void> updateStopsAndLines() {
         try {
-            this.idfmLineService.refreshLinesAndStops();
+            this.idfmLineService.refreshStopsInLines();
 
             return new ResponseEntity<>(HttpStatus.OK);
 

@@ -27,11 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -127,32 +123,32 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
             ));
     }
 
-    public void refreshLinesAndStops() {
+    public void refreshStopsInLines() {
         CSVReader<StopAndLineCSV> csvReader = new CSVReader<>(StopAndLineCSV.class);
 
-        Map<String, List<StopAndLineCSV>> linesAndStops = csvReader.readFromUrl(Constants.IDFM_STOPS_AND_LINES_URL, StopAndLineCSV::getRouteId);
+        Map<String, List<StopAndLineCSV>> stopsInLines = csvReader.readFromUrl(Constants.IDFM_STOPS_IN_LINES_URL, StopAndLineCSV::getRouteId);
 
-        if (linesAndStops == null || linesAndStops.isEmpty()) {
-            log.info("No data has been found in the stations & lines CSV file");
+        if (stopsInLines == null || stopsInLines.isEmpty()) {
+            log.info("No data has been found in the stops in lines CSV file");
             return;
         }
 
-        log.info("Start importing stops-lines pairs");
-        log.info("{} stops-lines pairs to import", linesAndStops.size());
+        log.info("Start importing stops in lines pairs");
+        log.info("{} stops in lines pairs to import", stopsInLines.size());
 
         List<IDFMLine> allLines = this.idfmLineRepository.findAll();
 
-        linesAndStops
+        stopsInLines
             .entrySet()
             .parallelStream()
-            .forEach(lineAndStop -> {
-                String lineId = lineAndStop.getKey().split(":")[1];
+            .forEach(stopInLine -> {
+                String lineId = stopInLine.getKey().split(":")[1];
 
                 if (allLines.stream().anyMatch(idfmLine -> idfmLine.getId().equals(lineId))) {
                     try {
-                        if (lineAndStop.getValue().stream().findFirst().get().getStopId().split(":").length == 2) {
+                        if (stopInLine.getValue().stream().findFirst().get().getStopId().split(":").length == 2) {
                             this.idfmStopInLineService.saveAllStopLine(
-                                lineAndStop
+                                stopInLine
                                     .getValue()
                                     .stream()
                                     .map(stop -> new IDFMStopInLine(lineId, stop.getStopId()))
@@ -165,7 +161,7 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
                     }
                 }
             });
-        
+
         log.info("Finish importing stops-lines pairs");
     }
 
@@ -185,7 +181,7 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
                         case "bus":
                             return lineCSV.getOperatorId() != null && lineCSV.getOperatorId() == 100 && lineCSV.getType().isEmpty();
                         case "rail":
-                            return !Arrays.asList("C00563", "C01388").contains(lineCSV.getLineId());
+                            return !Arrays.asList("C00563", "C01388").contains(lineCSV.getLineId()); // remove CDG val & orly val
                         case "metro":
                         case "tram":
                             return true;

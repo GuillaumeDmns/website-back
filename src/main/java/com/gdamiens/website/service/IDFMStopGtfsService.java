@@ -2,6 +2,7 @@ package com.gdamiens.website.service;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.StopAndLineCSV;
+import com.gdamiens.website.model.IDFMStopGtfs;
 import com.gdamiens.website.repository.IDFMStopGtfsRepository;
 import com.gdamiens.website.utils.Constants;
 import org.slf4j.Logger;
@@ -32,7 +33,7 @@ public class IDFMStopGtfsService extends AbstractIDFMService implements IDFMServ
     public void saveStopsRoutesFromCSV() {
         CSVReader<StopAndLineCSV> csvReader = new CSVReader<>(StopAndLineCSV.class);
 
-        List<StopAndLineCSV> stopsList = csvReader.readFromUrl(Constants.IDFM_STOPS_AND_LINES_URL);
+        List<StopAndLineCSV> stopsList = csvReader.readFromUrl(Constants.IDFM_STOPS_IN_LINES_URL);
 
 
         log.info("Start setting gtfs stops route id");
@@ -43,5 +44,9 @@ public class IDFMStopGtfsService extends AbstractIDFMService implements IDFMServ
             .forEach(stop -> this.idfmStopGtfsRepository.updateRouteId(stop.getStopId(), stop.getRouteId()));
 
         log.info("Finish setting gtfs stops route id");
+    }
+
+    public List<IDFMStopGtfs> getStopAreasFromLineId(String lineId) {
+        return this.idfmStopGtfsRepository.getStopsFromLineId(lineId);
     }
 }
