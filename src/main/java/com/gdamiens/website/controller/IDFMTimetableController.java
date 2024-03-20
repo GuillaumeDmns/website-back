@@ -3,11 +3,10 @@ package com.gdamiens.website.controller;
 import com.gdamiens.website.controller.object.*;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.IDFMLine;
-import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.model.IDFMStopGtfs;
 import com.gdamiens.website.service.IDFMGeneralMessageService;
 import com.gdamiens.website.service.IDFMLineService;
-import com.gdamiens.website.service.IDFMStopService;
+import com.gdamiens.website.service.IDFMStopGtfsService;
 import com.gdamiens.website.utils.Constants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
@@ -30,16 +28,16 @@ public class IDFMTimetableController {
 
     private final IDFMLineService idfmLineService;
 
-    private final IDFMStopService idfmStopService;
+    private final IDFMStopGtfsService idfmStopGtfsService;
 
     private final IDFMGeneralMessageService idfmGeneralMessageService;
 
     public IDFMTimetableController(IDFMLineService idfmLineService,
-                          IDFMStopService idfmStopService,
+                                   IDFMStopGtfsService idfmStopGtfsService,
                           IDFMGeneralMessageService idfmGeneralMessageService
     ) {
         this.idfmLineService = idfmLineService;
-        this.idfmStopService = idfmStopService;
+        this.idfmStopGtfsService = idfmStopGtfsService;
         this.idfmGeneralMessageService = idfmGeneralMessageService;
     }
 
@@ -68,19 +66,13 @@ public class IDFMTimetableController {
 
     @GetMapping("/get-stop-next-passages")
     @Operation(summary = "Get next passages of a IDFM stop", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<UnitIDFMDTO> getStopInformation(@NotNull Integer stopId, String lineId) {
+    public ResponseEntity<UnitIDFMDTO> getStopInformation(@NotNull String stopId, String lineId) {
         try {
-            List<CallUnit> calls = this.idfmStopService.getStopNextPassage(stopId, lineId, Constants.IDFM_STOP_MONITORING_URL);
+            IDFMStopGtfs idfmStopGtfs = this.idfmStopGtfsService.getStop(stopId);
 
-            IDFMStop idfmStop = this.idfmStopService.getStop(stopId);
+            List<CallUnit> calls = this.idfmStopGtfsService.getStopNextPassage(stopId, lineId, Constants.IDFM_STOP_MONITORING_URL);
 
-            if (Optional.ofNullable(idfmStop).isEmpty()) {
-                IDFMStopGtfs idfmStopGtfs = new IDFMStopGtfs(); // TODO implement
-
-                return new ResponseEntity<>(new UnitIDFMDTO(idfmStopGtfs, calls), HttpStatus.OK);
-            }
-
-            return new ResponseEntity<>(new UnitIDFMDTO(idfmStop, calls), HttpStatus.OK);
+            return new ResponseEntity<>(new UnitIDFMDTO(idfmStopGtfs, calls), HttpStatus.OK);
         } catch (CustomException e) {
             log.info(e.getMessage());
 

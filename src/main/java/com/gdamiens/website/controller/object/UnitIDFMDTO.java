@@ -1,6 +1,5 @@
 package com.gdamiens.website.controller.object;
 
-import com.gdamiens.website.model.IDFMStop;
 import com.gdamiens.website.model.IDFMStopGtfs;
 
 import java.util.List;
@@ -8,19 +7,12 @@ import java.util.stream.Collectors;
 
 public class UnitIDFMDTO {
 
-    private IDFMStop stop;
-
     private IDFMStopGtfs stopGtfs;
 
     private List<CallUnit> nextPassages;
 
     private List<String> nextPassageDestinations;
 
-    public UnitIDFMDTO(IDFMStop idfmStop, List<CallUnit> nextPassages) {
-        this.stop = idfmStop;
-        this.nextPassages = nextPassages;
-        this.nextPassageDestinations = nextPassages.stream().map(CallUnit::getDestinationDisplay).distinct().collect(Collectors.toList());
-    }
 
     public UnitIDFMDTO(IDFMStopGtfs stopGtfs, List<CallUnit> nextPassages) {
         this.stopGtfs = stopGtfs;
@@ -29,14 +21,6 @@ public class UnitIDFMDTO {
     }
 
     public UnitIDFMDTO() {}
-
-    public IDFMStop getStop() {
-        return stop;
-    }
-
-    public void setStop(IDFMStop stop) {
-        this.stop = stop;
-    }
 
     public IDFMStopGtfs getStopGtfs() {
         return stopGtfs;
