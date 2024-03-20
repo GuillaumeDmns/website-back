@@ -48,8 +48,10 @@ public class IDFMStopGtfsService extends AbstractIDFMService implements IDFMServ
     public List<CallUnit> getStopNextPassage(String stopId, String lineId, String url) {
         HttpEntity<String> request = this.prepareHttpRequest();
 
+        String[] splittedStopId = stopId.split(":");
+
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(url)
-            .queryParam("MonitoringRef", "STIF:StopArea:SP:" + stopId.split(":")[1] + ":");
+            .queryParam("MonitoringRef", "STIF:StopArea:SP:" + splittedStopId[splittedStopId.length - 1] + ":");
 
         ResponseEntity<IDFMResponse> response = new RestTemplate(this.requestFactory).exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, IDFMResponse.class);
 
