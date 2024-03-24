@@ -11,7 +11,7 @@ public final class Constants {
     public static final String IDFM_STOPS_IN_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/arrets-lignes/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_ALL_LINES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/referentiel-des-lignes/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_OPERATORS_URL = "https://data.iledefrance.fr/explore/dataset/liste-des-transporteurs-exploitant-des-lignes-de-transport-en-commun-en-ile-de-f/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
-
+    public static final String IDFM_LINE_SHAPES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/traces-des-lignes-de-transport-en-commun-idfm/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
 
 
     private Constants() {}

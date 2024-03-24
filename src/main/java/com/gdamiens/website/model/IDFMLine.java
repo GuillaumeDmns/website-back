@@ -6,7 +6,10 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.locationtech.jts.geom.Geometry;
+
 import java.io.Serializable;
+import java.util.Objects;
 
 @Entity(name = "IDFMLine")
 @Table(schema = "public", name = "idfm_line")
@@ -30,6 +33,9 @@ public class IDFMLine implements Serializable {
 
     @Column(name = "line_id_background_color")
     private String lineIdBackgroundColor;
+
+    @Column(name = "shape", columnDefinition = "geography")
+    private Geometry shape;
 
     public IDFMLine() {
     }
@@ -86,15 +92,37 @@ public class IDFMLine implements Serializable {
         this.lineIdBackgroundColor = lineIdBackgroundColor;
     }
 
+    public Geometry getShape() {
+        return shape;
+    }
+
+    public void setShape(Geometry shape) {
+        this.shape = shape;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        IDFMLine idfmLine = (IDFMLine) o;
+        return Objects.equals(id, idfmLine.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
     @Override
     public String toString() {
         return "IDFMLine{" +
             "id='" + id + '\'' +
             ", name='" + name + '\'' +
-            ", transportMode='" + transportMode + '\'' +
+            ", transportMode=" + transportMode +
             ", operatorId=" + operatorId +
             ", lineIdColor='" + lineIdColor + '\'' +
             ", lineIdBackgroundColor='" + lineIdBackgroundColor + '\'' +
+            ", shape=" + shape +
             '}';
     }
 }

@@ -194,14 +194,44 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
         log.info("Finish importing lines");
     }
 
+    public void updateLineShapes() {
+        CSVReader<LineShapesCSV> csvReader = new CSVReader<>(LineShapesCSV.class);
+
+        List<LineShapesCSV> lineShapes = csvReader.readFromUrl(Constants.IDFM_LINE_SHAPES_URL);
+
+        if (lineShapes == null || lineShapes.isEmpty()) {
+            log.info("No data has been found in the line shapes CSV file");
+            return;
+        }
+
+        log.info("Start importing line shapes");
+        log.info("{} line shapes to import", lineShapes.size());
+
+        lineShapes.forEach(lineShape -> {
+            String[] splittedLineId = lineShape.getLineId().split(":");
+            String lineId = splittedLineId[splittedLineId.length - 1];
+            if (lineId != null && lineShape.getShape() != null) {
+                try {
+                    this.idfmLineRepository.updateLineShape(lineId, lineShape.getShape());
+                } catch (Exception e) {
+                    log.warn("Failed to import line {} shape : {}", lineId, e.getStackTrace());
+                }
+            }
+        }
+        );
+
+        log.info("Finish importing line shapes");
+    }
+
     public IDFMLine getLine(String lineId) {
         return this.idfmLineRepository.findById(lineId).orElse(null);
     }
 
-    public Map<TransportMode, List<IDFMLine>> getLinesByTransportMode() {
+    public Map<TransportMode, List<LineDTO>> getLinesByTransportMode() {
         return this.idfmLineRepository
             .findAllByOrderByNameAsc()
             .stream()
-            .collect(Collectors.groupingBy(IDFMLine::getTransportMode));
+            .map(LineDTO::new)
+            .collect(Collectors.groupingBy(LineDTO::getTransportMode));
     }
 }

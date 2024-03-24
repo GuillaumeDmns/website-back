@@ -8,20 +8,20 @@ import java.util.Map;
 
 public class LinesDTO {
 
-    private Map<TransportMode, List<IDFMLine>> lines;
+    private Map<TransportMode, List<LineDTO>> lines;
 
     private Map<TransportMode, Integer> count;
 
-    public LinesDTO(Map<TransportMode, List<IDFMLine>> lines, Map<TransportMode, Integer> count) {
+    public LinesDTO(Map<TransportMode, List<LineDTO>> lines, Map<TransportMode, Integer> count) {
         this.lines = lines;
         this.count = count;
     }
 
-    public Map<TransportMode, List<IDFMLine>> getLines() {
+    public Map<TransportMode, List<LineDTO>> getLines() {
         return lines;
     }
 
-    public void setLines(Map<TransportMode, List<IDFMLine>> lines) {
+    public void setLines(Map<TransportMode, List<LineDTO>> lines) {
         this.lines = lines;
     }
 
