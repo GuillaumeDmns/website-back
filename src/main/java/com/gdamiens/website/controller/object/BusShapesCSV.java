@@ -2,12 +2,12 @@ package com.gdamiens.website.controller.object;
 
 import com.opencsv.bean.CsvBindByPosition;
 
-public class LineShapesCSV {
+public class BusShapesCSV {
 
-    @CsvBindByPosition(position = 0)
+    @CsvBindByPosition(position = 2)
     private String lineId;
 
-    @CsvBindByPosition(position = 6)
+    @CsvBindByPosition(position = 1)
     private String shape;
 
     public String getLineId() {

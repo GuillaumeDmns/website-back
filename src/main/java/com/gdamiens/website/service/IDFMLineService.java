@@ -195,30 +195,25 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
     }
 
     public void updateLineShapes() {
-        CSVReader<LineShapesCSV> csvReader = new CSVReader<>(LineShapesCSV.class);
+        CSVReader<BusShapesCSV> csvReader = new CSVReader<>(BusShapesCSV.class);
 
-        List<LineShapesCSV> lineShapes = csvReader.readFromUrl(Constants.IDFM_LINE_SHAPES_URL);
+        List<BusShapesCSV> busShapes = csvReader.readFromUrl(Constants.IDFM_BUS_SHAPES_URL);
 
-        if (lineShapes == null || lineShapes.isEmpty()) {
-            log.info("No data has been found in the line shapes CSV file");
+        if (busShapes == null || busShapes.isEmpty()) {
+            log.info("No data has been found in the bus shapes CSV file");
             return;
         }
 
-        log.info("Start importing line shapes");
-        log.info("{} line shapes to import", lineShapes.size());
+        log.info("Start importing bus shapes");
+        log.info("{} bus shapes to import", busShapes.size());
 
-        lineShapes.forEach(lineShape -> {
-            String[] splittedLineId = lineShape.getLineId().split(":");
-            String lineId = splittedLineId[splittedLineId.length - 1];
-            if (lineId != null && lineShape.getShape() != null) {
-                try {
-                    this.idfmLineRepository.updateLineShape(lineId, lineShape.getShape());
-                } catch (Exception e) {
-                    log.warn("Failed to import line {} shape : {}", lineId, e.getStackTrace());
-                }
+        busShapes.forEach(busShape -> {
+            try {
+                this.idfmLineRepository.updateLineShape(busShape.getLineId(), busShape.getShape());
+            } catch (Exception e) {
+                log.warn("Failed to import bus {} shape : {}", busShape.getLineId(), e.getStackTrace());
             }
-        }
-        );
+        });
 
         log.info("Finish importing line shapes");
     }
