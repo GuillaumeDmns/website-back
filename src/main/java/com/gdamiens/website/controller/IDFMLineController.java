@@ -2,7 +2,6 @@ package com.gdamiens.website.controller;
 
 import com.gdamiens.website.controller.object.LineDTO;
 import com.gdamiens.website.controller.object.LinesDTO;
-import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.TransportMode;
 import com.gdamiens.website.service.IDFMLineService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,7 +55,8 @@ public class IDFMLineController {
     @Operation(summary = "Update line shapes", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Void> updateShapes() {
         try {
-            this.idfmLineService.updateLineShapes();
+            this.idfmLineService.updateBusShapes();
+            this.idfmLineService.updateRailShapes();
 
             return new ResponseEntity<>(HttpStatus.OK);
 

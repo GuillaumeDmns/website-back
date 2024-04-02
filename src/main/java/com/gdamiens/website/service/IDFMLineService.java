@@ -16,6 +16,12 @@ import com.gdamiens.website.model.mapper.LineMapper;
 import com.gdamiens.website.repository.IDFMLineRepository;
 import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.io.ParseException;
+import org.locationtech.jts.io.geojson.GeoJsonReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -194,7 +200,7 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
         log.info("Finish importing lines");
     }
 
-    public void updateLineShapes() {
+    public void updateBusShapes() {
         CSVReader<BusShapesCSV> csvReader = new CSVReader<>(BusShapesCSV.class);
 
         List<BusShapesCSV> busShapes = csvReader.readFromUrl(Constants.IDFM_BUS_SHAPES_URL);
@@ -215,7 +221,44 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
             }
         });
 
-        log.info("Finish importing line shapes");
+        log.info("Finish importing bus shapes");
+    }
+
+    public void updateRailShapes() {
+        CSVReader<RailShapesCSV> csvReader = new CSVReader<>(RailShapesCSV.class);
+
+        Map<String, List<RailShapesCSV>> railShapes = csvReader.readFromUrl(Constants.IDFM_RAIL_SHAPES_URL, RailShapesCSV::getLineId);
+
+        if (railShapes == null || railShapes.isEmpty()) {
+            log.info("No data has been found in the rail shapes CSV file");
+            return;
+        }
+
+        log.info("Start importing rail shapes");
+        log.info("{} rail shapes to import", railShapes.size());
+
+        railShapes
+            .entrySet()
+            .parallelStream()
+            .forEach(lineShapeList -> {
+                GeoJsonReader geoJsonReader = new GeoJsonReader();
+                List<LineString> lineStrings = new ArrayList<>();
+
+                lineShapeList.getValue().forEach(lineShape -> {
+                    try {
+                        Geometry geometry = geoJsonReader.read(lineShape.getShape());
+                        if (geometry instanceof LineString) {
+                            lineStrings.add((LineString) geometry);
+                        }
+                    } catch (ParseException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+                this.idfmLineRepository.updateLineShape(lineShapeList.getKey(), new MultiLineString(lineStrings.toArray(new LineString[0]), new GeometryFactory()));
+        });
+
+        log.info("Finish importing rail shapes");
     }
 
     public IDFMLine getLine(String lineId) {

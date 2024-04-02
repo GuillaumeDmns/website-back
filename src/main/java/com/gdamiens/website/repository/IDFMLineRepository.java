@@ -1,6 +1,7 @@
 package com.gdamiens.website.repository;
 
 import com.gdamiens.website.model.IDFMLine;
+import org.locationtech.jts.geom.MultiLineString;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -19,4 +20,9 @@ public interface IDFMLineRepository extends JpaRepository<IDFMLine, String> {
     @Modifying
     @Query(value = "UPDATE idfm_line SET shape = ST_GeomFromGeoJSON(:geoJsonShape) WHERE id = :lineId", nativeQuery = true)
     void updateLineShape(@Param("lineId") String lineId, @Param("geoJsonShape") String geoJsonShape);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE idfm_line SET shape = :multilineString WHERE id = :lineId", nativeQuery = true)
+    void updateLineShape(@Param("lineId") String lineId, @Param("multilineString") MultiLineString multilineString);
 }
