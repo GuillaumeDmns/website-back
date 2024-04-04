@@ -16,13 +16,16 @@ public interface IDFMLineRepository extends JpaRepository<IDFMLine, String> {
 
     List<IDFMLine> findAllByOrderByNameAsc();
 
+    @Query(value = "SELECT l.id, l.name, l.transport_mode, l.operator_id, l.line_id_color, l.line_id_background_color, null AS shape FROM idfm_line l", nativeQuery = true)
+    List<IDFMLine> findAllByOrderByNameAscWithoutShape();
+
     @Transactional
     @Modifying
     @Query(value = "UPDATE idfm_line SET shape = ST_GeomFromGeoJSON(:geoJsonShape) WHERE id = :lineId", nativeQuery = true)
-    void updateLineShape(@Param("lineId") String lineId, @Param("geoJsonShape") String geoJsonShape);
+    void updateBusShape(@Param("lineId") String lineId, @Param("geoJsonShape") String geoJsonShape);
 
     @Transactional
     @Modifying
     @Query(value = "UPDATE idfm_line SET shape = :multilineString WHERE id = :lineId", nativeQuery = true)
-    void updateLineShape(@Param("lineId") String lineId, @Param("multilineString") MultiLineString multilineString);
+    void updateRailShape(@Param("lineId") String lineId, @Param("multilineString") MultiLineString multilineString);
 }

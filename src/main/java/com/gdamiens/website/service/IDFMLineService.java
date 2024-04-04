@@ -215,7 +215,7 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
 
         busShapes.forEach(busShape -> {
             try {
-                this.idfmLineRepository.updateLineShape(busShape.getLineId(), busShape.getShape());
+                this.idfmLineRepository.updateBusShape(busShape.getLineId(), busShape.getShape());
             } catch (Exception e) {
                 log.warn("Failed to import bus {} shape : {}", busShape.getLineId(), e.getStackTrace());
             }
@@ -255,7 +255,7 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
                     }
                 });
 
-                this.idfmLineRepository.updateLineShape(lineShapeList.getKey(), new MultiLineString(lineStrings.toArray(new LineString[0]), new GeometryFactory()));
+                this.idfmLineRepository.updateRailShape(lineShapeList.getKey(), new MultiLineString(lineStrings.toArray(new LineString[0]), new GeometryFactory()));
         });
 
         log.info("Finish importing rail shapes");
@@ -267,7 +267,7 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
 
     public Map<TransportMode, List<LineDTO>> getLinesByTransportMode() {
         return this.idfmLineRepository
-            .findAllByOrderByNameAsc()
+            .findAllByOrderByNameAscWithoutShape()
             .stream()
             .map(LineDTO::new)
             .collect(Collectors.groupingBy(LineDTO::getTransportMode));

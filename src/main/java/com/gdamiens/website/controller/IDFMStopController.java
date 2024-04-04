@@ -67,7 +67,7 @@ public class IDFMStopController {
                     break;
             }
 
-            return new ResponseEntity<>(new StopsByLineDTO(idfmStops), HttpStatus.OK);
+            return new ResponseEntity<>(new StopsByLineDTO(idfmStops, requestedLine.getShape()), HttpStatus.OK);
 
         } catch (Exception e) {
             log.info("error during IDFM get stops by lineId request");
