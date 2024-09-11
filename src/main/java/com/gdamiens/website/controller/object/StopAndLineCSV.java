@@ -4,7 +4,7 @@ import com.opencsv.bean.CsvBindByPosition;
 
 public class StopAndLineCSV {
 
-    @CsvBindByPosition(position = 4)
+    @CsvBindByPosition(position = 2)
     private String stopId;
 
     @CsvBindByPosition(position = 0)

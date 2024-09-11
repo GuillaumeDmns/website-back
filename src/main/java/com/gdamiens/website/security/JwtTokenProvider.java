@@ -1,7 +1,6 @@
 package com.gdamiens.website.security;
 
 import com.gdamiens.website.exceptions.CustomException;
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -16,11 +15,10 @@ import org.springframework.stereotype.Component;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class JwtTokenProvider {
@@ -28,7 +26,7 @@ public class JwtTokenProvider {
     @Value("${security.jwt.token.secret-key}")
     private String secretKey;
 
-    private Key key;
+    private SecretKey key;
 
     @Value("${security.jwt.token.expire-length:3600000}")
     private static final long VALIDITY_IN_MS = 3600000; // 1h
@@ -47,16 +45,14 @@ public class JwtTokenProvider {
 
     public String createToken(String username, List<Role> roles) {
 
-        Claims claims = Jwts.claims().setSubject(username);
-        claims.put("auth", roles.stream().map(s -> new SimpleGrantedAuthority(s.getAuthority())).collect(Collectors.toList()));
-
         Date now = new Date();
         Date validity = new Date(now.getTime() + VALIDITY_IN_MS);
 
         return Jwts.builder()
-            .setClaims(claims)
-            .setIssuedAt(now)
-            .setExpiration(validity)
+            .claim("auth", roles.stream().map(s -> new SimpleGrantedAuthority(s.getAuthority())).toList())
+            .subject(username)
+            .issuedAt(now)
+            .expiration(validity)
             .signWith(key)
             .compact();
     }
@@ -68,11 +64,11 @@ public class JwtTokenProvider {
 
     public String getUsername(String token) {
         return Jwts
-            .parserBuilder()
-            .setSigningKey(key)
+            .parser()
+            .verifyWith(key)
             .build()
-            .parseClaimsJws(token)
-            .getBody()
+            .parseSignedClaims(token)
+            .getPayload()
             .getSubject();
     }
 
@@ -87,10 +83,10 @@ public class JwtTokenProvider {
     public boolean validateToken(String token) {
         try {
             Jwts
-                .parserBuilder()
-                .setSigningKey(key)
+                .parser()
+                .verifyWith(key)
                 .build()
-                .parseClaimsJws(token);
+                .parseSignedClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             throw new CustomException("Expired or invalid JWT token", HttpStatus.INTERNAL_SERVER_ERROR);
