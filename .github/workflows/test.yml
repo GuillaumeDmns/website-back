@@ -13,8 +13,6 @@ jobs:
           distribution: 'adopt'
           cache: maven
       - name: Install dependencies
-        run: mvn install
-      - name: Maven Test
-        run: mvn test
+        run: mvn install -DskipTests
       - name: Run test-coverage
         run: mvn clean test jacoco:report coveralls:report -DrepoToken=${{ secrets.COVERALLS_REPO_TOKEN }}
