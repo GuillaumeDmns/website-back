@@ -8,10 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest
 class WebsiteApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
     @Test
     void testHelloWorld() {
         String message = "Hello, World!";
