@@ -24,7 +24,11 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "AimedDepartureTime",
     "ExpectedDepartureTime",
     "ArrivalStatus",
-    "DepartureStatus"
+    "DepartureStatus",
+    "ArrivalStopAssignment",
+    "DepartureStopAssignment",
+    "CallNote",
+    "ExpectedHeadwayInterval"
 })
 @Generated("jsonschema2pojo")
 public class MonitoredCall {
@@ -51,6 +55,14 @@ public class MonitoredCall {
     private String arrivalStatus;
     @JsonProperty("DepartureStatus")
     private String departureStatus;
+    @JsonProperty("ArrivalStopAssignment")
+    private ArrivalStopAssignment arrivalStopAssignment;
+    @JsonProperty("DepartureStopAssignment")
+    private DepartureStopAssignment departureStopAssignment;
+    @JsonProperty("CallNote")
+    private List<CallNote> callNote = null;
+    @JsonProperty("ExpectedHeadwayInterval")
+    private String expectedHeadwayInterval;
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -162,6 +174,46 @@ public class MonitoredCall {
     @JsonProperty("DepartureStatus")
     public void setDepartureStatus(String departureStatus) {
         this.departureStatus = departureStatus;
+    }
+
+    @JsonProperty("ArrivalStopAssignment")
+    public ArrivalStopAssignment getArrivalStopAssignment() {
+        return arrivalStopAssignment;
+    }
+
+    @JsonProperty("ArrivalStopAssignment")
+    public void setArrivalStopAssignment(ArrivalStopAssignment arrivalStopAssignment) {
+        this.arrivalStopAssignment = arrivalStopAssignment;
+    }
+
+    @JsonProperty("DepartureStopAssignment")
+    public DepartureStopAssignment getDepartureStopAssignment() {
+        return departureStopAssignment;
+    }
+
+    @JsonProperty("DepartureStopAssignment")
+    public void setDepartureStopAssignment(DepartureStopAssignment departureStopAssignment) {
+        this.departureStopAssignment = departureStopAssignment;
+    }
+
+    @JsonProperty("CallNote")
+    public List<CallNote> getCallNote() {
+        return callNote;
+    }
+
+    @JsonProperty("CallNote")
+    public void setCallNote(List<CallNote> callNote) {
+        this.callNote = callNote;
+    }
+
+    @JsonProperty("ExpectedHeadwayInterval")
+    public String getExpectedHeadwayInterval() {
+        return expectedHeadwayInterval;
+    }
+
+    @JsonProperty("ExpectedHeadwayInterval")
+    public void setExpectedHeadwayInterval(String expectedHeadwayInterval) {
+        this.expectedHeadwayInterval = expectedHeadwayInterval;
     }
 
     @JsonAnyGetter

@@ -22,7 +22,12 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "DestinationName",
     "VehicleJourneyName",
     "JourneyNote",
-    "MonitoredCall"
+    "MonitoredCall",
+    "TrainNumbers",
+    "VehicleFeatureRef",
+    "DirectionRef",
+    "DestinationShortName",
+    "FirstOrLastJourney"
 })
 @Generated("jsonschema2pojo")
 public class MonitoredVehicleJourney {
@@ -45,6 +50,16 @@ public class MonitoredVehicleJourney {
     private List<JourneyNote> journeyNote = null;
     @JsonProperty("MonitoredCall")
     private MonitoredCall monitoredCall;
+    @JsonProperty("TrainNumbers")
+    private TrainNumbers trainNumbers;
+    @JsonProperty("VehicleFeatureRef")
+    private List<String> vehicleFeatureRef;
+    @JsonProperty("DirectionRef")
+    private DirectionRef directionRef;
+    @JsonProperty("DestinationShortName")
+    private List<DestinationShortName> destinationShortName = null;
+    @JsonProperty("FirstOrLastJourney")
+    private FirstOrLastJourney firstOrLastJourney;
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -136,6 +151,56 @@ public class MonitoredVehicleJourney {
     @JsonProperty("MonitoredCall")
     public void setMonitoredCall(MonitoredCall monitoredCall) {
         this.monitoredCall = monitoredCall;
+    }
+
+    @JsonProperty("TrainNumbers")
+    public TrainNumbers getTrainNumbers() {
+        return trainNumbers;
+    }
+
+    @JsonProperty("TrainNumbers")
+    public void setTrainNumbers(TrainNumbers trainNumbers) {
+        this.trainNumbers = trainNumbers;
+    }
+
+    @JsonProperty("VehicleFeatureRef")
+    public List<String> getVehicleFeatureRef() {
+        return vehicleFeatureRef;
+    }
+
+    @JsonProperty("VehicleFeatureRef")
+    public void setVehicleFeatureRef(List<String> vehicleFeatureRef) {
+        this.vehicleFeatureRef = vehicleFeatureRef;
+    }
+
+    @JsonProperty("DirectionRef")
+    public DirectionRef getDirectionRef() {
+        return directionRef;
+    }
+
+    @JsonProperty("DirectionRef")
+    public void setDirectionRef(DirectionRef directionRef) {
+        this.directionRef = directionRef;
+    }
+
+    @JsonProperty("DestinationShortName")
+    public List<DestinationShortName> getDestinationShortName() {
+        return destinationShortName;
+    }
+
+    @JsonProperty("DestinationShortName")
+    public void setDestinationShortName(List<DestinationShortName> destinationShortName) {
+        this.destinationShortName = destinationShortName;
+    }
+
+    @JsonProperty("FirstOrLastJourney")
+    public FirstOrLastJourney getFirstOrLastJourney() {
+        return firstOrLastJourney;
+    }
+
+    @JsonProperty("FirstOrLastJourney")
+    public void setFirstOrLastJourney(FirstOrLastJourney firstOrLastJourney) {
+        this.firstOrLastJourney = firstOrLastJourney;
     }
 
     @JsonAnyGetter

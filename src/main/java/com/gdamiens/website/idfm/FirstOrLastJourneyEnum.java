@@ -10,8 +10,8 @@ public enum FirstOrLastJourneyEnum {
     @JsonProperty("firstServiceOfDay")
     FIRST_SERVICE_OF_DAY("firstServiceOfDay"),
 
-    @JsonProperty("firstServiceOfDay")
-    LAST_SERVICE_OF_DAY("firstServiceOfDay"),
+    @JsonProperty("lastServiceOfDay")
+    LAST_SERVICE_OF_DAY("lastServiceOfDay"),
 
     @JsonProperty("otherService")
     OTHER_SERVICE("otherService");

@@ -4,6 +4,7 @@ import com.gdamiens.website.idfm.ArrivalPlatformName;
 import com.gdamiens.website.idfm.DestinationDisplay;
 import com.gdamiens.website.idfm.DestinationName;
 import com.gdamiens.website.idfm.DirectionName;
+import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.idfm.LineRef;
 import com.gdamiens.website.idfm.MonitoredCall;
 import com.gdamiens.website.idfm.MonitoredStopVisit;
@@ -15,6 +16,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class CallUnit extends Call {
+
+    private String id;
 
     private String destinationDisplay;
 
@@ -32,11 +35,17 @@ public class CallUnit extends Call {
 
     private String destinationName;
 
+    private String journeyNote;
+
 
     public CallUnit(MonitoredStopVisit monitoredStopVisit) {
         super(monitoredStopVisit);
 
-        Optional<MonitoredVehicleJourney> optionalMonitoredVehicleJourney = Optional.ofNullable(monitoredStopVisit)
+        Optional<MonitoredStopVisit> optionalMonitoredStopVisit = Optional.ofNullable(monitoredStopVisit);
+
+        this.id = optionalMonitoredStopVisit.map(MonitoredStopVisit::getItemIdentifier).orElse(null);
+
+        Optional<MonitoredVehicleJourney> optionalMonitoredVehicleJourney = optionalMonitoredStopVisit
             .map(MonitoredStopVisit::getMonitoredVehicleJourney);
         Optional<MonitoredCall> optionalMonitoredCall = optionalMonitoredVehicleJourney
             .map(MonitoredVehicleJourney::getMonitoredCall);
@@ -64,8 +73,17 @@ public class CallUnit extends Call {
             this.operatorId = Optional.ofNullable(monitoredVehicleJourney.getOperatorRef()).map(OperatorRef::getValue).orElse(null);
             this.directionName = Optional.ofNullable(monitoredVehicleJourney.getDirectionName()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(DirectionName::getValue).orElse(null);
             this.destinationName = Optional.ofNullable(monitoredVehicleJourney.getDestinationName()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(DestinationName::getValue).orElse(null);
+            this.journeyNote = Optional.ofNullable(monitoredVehicleJourney.getJourneyNote()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(JourneyNote::getValue).orElse(null);
         }
 
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getDestinationDisplay() {
@@ -130,5 +148,13 @@ public class CallUnit extends Call {
 
     public void setDestinationName(String destinationName) {
         this.destinationName = destinationName;
+    }
+
+    public String getJourneyNote() {
+        return journeyNote;
+    }
+
+    public void setJourneyNote(String journeyNote) {
+        this.journeyNote = journeyNote;
     }
 }
