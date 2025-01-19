@@ -13,6 +13,7 @@ public final class Constants {
     public static final String IDFM_OPERATORS_URL = "https://data.iledefrance.fr/explore/dataset/liste-des-transporteurs-exploitant-des-lignes-de-transport-en-commun-en-ile-de-f/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_BUS_SHAPES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/traces-des-lignes-regulieres-de-bus-en-ile-de-france/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_RAIL_SHAPES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/traces-du-reseau-ferre-idf/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
+    public static final String IDFM_NAVITIA_PLACES = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/places";
 
 
     private Constants() {}
