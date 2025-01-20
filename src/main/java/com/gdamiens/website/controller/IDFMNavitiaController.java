@@ -1,5 +1,6 @@
 package com.gdamiens.website.controller;
 
+import com.gdamiens.website.idfm.navitia.Places;
 import com.gdamiens.website.service.IDFMNavitiaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,11 +26,9 @@ public class IDFMNavitiaController {
 
     @GetMapping("/places")
     @Operation(summary = "Get list of places for autocomplete", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> getLines(String query) {
+    public ResponseEntity<Places> getLines(String query) {
         try {
-            this.idfmNavitiaService.getPlaces(query);
-
-            return new ResponseEntity<>(HttpStatus.OK);
+            return new ResponseEntity<>(this.idfmNavitiaService.getPlaces(query), HttpStatus.OK);
 
         } catch (Exception e) {
             log.info("error during IDFM get places");

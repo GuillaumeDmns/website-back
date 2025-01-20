@@ -16,8 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Optional;
-
 @Service
 public class IDFMNavitiaService extends AbstractIDFMService {
 
@@ -32,9 +30,10 @@ public class IDFMNavitiaService extends AbstractIDFMService {
 
     }
 
-    public void getPlaces(String query) {
-        HttpEntity<String> request = this.prepareHttpRequest();
+    public Places getPlaces(String query) {
+        log.info("Getting places for query {}", query);
 
+        HttpEntity<String> request = this.prepareHttpRequest();
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_PLACES)
             .queryParam("q", query);
@@ -45,7 +44,7 @@ public class IDFMNavitiaService extends AbstractIDFMService {
             throw new CustomException("IDFM Navitia places response != 200", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        Optional<Places> optionalIDFMResponse = Optional.ofNullable(response.getBody());
+        return response.getBody();
 
     }
 }
