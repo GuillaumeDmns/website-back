@@ -43,7 +43,6 @@ public class Line {
     @JsonProperty("color")
     private String color;
 
-    @JsonProperty("text_color")
     private String textColor = null;
 
     @JsonProperty("comments")
@@ -55,10 +54,8 @@ public class Line {
     @JsonProperty("codes")
     private List<Code> codes = null;
 
-    @JsonProperty("commercial_mode")
     private CommercialMode commercialMode = null;
 
-    @JsonProperty("physical_modes")
     private List<PhysicalMode> physicalModes = null;
 
     @JsonProperty("routes")
@@ -67,10 +64,8 @@ public class Line {
     @JsonProperty("network")
     private Network network;
 
-    @JsonProperty("opening_time")
     private String openingTime;
 
-    @JsonProperty("closing_time")
     private String closingTime;
 
     @JsonProperty("properties")
@@ -82,7 +77,6 @@ public class Line {
     @JsonProperty("links")
     private List<LinkSchema> links = null;
 
-    @JsonProperty("line_groups")
     private List<LineGroup> lineGroups = null;
 
     @JsonIgnore
@@ -128,7 +122,7 @@ public class Line {
         this.color = color;
     }
 
-    @JsonProperty("text_color")
+    @JsonProperty("textColor")
     public String getTextColor() {
         return textColor;
     }
@@ -168,7 +162,7 @@ public class Line {
         this.codes = codes;
     }
 
-    @JsonProperty("commercial_mode")
+    @JsonProperty("commercialMode")
     public CommercialMode getCommercialMode() {
         return commercialMode;
     }
@@ -178,7 +172,7 @@ public class Line {
         this.commercialMode = commercialMode;
     }
 
-    @JsonProperty("physical_modes")
+    @JsonProperty("physicalModes")
     public List<PhysicalMode> getPhysicalModes() {
         return physicalModes;
     }
@@ -208,7 +202,7 @@ public class Line {
         this.network = network;
     }
 
-    @JsonProperty("opening_time")
+    @JsonProperty("openingTime")
     public String getOpeningTime() {
         return openingTime;
     }
@@ -218,7 +212,7 @@ public class Line {
         this.openingTime = openingTime;
     }
 
-    @JsonProperty("closing_time")
+    @JsonProperty("closingTime")
     public String getClosingTime() {
         return closingTime;
     }
@@ -258,7 +252,7 @@ public class Line {
         this.links = links;
     }
 
-    @JsonProperty("line_groups")
+    @JsonProperty("lineGroups")
     public List<LineGroup> getLineGroups() {
         return lineGroups;
     }

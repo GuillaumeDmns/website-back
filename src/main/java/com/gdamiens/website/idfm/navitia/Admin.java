@@ -28,7 +28,6 @@ public class Admin {
     @JsonProperty("level")
     private Integer level;
 
-    @JsonProperty("zip_code")
     private String zipCode;
 
     @JsonProperty("label")
@@ -73,7 +72,7 @@ public class Admin {
         this.level = quality;
     }
 
-    @JsonProperty("zip_code")
+    @JsonProperty("zipCode")
     public String getZipCode() {
         return zipCode;
     }

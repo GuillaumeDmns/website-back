@@ -16,13 +16,10 @@ import java.util.Map;
 @Generated("jsonschema2pojo")
 public class Stands {
 
-    @JsonProperty("available_places")
     private Integer availablePlaces;
 
-    @JsonProperty("available_bikes")
     private Integer availableBikes;
 
-    @JsonProperty("total_stands")
     private Integer totalStands;
 
     @JsonProperty("status")
@@ -31,7 +28,7 @@ public class Stands {
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
-    @JsonProperty("available_places")
+    @JsonProperty("availablePlaces")
     public Integer getAvailablePlaces() {
         return availablePlaces;
     }
@@ -41,7 +38,7 @@ public class Stands {
         this.availablePlaces = availablePlaces;
     }
 
-    @JsonProperty("available_bikes")
+    @JsonProperty("availableBikes")
     public Integer getAvailableBikes() {
         return availableBikes;
     }
@@ -51,7 +48,7 @@ public class Stands {
         this.availableBikes = availableBikes;
     }
 
-    @JsonProperty("total_stands")
+    @JsonProperty("totalStands")
     public Integer getTotalStands() {
         return totalStands;
     }

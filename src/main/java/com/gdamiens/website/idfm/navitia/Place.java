@@ -11,7 +11,7 @@ import java.util.Map;
     "id",
     "name",
     "quality",
-    "stop_area",
+    "stopArea",
     "stop_point",
     "administrative_region",
     "embedded_type",
@@ -32,16 +32,12 @@ public class Place {
     @JsonProperty("quality")
     private Integer quality;
 
-    @JsonProperty("stop_area")
     private StopArea stopArea;
 
-    @JsonProperty("stop_point")
     private StopPoint stopPoint;
 
-    @JsonProperty("administrative_region")
     private Admin administrativeRegion;
 
-    @JsonProperty("embedded_type")
     private EmbeddedTypeEnum embeddedType;
 
     @JsonProperty("address")
@@ -50,7 +46,6 @@ public class Place {
     @JsonProperty("poi")
     private Poi poi;
 
-    @JsonProperty("access_point")
     private PathWay accessPoint;
 
     @JsonProperty("distance")
@@ -89,7 +84,7 @@ public class Place {
         this.quality = quality;
     }
 
-    @JsonProperty("stop_area")
+    @JsonProperty("stopArea")
     public StopArea getStopArea() {
         return stopArea;
     }
@@ -99,7 +94,7 @@ public class Place {
         this.stopArea = stopArea;
     }
 
-    @JsonProperty("stop_point")
+    @JsonProperty("stopPoint")
     public StopPoint getStopPoint() {
         return stopPoint;
     }
@@ -109,7 +104,7 @@ public class Place {
         this.stopPoint = stopPoint;
     }
 
-    @JsonProperty("administrative_region")
+    @JsonProperty("administrativeRegion")
     public Admin getAdministrativeRegion() {
         return administrativeRegion;
     }
@@ -119,7 +114,7 @@ public class Place {
         this.administrativeRegion = administrativeRegion;
     }
 
-    @JsonProperty("embedded_type")
+    @JsonProperty("embeddedType")
     public EmbeddedTypeEnum getEmbeddedType() {
         return embeddedType;
     }
@@ -149,7 +144,7 @@ public class Place {
         this.poi = poi;
     }
 
-    @JsonProperty("access_point")
+    @JsonProperty("accessPoint")
     public PathWay getAccessPoint() {
         return accessPoint;
     }

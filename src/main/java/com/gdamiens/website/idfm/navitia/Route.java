@@ -31,13 +31,10 @@ public class Route {
     @JsonProperty("name")
     private String name;
 
-    @JsonProperty("is_frequence")
     private IsFrequenceEnum isFrequence;
 
-    @JsonProperty("direction_type")
     private String directionType;
 
-    @JsonProperty("physical_modes")
     private List<PhysicalMode> physicalModes = null;
 
     @JsonProperty("comments")
@@ -58,7 +55,6 @@ public class Route {
     @JsonProperty("line")
     private Line line;
 
-    @JsonProperty("stop_points")
     private List<StopPoint> stopPoints = null;
 
     @JsonIgnore
@@ -84,7 +80,7 @@ public class Route {
         this.name = name;
     }
 
-    @JsonProperty("is_frequence")
+    @JsonProperty("isFrequence")
     public IsFrequenceEnum getIsFrequence() {
         return isFrequence;
     }
@@ -94,7 +90,7 @@ public class Route {
         this.isFrequence = isFrequence;
     }
 
-    @JsonProperty("direction_type")
+    @JsonProperty("directionType")
     public String getDirectionType() {
         return directionType;
     }
@@ -104,7 +100,7 @@ public class Route {
         this.directionType = directionType;
     }
 
-    @JsonProperty("physical_modes")
+    @JsonProperty("physicalModes")
     public List<PhysicalMode> getPhysicalModes() {
         return physicalModes;
     }
@@ -174,7 +170,7 @@ public class Route {
         this.line = line;
     }
 
-    @JsonProperty("stop_points")
+    @JsonProperty("stopPoints")
     public List<StopPoint> getStopPoints() {
         return stopPoints;
     }

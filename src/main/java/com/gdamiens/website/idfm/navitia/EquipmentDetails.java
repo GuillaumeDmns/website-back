@@ -22,7 +22,6 @@ public class EquipmentDetails {
     @JsonProperty("name")
     private String name;
 
-    @JsonProperty("embedded_type")
     private EmbeddedEquipmentDetailsTypeEnum embeddedType;
 
 //    @JsonProperty("current_availability")
@@ -51,7 +50,7 @@ public class EquipmentDetails {
         this.name = name;
     }
 
-    @JsonProperty("embedded_type")
+    @JsonProperty("embeddedType")
     public EmbeddedEquipmentDetailsTypeEnum getEmbeddedType() {
         return embeddedType;
     }

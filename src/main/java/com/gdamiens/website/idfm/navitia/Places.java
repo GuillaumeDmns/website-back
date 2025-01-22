@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @Generated("jsonschema2pojo")
 public class Places {
 
-    @JsonProperty("feed_publishers")
     private List<FeedPublisher> feedPublishers = null;
 
     @JsonProperty("places")
@@ -38,7 +37,7 @@ public class Places {
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
 
-    @JsonProperty("feed_publishers")
+    @JsonProperty("feedPublishers")
     public List<FeedPublisher> getFeedPublishers() {
         return feedPublishers;
     }

@@ -29,25 +29,18 @@ public class CarPark {
     @JsonProperty("occupied")
     private Integer occupied;
 
-    @JsonProperty("available_PRM")
     private Integer availablePRM;
 
-    @JsonProperty("occupied_PRM")
     private Integer occupiedPRM;
 
-    @JsonProperty("total_places")
     private Integer totalPlaces;
 
-    @JsonProperty("available_ridesharing")
     private Integer availableRidesharing;
 
-    @JsonProperty("occupied_ridesharing")
     private Integer occupiedRidesharing;
 
-    @JsonProperty("available_electric_vehicle")
     private Integer availableElectricVehicle;
 
-    @JsonProperty("occupied_electric_vehicle")
     private Integer occupiedElectricVehicle;
 
     @JsonProperty("state")
@@ -79,7 +72,7 @@ public class CarPark {
         this.occupied = occupied;
     }
 
-    @JsonProperty("available_PRM")
+    @JsonProperty("availablePRM")
     public Integer getAvailablePRM() {
         return availablePRM;
     }
@@ -89,7 +82,7 @@ public class CarPark {
         this.availablePRM = availablePRM;
     }
 
-    @JsonProperty("occupied_PRM")
+    @JsonProperty("occupiedPRM")
     public Integer getOccupiedPRM() {
         return occupiedPRM;
     }
@@ -99,7 +92,7 @@ public class CarPark {
         this.occupiedPRM = occupiedPRM;
     }
 
-    @JsonProperty("total_places")
+    @JsonProperty("totalPlaces")
     public Integer getTotalPlaces() {
         return totalPlaces;
     }
@@ -109,7 +102,7 @@ public class CarPark {
         this.totalPlaces = totalPlaces;
     }
 
-    @JsonProperty("available_ridesharing")
+    @JsonProperty("availableRidesharing")
     public Integer getAvailableRidesharing() {
         return availableRidesharing;
     }
@@ -119,7 +112,7 @@ public class CarPark {
         this.availableRidesharing = availableRidesharing;
     }
 
-    @JsonProperty("occupied_ridesharing")
+    @JsonProperty("occupiedRidesharing")
     public Integer getOccupiedRidesharing() {
         return occupiedRidesharing;
     }
@@ -129,7 +122,7 @@ public class CarPark {
         this.occupiedRidesharing = occupiedRidesharing;
     }
 
-    @JsonProperty("available_electric_vehicle")
+    @JsonProperty("availableElectricVehicle")
     public Integer getAvailableElectricVehicle() {
         return availableElectricVehicle;
     }
@@ -139,7 +132,7 @@ public class CarPark {
         this.availableElectricVehicle = availableElectricVehicle;
     }
 
-    @JsonProperty("occupied_electric_vehicle")
+    @JsonProperty("occupiedElectricVehicle")
     public Integer getOccupiedElectricVehicle() {
         return occupiedElectricVehicle;
     }

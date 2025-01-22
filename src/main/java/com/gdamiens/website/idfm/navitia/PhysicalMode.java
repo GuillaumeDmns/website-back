@@ -21,7 +21,6 @@ public class PhysicalMode {
     @JsonProperty("name")
     private String name;
 
-    @JsonProperty("co2_emission_rate")
     private CO2EmissionRate co2EmissionRate;
 
     @JsonIgnore
@@ -47,7 +46,7 @@ public class PhysicalMode {
         this.name = name;
     }
 
-    @JsonProperty("co2_emission_rate")
+    @JsonProperty("co2EmissionRate")
     public CO2EmissionRate getCo2EmissionRate() {
         return co2EmissionRate;
     }

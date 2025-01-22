@@ -14,8 +14,6 @@ import java.util.Map;
 @Generated("jsonschema2pojo")
 public class Context {
 
-
-    @JsonProperty("current_datetime")
     private String currentDatetime;
 
     @JsonProperty("timezone")
@@ -24,7 +22,7 @@ public class Context {
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
-    @JsonProperty("current_datetime")
+    @JsonProperty("currentDatetime")
     public String getCurrentDatetime() {
         return currentDatetime;
     }

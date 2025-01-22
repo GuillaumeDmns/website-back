@@ -54,16 +54,12 @@ public class StopArea {
     @JsonProperty("links")
     private List<LinkSchema> links = null;
 
-    @JsonProperty("commercial_modes")
     private List<CommercialMode> commercialModes = null;
 
-    @JsonProperty("physical_modes")
     private List<PhysicalMode> physicalModes = null;
 
-    @JsonProperty("administrative_regions")
     private List<Admin> administrativeRegions = null;
 
-    @JsonProperty("stop_points")
     private List<StopPoint> stopPoints = null;
 
     @JsonProperty("lines")
@@ -162,7 +158,7 @@ public class StopArea {
         this.links = links;
     }
 
-    @JsonProperty("commercial_modes")
+    @JsonProperty("commercialModes")
     public List<CommercialMode> getCommercialModes() {
         return commercialModes;
     }
@@ -172,7 +168,7 @@ public class StopArea {
         this.commercialModes = commercialModes;
     }
 
-    @JsonProperty("physical_modes")
+    @JsonProperty("physicalModes")
     public List<PhysicalMode> getPhysicalModes() {
         return physicalModes;
     }
@@ -182,7 +178,7 @@ public class StopArea {
         this.physicalModes = physicalModes;
     }
 
-    @JsonProperty("administrative_regions")
+    @JsonProperty("administrativeRegions")
     public List<Admin> getAdministrativeRegions() {
         return administrativeRegions;
     }
@@ -192,7 +188,7 @@ public class StopArea {
         this.administrativeRegions = administrativeRegions;
     }
 
-    @JsonProperty("stop_points")
+    @JsonProperty("stopPoints")
     public List<StopPoint> getStopPoints() {
         return stopPoints;
     }

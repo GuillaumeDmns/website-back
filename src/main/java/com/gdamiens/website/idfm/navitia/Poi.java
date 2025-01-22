@@ -39,10 +39,8 @@ public class Poi {
     @JsonProperty("label")
     private String label;
 
-    @JsonProperty("administrative_regions")
     private List<Admin> administrativeRegions = null;
 
-    @JsonProperty("poi_type")
     private PoiType poiType;
 
     @JsonProperty("properties")
@@ -54,7 +52,6 @@ public class Poi {
     @JsonProperty("stands")
     private Stands stands;
 
-    @JsonProperty("car_park")
     private CarPark carPark;
 
     @JsonIgnore
@@ -110,7 +107,7 @@ public class Poi {
         this.label = label;
     }
 
-    @JsonProperty("administrative_regions")
+    @JsonProperty("administrativeRegions")
     public List<Admin> getAdministrativeRegions() {
         return administrativeRegions;
     }
@@ -120,7 +117,7 @@ public class Poi {
         this.administrativeRegions = administrativeRegions;
     }
 
-    @JsonProperty("poi_type")
+    @JsonProperty("poiType")
     public PoiType getPoiType() {
         return poiType;
     }
@@ -160,7 +157,7 @@ public class Poi {
         this.stands = stands;
     }
 
-    @JsonProperty("car_park")
+    @JsonProperty("carPark")
     public CarPark getCarPark() {
         return carPark;
     }

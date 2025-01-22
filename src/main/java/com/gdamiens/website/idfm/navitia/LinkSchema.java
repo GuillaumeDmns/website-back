@@ -49,7 +49,6 @@ public class LinkSchema {
     @JsonProperty("category")
     private String category;
 
-    @JsonProperty("comment_type")
     private String commentType;
 
     @JsonIgnore
@@ -145,7 +144,7 @@ public class LinkSchema {
         this.category = category;
     }
 
-    @JsonProperty("comment_type")
+    @JsonProperty("commentType")
     public String getCommentType() {
         return commentType;
     }

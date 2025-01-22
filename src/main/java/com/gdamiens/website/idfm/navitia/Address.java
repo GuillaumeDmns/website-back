@@ -25,7 +25,6 @@ public class Address {
     @JsonProperty("name")
     private String name;
 
-    @JsonProperty("house_number")
     private Integer houseNumber;
 
     @JsonProperty("coord")
@@ -34,7 +33,6 @@ public class Address {
     @JsonProperty("label")
     private String label;
 
-    @JsonProperty("administrative_regions")
     private List<Admin> administrativeRegions = null;
 
     @JsonIgnore
@@ -60,7 +58,7 @@ public class Address {
         this.name = name;
     }
 
-    @JsonProperty("house_number")
+    @JsonProperty("houseNumber")
     public Integer getHouseNumber() {
         return houseNumber;
     }
@@ -90,7 +88,7 @@ public class Address {
         this.label = label;
     }
 
-    @JsonProperty("administrative_regions")
+    @JsonProperty("administrativeRegions")
     public List<Admin> getAdministrativeRegions() {
         return administrativeRegions;
     }

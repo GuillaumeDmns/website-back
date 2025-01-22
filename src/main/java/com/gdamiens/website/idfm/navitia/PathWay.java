@@ -31,37 +31,27 @@ public class PathWay {
     @JsonProperty("name")
     private String name;
 
-    @JsonProperty("access_point")
     private AccessPoint accessPoint;
 
-    @JsonProperty("is_entrance")
     private Boolean isEntrance;
 
-    @JsonProperty("is_exit")
     private Boolean isExit;
 
     @JsonProperty("length")
     private Integer length;
 
-    @JsonProperty("traversal_time")
     private Integer traversalTime;
 
-    @JsonProperty("pathway_mode")
     private Integer pathwayMode;
 
-    @JsonProperty("stair_count")
     private Integer stairCount;
 
-    @JsonProperty("max_slope")
     private Integer maxSlope;
 
-    @JsonProperty("min_width")
     private Integer minWidth;
 
-    @JsonProperty("signposted_as")
     private String signpostedAs;
 
-    @JsonProperty("reversed_signposted_as")
     private String reversedSignpostedAs;
 
     @JsonIgnore
@@ -87,7 +77,7 @@ public class PathWay {
         this.name = name;
     }
 
-    @JsonProperty("access_point")
+    @JsonProperty("accessPoint")
     public AccessPoint getAccessPoint() {
         return accessPoint;
     }
@@ -97,7 +87,7 @@ public class PathWay {
         this.accessPoint = accessPoint;
     }
 
-    @JsonProperty("is_entrance")
+    @JsonProperty("isEntrance")
     public Boolean getEntrance() {
         return isEntrance;
     }
@@ -107,7 +97,7 @@ public class PathWay {
         isEntrance = entrance;
     }
 
-    @JsonProperty("is_exit")
+    @JsonProperty("isExit")
     public Boolean getExit() {
         return isExit;
     }
@@ -127,7 +117,7 @@ public class PathWay {
         this.length = length;
     }
 
-    @JsonProperty("traversal_time")
+    @JsonProperty("traversalTime")
     public Integer getTraversalTime() {
         return traversalTime;
     }
@@ -137,7 +127,7 @@ public class PathWay {
         this.traversalTime = traversalTime;
     }
 
-    @JsonProperty("pathway_mode")
+    @JsonProperty("pathwayMode")
     public Integer getPathwayMode() {
         return pathwayMode;
     }
@@ -147,7 +137,7 @@ public class PathWay {
         this.pathwayMode = pathwayMode;
     }
 
-    @JsonProperty("stair_count")
+    @JsonProperty("stairCount")
     public Integer getStairCount() {
         return stairCount;
     }
@@ -157,7 +147,7 @@ public class PathWay {
         this.stairCount = stairCount;
     }
 
-    @JsonProperty("max_slope")
+    @JsonProperty("maxSlope")
     public Integer getMaxSlope() {
         return maxSlope;
     }
@@ -167,7 +157,7 @@ public class PathWay {
         this.maxSlope = maxSlope;
     }
 
-    @JsonProperty("min_width")
+    @JsonProperty("minWidth")
     public Integer getMinWidth() {
         return minWidth;
     }
@@ -177,7 +167,7 @@ public class PathWay {
         this.minWidth = minWidth;
     }
 
-    @JsonProperty("signposted_as")
+    @JsonProperty("signpostedAs")
     public String getSignpostedAs() {
         return signpostedAs;
     }
@@ -187,7 +177,7 @@ public class PathWay {
         this.signpostedAs = signpostedAs;
     }
 
-    @JsonProperty("reversed_signposted_as")
+    @JsonProperty("reversedSignpostedAs")
     public String getReversedSignpostedAs() {
         return reversedSignpostedAs;
     }

@@ -55,16 +55,12 @@ public class StopPoint {
     @JsonProperty("links")
     private List<LinkSchema> links;
 
-    @JsonProperty("commercial_modes")
     private List<CommercialMode> commercialModes = null;
 
-    @JsonProperty("physical_modes")
     private List<PhysicalMode> physicalModes = null;
 
-    @JsonProperty("administrative_regions")
     private List<Admin> administrativeRegions = null;
 
-    @JsonProperty("stop_area")
     private StopArea stopArea;
 
     @JsonProperty("equipments")
@@ -73,16 +69,13 @@ public class StopPoint {
     @JsonProperty("address")
     private Address address;
 
-    @JsonProperty("fare_zone")
     private FareZone fareZone;
 
-    @JsonProperty("equipment_details")
     private List<EquipmentDetails> equipmentDetails = null;
 
     @JsonProperty("lines")
     private List<Line> lines = null;
 
-    @JsonProperty("access_points")
     private List<PathWay> accessPoints = null;
 
     @JsonIgnore
@@ -168,7 +161,7 @@ public class StopPoint {
         this.links = links;
     }
 
-    @JsonProperty("commercial_modes")
+    @JsonProperty("commercialModes")
     public List<CommercialMode> getCommercialModes() {
         return commercialModes;
     }
@@ -178,7 +171,7 @@ public class StopPoint {
         this.commercialModes = commercialModes;
     }
 
-    @JsonProperty("physical_modes")
+    @JsonProperty("physicalModes")
     public List<PhysicalMode> getPhysicalModes() {
         return physicalModes;
     }
@@ -188,7 +181,7 @@ public class StopPoint {
         this.physicalModes = physicalModes;
     }
 
-    @JsonProperty("administrative_regions")
+    @JsonProperty("administrativeRegions")
     public List<Admin> getAdministrativeRegions() {
         return administrativeRegions;
     }
@@ -198,7 +191,7 @@ public class StopPoint {
         this.administrativeRegions = administrativeRegions;
     }
 
-    @JsonProperty("stop_area")
+    @JsonProperty("stopArea")
     public StopArea getStopArea() {
         return stopArea;
     }
@@ -228,7 +221,7 @@ public class StopPoint {
         this.address = address;
     }
 
-    @JsonProperty("fare_zone")
+    @JsonProperty("fareZone")
     public FareZone getFareZone() {
         return fareZone;
     }
@@ -238,7 +231,7 @@ public class StopPoint {
         this.fareZone = fareZone;
     }
 
-    @JsonProperty("equipment_details")
+    @JsonProperty("equipmentDetails")
     public List<EquipmentDetails> getEquipmentDetails() {
         return equipmentDetails;
     }
@@ -258,7 +251,7 @@ public class StopPoint {
         this.lines = lines;
     }
 
-    @JsonProperty("access_points")
+    @JsonProperty("accessPoints")
     public List<PathWay> getAccessPoints() {
         return accessPoints;
     }

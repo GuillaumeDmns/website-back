@@ -27,7 +27,6 @@ public class LineGroup {
     @JsonProperty("lines")
     private List<Line> lines = null;
 
-    @JsonProperty("main_line")
     private Line mainLine;
 
     @JsonProperty("comments")
@@ -66,7 +65,7 @@ public class LineGroup {
         this.lines = lines;
     }
 
-    @JsonProperty("main_line")
+    @JsonProperty("mainLine")
     public Line getMainLine() {
         return mainLine;
     }

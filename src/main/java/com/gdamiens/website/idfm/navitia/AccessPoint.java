@@ -26,10 +26,8 @@ public class AccessPoint {
     @JsonProperty("coord")
     private Coord coord;
 
-    @JsonProperty("access_point_code")
     private String accessPointCode;
 
-    @JsonProperty("embedded_type")
     private EmbeddedAccessPointTypeEnum embeddedType;
 
     @JsonIgnore
@@ -65,7 +63,7 @@ public class AccessPoint {
         this.coord = coord;
     }
 
-    @JsonProperty("access_point_code")
+    @JsonProperty("getAccessPointCode")
     public String getAccessPointCode() {
         return accessPointCode;
     }
@@ -75,7 +73,7 @@ public class AccessPoint {
         this.accessPointCode = accessPointCode;
     }
 
-    @JsonProperty("embedded_type")
+    @JsonProperty("embeddedType")
     public EmbeddedAccessPointTypeEnum getEmbeddedType() {
         return embeddedType;
     }
