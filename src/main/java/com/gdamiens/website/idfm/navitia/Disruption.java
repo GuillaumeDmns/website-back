@@ -26,6 +26,8 @@ import java.util.Map;
     "disruption_uri",
     "contributor",
     "properties",
+    "notes",
+    "exceptions"
 })
 @Generated("jsonschema2pojo")
 public class Disruption {

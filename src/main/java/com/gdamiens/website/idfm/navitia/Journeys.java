@@ -50,7 +50,7 @@ public class Journeys {
     private List<Note> notes = null;
 
     @JsonProperty("exceptions")
-    private List<Exception> exceptions = null;
+    private List<JourneyExc> exceptions = null;
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
