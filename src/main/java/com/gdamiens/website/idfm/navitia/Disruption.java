@@ -112,12 +112,12 @@ public class Disruption {
         this.impactId = impactId;
     }
 
-    @JsonProperty("applicationPatterns")
+    @JsonProperty("applicationPeriods")
     public List<Period> getApplicationPeriods() {
         return applicationPeriods;
     }
 
-    @JsonProperty("application_patterns")
+    @JsonProperty("application_periods")
     public void setApplicationPeriods(List<Period> applicationPeriods) {
         this.applicationPeriods = applicationPeriods;
     }

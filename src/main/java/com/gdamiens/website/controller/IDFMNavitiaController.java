@@ -1,5 +1,6 @@
 package com.gdamiens.website.controller;
 
+import com.gdamiens.website.idfm.navitia.Journeys;
 import com.gdamiens.website.idfm.navitia.Places;
 import com.gdamiens.website.service.IDFMNavitiaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,6 +33,19 @@ public class IDFMNavitiaController {
 
         } catch (Exception e) {
             log.info("error during IDFM get places");
+        }
+
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @GetMapping("/journeys")
+    @Operation(summary = "Get list of places for autocomplete", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<Journeys> getLines(String startPoint, String endPoint) {
+        try {
+            return new ResponseEntity<>(this.idfmNavitiaService.getJourneys(startPoint, endPoint), HttpStatus.OK);
+
+        } catch (Exception e) {
+            log.info("error during IDFM get journeys");
         }
 
         return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
