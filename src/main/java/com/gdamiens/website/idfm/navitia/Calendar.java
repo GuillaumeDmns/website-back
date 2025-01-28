@@ -24,7 +24,6 @@ import java.util.Map;
 @Generated("jsonschema2pojo")
 public class Calendar {
 
-    @JsonProperty("id")
     private List<CalendarPeriod> activePeriods = null;
 
     @JsonProperty("name")

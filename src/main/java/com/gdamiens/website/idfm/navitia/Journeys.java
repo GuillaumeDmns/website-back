@@ -146,12 +146,12 @@ public class Journeys {
     }
 
     @JsonProperty("exceptions")
-    public List<Exception> getExceptions() {
+    public List<JourneyExc> getExceptions() {
         return exceptions;
     }
 
     @JsonProperty("exceptions")
-    public void setExceptions(List<Exception> exceptions) {
+    public void setExceptions(List<JourneyExc> exceptions) {
         this.exceptions = exceptions;
     }
 

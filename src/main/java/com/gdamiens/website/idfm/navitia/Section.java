@@ -52,7 +52,7 @@ public class Section {
 
     private String departureDateTime;
 
-    private RidesharingInformation ridesharingInformations;
+//    private RidesharingInformation ridesharingInformations;
 
     @JsonProperty("to")
     private Place to;
@@ -160,15 +160,15 @@ public class Section {
         this.departureDateTime = departureDateTime;
     }
 
-    @JsonProperty("ridesharingInformations")
-    public RidesharingInformation getRidesharingInformations() {
-        return ridesharingInformations;
-    }
-
-    @JsonProperty("ridesharing_informations")
-    public void setRidesharingInformations(RidesharingInformation ridesharingInformations) {
-        this.ridesharingInformations = ridesharingInformations;
-    }
+//    @JsonProperty("ridesharingInformations")
+//    public RidesharingInformation getRidesharingInformations() {
+//        return ridesharingInformations;
+//    }
+//
+//    @JsonProperty("ridesharing_informations")
+//    public void setRidesharingInformations(RidesharingInformation ridesharingInformations) {
+//        this.ridesharingInformations = ridesharingInformations;
+//    }
 
     @JsonProperty("to")
     public Place getTo() {
@@ -250,12 +250,12 @@ public class Section {
         this.path = path;
     }
 
-    @JsonProperty("stop_date_times")
+    @JsonProperty("stopDateTimes")
     public List<StopDateTime> getStopDateTimes() {
         return stopDateTimes;
     }
 
-    @JsonProperty("stopDateTimes")
+    @JsonProperty("stop_date_times")
     public void setStopDateTimes(List<StopDateTime> stopDateTimes) {
         this.stopDateTimes = stopDateTimes;
     }

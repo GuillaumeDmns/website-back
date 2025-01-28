@@ -2,6 +2,7 @@ package com.gdamiens.website.service;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.idfm.navitia.Journeys;
 import com.gdamiens.website.idfm.navitia.Places;
 import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -45,6 +46,23 @@ public class IDFMNavitiaService extends AbstractIDFMService {
         }
 
         return response.getBody();
+    }
 
+    public Journeys getJourneys(String startPoint, String endPoint) {
+        log.info("Getting places for start point {} and end point {}", startPoint, endPoint);
+
+        HttpEntity<String> request = this.prepareHttpRequest();
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_JOURNEYS)
+            .queryParam("from", startPoint)
+            .queryParam("to", endPoint);
+
+        ResponseEntity<Journeys> response = this.restTemplate.exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, Journeys.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new CustomException("IDFM Navitia journeys response != 200", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return response.getBody();
     }
 }

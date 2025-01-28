@@ -64,7 +64,7 @@ public class StopPoint {
     private StopArea stopArea;
 
     @JsonProperty("equipments")
-    private EquipmentsEnum equipments;
+    private List<EquipmentsEnum> equipments = null;
 
     @JsonProperty("address")
     private Address address;
@@ -202,12 +202,12 @@ public class StopPoint {
     }
 
     @JsonProperty("equipments")
-    public EquipmentsEnum getEquipments() {
+    public List<EquipmentsEnum> getEquipments() {
         return equipments;
     }
 
     @JsonProperty("equipments")
-    public void setEquipments(EquipmentsEnum equipments) {
+    public void setEquipments(List<EquipmentsEnum> equipments) {
         this.equipments = equipments;
     }
 
