@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.2</version>
+        <version>3.5.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.gdamiens</groupId>
@@ -16,22 +16,21 @@
 
     <properties>
         <java.version>17</java.version>
-        <springdoc-openapi-starter-webmvc-ui.version>2.6.0</springdoc-openapi-starter-webmvc-ui.version>
+        <springdoc-openapi-starter-webmvc-ui.version>2.8.8</springdoc-openapi-starter-webmvc-ui.version>
         <jjwt-api.version>0.12.6</jjwt-api.version>
         <jjwt-impl.version>0.12.6</jjwt-impl.version>
         <jjwt-jackson.version>0.12.6</jjwt-jackson.version>
-        <postgresql.version>42.7.4</postgresql.version>
+        <postgresql.version>42.7.7</postgresql.version>
         <commons-lang3.version>3.17.0</commons-lang3.version>
-        <swagger-parser.version>2.1.22</swagger-parser.version>
-        <opencsv.version>5.9</opencsv.version>
-        <hibernate-validator.version>8.0.1.Final</hibernate-validator.version>
-        <httpclient5.version>5.2.1</httpclient5.version>
-        <proj4j.version>1.3.0</proj4j.version>
-        <proj4j-epsg.version>1.3.0</proj4j-epsg.version>
+        <swagger-parser.version>2.1.27</swagger-parser.version>
+        <opencsv.version>5.11.1</opencsv.version>
+        <hibernate-validator.version>9.0.0.Final</hibernate-validator.version>
+        <httpclient5.version>5.5</httpclient5.version>
+        <proj4j.version>1.4.0</proj4j.version>
+        <proj4j-epsg.version>1.4.0</proj4j-epsg.version>
         <jackson-datatype-jts.version>2.4</jackson-datatype-jts.version>
         <jts-core.version>1.20.0</jts-core.version>
-
-        <snakeyaml.version>2.0</snakeyaml.version>
+        <jts-io-common.version>1.20.0</jts-io-common.version>
     </properties>
 
     <dependencies>
@@ -173,7 +172,7 @@
         <dependency>
             <groupId>org.locationtech.jts.io</groupId>
             <artifactId>jts-io-common</artifactId>
-            <version>1.19.0</version>
+            <version>${jts-io-common.version}</version>
         </dependency>
 
         <dependency>

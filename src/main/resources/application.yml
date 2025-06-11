@@ -14,7 +14,6 @@ spring:
       hibernate:
         jdbc:
           batch_size: 50
-        dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
 logging:
