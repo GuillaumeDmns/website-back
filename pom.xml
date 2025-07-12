@@ -21,7 +21,7 @@
         <jjwt-impl.version>0.12.6</jjwt-impl.version>
         <jjwt-jackson.version>0.12.6</jjwt-jackson.version>
         <postgresql.version>42.7.7</postgresql.version>
-        <commons-lang3.version>3.17.0</commons-lang3.version>
+        <commons-lang3.version>3.18.0</commons-lang3.version>
         <swagger-parser.version>2.1.27</swagger-parser.version>
         <opencsv.version>5.11.1</opencsv.version>
         <hibernate-validator.version>9.0.0.Final</hibernate-validator.version>
