@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.0</version>
+        <version>3.5.8</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.gdamiens</groupId>
@@ -16,18 +16,18 @@
 
     <properties>
         <java.version>17</java.version>
-        <springdoc-openapi-starter-webmvc-ui.version>2.8.8</springdoc-openapi-starter-webmvc-ui.version>
-        <jjwt-api.version>0.12.6</jjwt-api.version>
-        <jjwt-impl.version>0.12.6</jjwt-impl.version>
-        <jjwt-jackson.version>0.12.6</jjwt-jackson.version>
-        <postgresql.version>42.7.7</postgresql.version>
-        <commons-lang3.version>3.17.0</commons-lang3.version>
-        <swagger-parser.version>2.1.27</swagger-parser.version>
-        <opencsv.version>5.11.1</opencsv.version>
-        <hibernate-validator.version>9.0.0.Final</hibernate-validator.version>
-        <httpclient5.version>5.5</httpclient5.version>
-        <proj4j.version>1.4.0</proj4j.version>
-        <proj4j-epsg.version>1.4.0</proj4j-epsg.version>
+        <springdoc-openapi-starter-webmvc-ui.version>2.8.14</springdoc-openapi-starter-webmvc-ui.version>
+        <jjwt-api.version>0.13.0</jjwt-api.version>
+        <jjwt-impl.version>0.13.0</jjwt-impl.version>
+        <jjwt-jackson.version>0.13.0</jjwt-jackson.version>
+        <postgresql.version>42.7.8</postgresql.version>
+        <commons-lang3.version>3.20.0</commons-lang3.version>
+        <swagger-parser.version>2.1.36</swagger-parser.version>
+        <opencsv.version>5.12.0</opencsv.version>
+        <hibernate-validator.version>9.1.0.Final</hibernate-validator.version>
+        <httpclient5.version>5.5.1</httpclient5.version>
+        <proj4j.version>1.4.1</proj4j.version>
+        <proj4j-epsg.version>1.4.1</proj4j-epsg.version>
         <jackson-datatype-jts.version>2.4</jackson-datatype-jts.version>
         <jts-core.version>1.20.0</jts-core.version>
         <jts-io-common.version>1.20.0</jts-io-common.version>
@@ -192,12 +192,12 @@
             <plugin>
                 <groupId>com.github.hazendaz.maven</groupId>
                 <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.5.0-M2</version>
+                <version>5.0.0</version>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.11</version>
+                <version>0.8.14</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
