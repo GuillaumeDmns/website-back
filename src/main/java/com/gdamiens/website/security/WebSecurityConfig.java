@@ -8,18 +8,15 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
-import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity()
+@EnableMethodSecurity
 public class WebSecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -29,25 +26,28 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, HandlerMappingIntrospector introspector) throws Exception {
-        MvcRequestMatcher.Builder mvcMatcherBuilder = new MvcRequestMatcher.Builder(introspector);
+    public SecurityFilterChain filterChain(HttpSecurity http) {
         http.csrf(AbstractHttpConfigurer::disable);
 
-        http.sessionManagement(httpSecuritySessionManagementConfigurer -> httpSecuritySessionManagementConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.sessionManagement(session -> session
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        );
 
         http.authorizeHttpRequests(authorize -> authorize
             .requestMatchers(
-                mvcMatcherBuilder.pattern("/api/signin"),
-                mvcMatcherBuilder.pattern("/v3/api-docs/**"),
-                mvcMatcherBuilder.pattern("/swagger-ui/**"),
-                mvcMatcherBuilder.pattern("/configuration/**"),
-                mvcMatcherBuilder.pattern("/webjars/**"),
-                mvcMatcherBuilder.pattern("/public")).permitAll()
+                "/api/signin",
+                "/v3/api-docs/**",
+                "/swagger-ui/**",
+                "/configuration/**",
+                "/webjars/**",
+                "/public"
+            ).permitAll()
             .anyRequest().authenticated()
         );
 
-        http.exceptionHandling(httpSecurityExceptionHandlingConfigurer -> httpSecurityExceptionHandlingConfigurer.accessDeniedPage("/login"));
-
+        http.exceptionHandling(exceptions -> exceptions
+            .accessDeniedPage("/login")
+        );
 
         http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
 
@@ -55,7 +55,6 @@ public class WebSecurityConfig {
 
         return http.build();
     }
-
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -66,5 +65,4 @@ public class WebSecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfiguration) throws Exception {
         return authConfiguration.getAuthenticationManager();
     }
-
 }
