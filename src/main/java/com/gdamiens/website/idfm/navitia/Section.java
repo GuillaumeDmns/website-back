@@ -30,7 +30,8 @@ import java.util.Map;
     "type",
     "duration",
     "sections",
-    "debug"
+    "debug",
+    "vias"
 })
 @Generated("jsonschema2pojo")
 public class Section {
@@ -87,6 +88,9 @@ public class Section {
     private SectionModeEnum mode;
 
     private List<BoardingPositionEnum> bestBoardingPositions = null;
+
+    @JsonProperty("via")
+    private List<Via> vias = null;
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
@@ -309,6 +313,16 @@ public class Section {
     @JsonProperty("best_boarding_positions")
     public void setBestBoardingPositions(List<BoardingPositionEnum> bestBoardingPositions) {
         this.bestBoardingPositions = bestBoardingPositions;
+    }
+
+    @JsonProperty("vias")
+    public List<Via> getVias() {
+        return vias;
+    }
+
+    @JsonProperty("vias")
+    public void setVias(List<Via> vias) {
+        this.vias = vias;
     }
 
     @JsonAnyGetter

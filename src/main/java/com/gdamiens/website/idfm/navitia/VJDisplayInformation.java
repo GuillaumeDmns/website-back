@@ -27,7 +27,9 @@ import java.util.Map;
     "text_color",
     "headsigns",
     "commercial_mode",
-    "description"
+    "description",
+    "trip_short_name",
+    "company"
 })
 @Generated("jsonschema2pojo")
 public class VJDisplayInformation {
@@ -70,6 +72,11 @@ public class VJDisplayInformation {
 
     @JsonProperty("description")
     private String description;
+
+    private String tripShortName;
+
+    @JsonProperty("company")
+    private String company;
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
@@ -212,6 +219,26 @@ public class VJDisplayInformation {
     @JsonProperty("description")
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @JsonProperty("tripShortName")
+    public String getTripShortName() {
+        return tripShortName;
+    }
+
+    @JsonProperty("trip_short_name")
+    public void setTripShortName(String tripShortName) {
+        this.tripShortName = tripShortName;
+    }
+
+    @JsonProperty("company")
+    public String getCompany() {
+        return company;
+    }
+
+    @JsonProperty("company")
+    public void setCompany(String company) {
+        this.company = company;
     }
 
     @JsonAnyGetter

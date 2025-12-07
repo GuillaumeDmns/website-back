@@ -19,7 +19,8 @@ import java.util.Map;
     "links",
     "cost",
     "found",
-    "id"
+    "id",
+    "source_id"
 })
 @Generated("jsonschema2pojo")
 public class Ticket {
@@ -41,6 +42,8 @@ public class Ticket {
 
     @JsonProperty("id")
     private String id;
+
+    private String sourceId;
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
@@ -103,6 +106,16 @@ public class Ticket {
     @JsonProperty("id")
     public void setId(String id) {
         this.id = id;
+    }
+
+    @JsonProperty("sourceId")
+    public String getSourceId() {
+        return sourceId;
+    }
+
+    @JsonProperty("source_id")
+    public void setSourceId(String sourceId) {
+        this.sourceId = sourceId;
     }
 
     @JsonAnyGetter
