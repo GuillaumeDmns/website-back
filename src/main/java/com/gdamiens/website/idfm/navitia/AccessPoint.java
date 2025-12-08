@@ -63,7 +63,7 @@ public class AccessPoint {
         this.coord = coord;
     }
 
-    @JsonProperty("getAccessPointCode")
+    @JsonProperty("accessPointCode")
     public String getAccessPointCode() {
         return accessPointCode;
     }
