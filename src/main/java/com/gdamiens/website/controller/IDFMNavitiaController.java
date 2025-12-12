@@ -45,7 +45,7 @@ public class IDFMNavitiaController {
             return new ResponseEntity<>(this.idfmNavitiaService.getJourneys(startPoint, endPoint), HttpStatus.OK);
 
         } catch (Exception e) {
-            log.info("error during IDFM get journeys");
+            log.info("error during IDFM get journeys : {}", String.valueOf(e.getCause()));
         }
 
         return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);

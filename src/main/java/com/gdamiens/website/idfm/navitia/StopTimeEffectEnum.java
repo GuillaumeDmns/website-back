@@ -4,17 +4,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public enum StopTimeEffectEnum {
 
-    @JsonProperty("delayed")
+    @JsonProperty("DELAYED")
     DELAYED("delayed"),
 
-    @JsonProperty("added")
+    @JsonProperty("ADDED")
     ADDED("added"),
 
-    @JsonProperty("deleted")
+    @JsonProperty("DELETED")
     DELETED("deleted"),
 
-    @JsonProperty("unchanged")
-    UNCHANGED("unchanged");
+    @JsonProperty("UNCHANGED")
+    UNCHANGED("unchanged"),
+
+    @JsonProperty("NO_ALIGHTING")
+    NO_ALIGHTING("no_alighting"),
+
+    @JsonProperty("NO_BOARDING")
+    NO_BOARDING("no_boarding");
 
     private String value;
 

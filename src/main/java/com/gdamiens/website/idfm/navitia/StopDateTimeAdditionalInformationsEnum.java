@@ -13,7 +13,10 @@ public enum StopDateTimeAdditionalInformationsEnum {
     ON_DEMAND_TRANSPORT("on_demand_transport"),
 
     @JsonProperty("date_time_estimated")
-    DATE_TIME_ESTIMATED("date_time_estimated");
+    DATE_TIME_ESTIMATED("date_time_estimated"),
+
+    @JsonProperty("skipped_stop")
+    SKIPPED_STOP("skipped_stop");
 
     private String value;
 
