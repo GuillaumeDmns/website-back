@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.0</version>
+        <version>4.0.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.gdamiens</groupId>
@@ -15,19 +15,15 @@
     <description>Guillaume Damiens&apos; website</description>
 
     <properties>
-        <java.version>17</java.version>
-        <springdoc-openapi-starter-webmvc-ui.version>2.8.8</springdoc-openapi-starter-webmvc-ui.version>
-        <jjwt-api.version>0.12.6</jjwt-api.version>
-        <jjwt-impl.version>0.12.6</jjwt-impl.version>
-        <jjwt-jackson.version>0.12.6</jjwt-jackson.version>
-        <postgresql.version>42.7.7</postgresql.version>
-        <commons-lang3.version>3.17.0</commons-lang3.version>
-        <swagger-parser.version>2.1.27</swagger-parser.version>
-        <opencsv.version>5.11.1</opencsv.version>
-        <hibernate-validator.version>9.0.0.Final</hibernate-validator.version>
-        <httpclient5.version>5.5</httpclient5.version>
-        <proj4j.version>1.4.0</proj4j.version>
-        <proj4j-epsg.version>1.4.0</proj4j-epsg.version>
+        <java.version>25</java.version>
+        <springdoc-openapi-starter-webmvc-ui.version>3.0.0</springdoc-openapi-starter-webmvc-ui.version>
+        <jjwt-api.version>0.13.0</jjwt-api.version>
+        <jjwt-impl.version>0.13.0</jjwt-impl.version>
+        <jjwt-jackson.version>0.13.0</jjwt-jackson.version>
+        <swagger-parser.version>2.1.36</swagger-parser.version>
+        <opencsv.version>5.12.0</opencsv.version>
+        <proj4j.version>1.4.1</proj4j.version>
+        <proj4j-epsg.version>1.4.1</proj4j-epsg.version>
         <jackson-datatype-jts.version>2.4</jackson-datatype-jts.version>
         <jts-core.version>1.20.0</jts-core.version>
         <jts-io-common.version>1.20.0</jts-io-common.version>
@@ -56,17 +52,17 @@
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-hateoas</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web-services</artifactId>
+            <artifactId>spring-boot-starter-webservices</artifactId>
             <exclusions>
                 <exclusion>
                     <groupId>org.springframework.boot</groupId>
@@ -117,14 +113,12 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>${postgresql.version}</version>
             <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>${commons-lang3.version}</version>
         </dependency>
 
         <dependency>
@@ -142,13 +136,11 @@
         <dependency>
             <groupId>org.hibernate.validator</groupId>
             <artifactId>hibernate-validator</artifactId>
-            <version>${hibernate-validator.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
-            <version>${httpclient5.version}</version>
         </dependency>
 
         <dependency>
@@ -178,7 +170,6 @@
         <dependency>
         <groupId>org.hibernate.orm</groupId>
         <artifactId>hibernate-spatial</artifactId>
-        <version>${hibernate.version}</version>
     </dependency>
 
     </dependencies>
@@ -192,12 +183,12 @@
             <plugin>
                 <groupId>com.github.hazendaz.maven</groupId>
                 <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.5.0-M2</version>
+                <version>5.0.0</version>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.11</version>
+                <version>0.8.14</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>

@@ -9,26 +9,16 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
     "id",
-    "name",
-    "coord",
-    "access_point_code",
-    "embedded_type"
+    "name"
 })
 @Generated("jsonschema2pojo")
-public class AccessPoint {
+public class Trip {
 
     @JsonProperty("id")
     private String id;
 
     @JsonProperty("name")
     private String name;
-
-    @JsonProperty("coord")
-    private Coord coord;
-
-    private String accessPointCode;
-
-    private EmbeddedAccessPointTypeEnum embeddedType;
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
@@ -51,36 +41,6 @@ public class AccessPoint {
     @JsonProperty("name")
     public void setName(String name) {
         this.name = name;
-    }
-
-    @JsonProperty("coord")
-    public Coord getCoord() {
-        return coord;
-    }
-
-    @JsonProperty("coord")
-    public void setCoord(Coord coord) {
-        this.coord = coord;
-    }
-
-    @JsonProperty("accessPointCode")
-    public String getAccessPointCode() {
-        return accessPointCode;
-    }
-
-    @JsonProperty("access_point_code")
-    public void setAccessPointCode(String accessPointCode) {
-        this.accessPointCode = accessPointCode;
-    }
-
-    @JsonProperty("embeddedType")
-    public EmbeddedAccessPointTypeEnum getEmbeddedType() {
-        return embeddedType;
-    }
-
-    @JsonProperty("embedded_type")
-    public void setEmbeddedType(EmbeddedAccessPointTypeEnum embeddedType) {
-        this.embeddedType = embeddedType;
     }
 
     @JsonAnyGetter

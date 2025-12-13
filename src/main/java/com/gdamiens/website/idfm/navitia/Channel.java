@@ -4,18 +4,20 @@ import com.fasterxml.jackson.annotation.*;
 import jakarta.annotation.Generated;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
+    "content_type",
     "id",
     "name",
-    "coord",
-    "access_point_code",
-    "embedded_type"
+    "types"
 })
 @Generated("jsonschema2pojo")
-public class AccessPoint {
+public class Channel {
+
+    private String contentType;
 
     @JsonProperty("id")
     private String id;
@@ -23,15 +25,21 @@ public class AccessPoint {
     @JsonProperty("name")
     private String name;
 
-    @JsonProperty("coord")
-    private Coord coord;
-
-    private String accessPointCode;
-
-    private EmbeddedAccessPointTypeEnum embeddedType;
+    @JsonProperty("types")
+    private List<ChannelTypesEnum> types = null;
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+
+    @JsonProperty("contentType")
+    public String getContentType() {
+        return contentType;
+    }
+
+    @JsonProperty("content_type")
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
+    }
 
     @JsonProperty("id")
     public String getId() {
@@ -53,34 +61,14 @@ public class AccessPoint {
         this.name = name;
     }
 
-    @JsonProperty("coord")
-    public Coord getCoord() {
-        return coord;
+    @JsonProperty("types")
+    public List<ChannelTypesEnum> getTypes() {
+        return types;
     }
 
-    @JsonProperty("coord")
-    public void setCoord(Coord coord) {
-        this.coord = coord;
-    }
-
-    @JsonProperty("accessPointCode")
-    public String getAccessPointCode() {
-        return accessPointCode;
-    }
-
-    @JsonProperty("access_point_code")
-    public void setAccessPointCode(String accessPointCode) {
-        this.accessPointCode = accessPointCode;
-    }
-
-    @JsonProperty("embeddedType")
-    public EmbeddedAccessPointTypeEnum getEmbeddedType() {
-        return embeddedType;
-    }
-
-    @JsonProperty("embedded_type")
-    public void setEmbeddedType(EmbeddedAccessPointTypeEnum embeddedType) {
-        this.embeddedType = embeddedType;
+    @JsonProperty("types")
+    public void setTypes(List<ChannelTypesEnum> types) {
+        this.types = types;
     }
 
     @JsonAnyGetter

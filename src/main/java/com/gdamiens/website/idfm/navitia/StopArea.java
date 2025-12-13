@@ -37,7 +37,7 @@ public class StopArea {
     private List<Comment> comments = null;
 
     @JsonProperty("comment")
-    private Comment comment;
+    private String comment;
 
     @JsonProperty("codes")
     private List<Code> codes = null;
@@ -99,12 +99,12 @@ public class StopArea {
     }
 
     @JsonProperty("comment")
-    public Comment getComment() {
+    public String getComment() {
         return comment;
     }
 
     @JsonProperty("comment")
-    public void setComment(Comment comment) {
+    public void setComment(String comment) {
         this.comment = comment;
     }
 
