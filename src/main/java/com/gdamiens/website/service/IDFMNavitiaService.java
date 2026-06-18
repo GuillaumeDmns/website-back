@@ -4,6 +4,7 @@ import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.navitia.Journeys;
 import com.gdamiens.website.idfm.navitia.Places;
+import com.gdamiens.website.idfm.navitia.VehicleJourneys;
 import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
@@ -54,10 +55,32 @@ public class IDFMNavitiaService extends AbstractIDFMService {
         HttpEntity<String> request = this.prepareHttpRequest();
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_JOURNEYS)
+            .queryParam("data_freshness", "realtime")
             .queryParam("from", startPoint)
             .queryParam("to", endPoint);
 
         ResponseEntity<Journeys> response = this.restTemplate.exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, Journeys.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new CustomException("IDFM Navitia journeys response != 200", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return response.getBody();
+    }
+
+    public VehicleJourneys getStopPointJourneys(String stopPointId, String since, String until) {
+        log.info("Getting next departures for start point {}", stopPointId);
+
+        HttpEntity<String> request = this.prepareHttpRequest();
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE)
+            .pathSegment("stop_points", stopPointId, "vehicle_journeys")
+            .queryParam("data_freshness", "realtime")
+            .queryParam("depth", 3)
+            .queryParam("since", since)
+            .queryParam("until", until);
+
+        ResponseEntity<VehicleJourneys> response = this.restTemplate.exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, VehicleJourneys.class);
 
         if (!response.getStatusCode().is2xxSuccessful()) {
             throw new CustomException("IDFM Navitia journeys response != 200", HttpStatus.INTERNAL_SERVER_ERROR);

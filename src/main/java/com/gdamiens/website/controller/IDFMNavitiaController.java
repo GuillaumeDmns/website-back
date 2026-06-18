@@ -2,6 +2,7 @@ package com.gdamiens.website.controller;
 
 import com.gdamiens.website.idfm.navitia.Journeys;
 import com.gdamiens.website.idfm.navitia.Places;
+import com.gdamiens.website.idfm.navitia.VehicleJourneys;
 import com.gdamiens.website.service.IDFMNavitiaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,7 +34,7 @@ public class IDFMNavitiaController {
             return new ResponseEntity<>(this.idfmNavitiaService.getPlaces(query), HttpStatus.OK);
 
         } catch (Exception e) {
-            log.info("error during IDFM get places");
+            log.info("error during IDFM get places : {}", String.valueOf(e.getCause()));
         }
 
         return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -46,6 +48,19 @@ public class IDFMNavitiaController {
 
         } catch (Exception e) {
             log.info("error during IDFM get journeys : {}", String.valueOf(e.getCause()));
+        }
+
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @GetMapping("/stop/{stopPointId}/journeys")
+    @Operation(summary = "Get list of departures from a stop area and line id", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<VehicleJourneys> getStopPointJourneys(@PathVariable String stopPointId, String since, String until) {
+        try {
+            return new ResponseEntity<>(this.idfmNavitiaService.getStopPointJourneys(stopPointId, since, until), HttpStatus.OK);
+
+        } catch (Exception e) {
+            log.info("error during IDFM get departures : {}", String.valueOf(e.getCause()));
         }
 
         return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
