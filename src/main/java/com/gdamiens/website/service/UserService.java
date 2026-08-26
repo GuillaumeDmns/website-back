@@ -4,9 +4,10 @@ import com.gdamiens.website.model.User;
 import com.gdamiens.website.repository.UserRepository;
 import com.gdamiens.website.security.JwtTokenProvider;
 import com.gdamiens.website.security.Role;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,8 +15,8 @@ import java.util.Optional;
 public class UserService {
 
     private final JwtTokenProvider jwtTokenProvider;
-
     private final UserRepository userRepository;
+    private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public UserService(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
@@ -23,23 +24,21 @@ public class UserService {
     }
 
     public String signIn(String username, String password) {
-        Optional<User> optionalUser = userRepository.getByLogin(username);
-        if (optionalUser.isPresent() && optionalUser.get().getPassword().trim().equals(password)) {
-            List<Role> roleList = new ArrayList<>();
-            roleList.add(Role.ROLE_ADMIN);
-
-            return jwtTokenProvider.createToken(username, roleList);
-        }
-        return null;
+        return Optional.ofNullable(userRepository.getByLogin(username))
+            .filter(user -> passwordEncoder.matches(password, user.getPassword()))
+            .map(user -> jwtTokenProvider.createToken(username, List.of(Role.ROLE_ADMIN)))
+            .orElse(null);
     }
 
     public String refresh(String username) {
-        List<Role> roleList = new ArrayList<>();
-        roleList.add(Role.ROLE_ADMIN);
-
-        return jwtTokenProvider.createToken(username, roleList);
+        Optional<User> user = userRepository.getByLogin(username);
+        
+        if (user.isPresent()) {
+            return jwtTokenProvider.createToken(
+                username,
+                List.of(Role.ROLE_ADMIN));
+        }
+        
+        return null;
     }
-
-
-
 }

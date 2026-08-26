@@ -31,22 +31,21 @@ public class IDFMTripService extends AbstractIDFMService implements IDFMServiceI
     }
 
     public void saveAllTripsFromTripsCSVList(List<TripsCSV> tripsCSVList) {
+        if (tripsCSVList == null || tripsCSVList.isEmpty()) {
+            return;
+        }
+
         log.info("Start importing trips");
         log.info("{} trips to process", tripsCSVList.size());
 
-        tripsCSVList
-            .parallelStream()
+        List<IDFMTrip> trips = tripsCSVList.stream()
             .map(IDFMTrip::new)
-            .forEach(trip -> {
-                try {
-                    this.idfmTripRepository.save(trip);
-                }
-                catch (Exception e) {
-                    log.error("Cannot import trip {} : {}", trip.getId(), e.getMessage());
-                }
-            });
+            .toList();
 
+        long start = System.currentTimeMillis();
+        this.idfmTripRepository.saveAll(trips);
+        long end = System.currentTimeMillis();
 
-        log.info("Finish importing trips");
+        log.info("Finish importing trips (took {}ms)", end - start);
     }
 }

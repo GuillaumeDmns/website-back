@@ -16,9 +16,13 @@ public class IDFMStopInLineService implements IDFMServiceInterface {
     private final IDFMStopInLineRepository stopInLineRepository;
 
     public void truncateTable() {
-        log.info("Start deleting all stops in lines");
+        log.info("Start truncating stops in lines table");
+        
+        long start = System.currentTimeMillis();
         this.stopInLineRepository.deleteAllInBatch();
-        log.info("Finish deleting all stops in lines");
+        long end = System.currentTimeMillis();
+
+        log.info("Finish truncating stops in lines table (took {}ms)", end - start);
     }
 
     public IDFMStopInLineService(IDFMStopInLineRepository stopInLineRepository) {

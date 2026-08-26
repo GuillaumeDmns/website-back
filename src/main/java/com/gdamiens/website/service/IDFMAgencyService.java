@@ -29,18 +29,28 @@ public class IDFMAgencyService extends AbstractIDFMService implements IDFMServic
     }
 
     public void truncateTable() {
-        log.info("Start deleting all agencies");
+        log.info("Start truncating agencies table");
+        
+        long start = System.currentTimeMillis();
         this.idfmAgencyRepository.deleteAllInBatch();
-        log.info("Finish deleting all agencies");
+        long end = System.currentTimeMillis();
+
+        log.info("Finish truncating agencies table (took {}ms)", end - start);
     }
 
     public void saveAllAgenciesFromAgenciesCSVList(List<AgencyCSV> agencyCSVList) {
+        if (agencyCSVList == null || agencyCSVList.isEmpty()) {
+            return;
+        }
+
         log.info("Start importing agencies");
         log.info("{} agencies to process", agencyCSVList.size());
 
-        this.idfmAgencyRepository.saveAll(
-            agencyCSVList.parallelStream().map(IDFMAgency::new).collect(Collectors.toList())
-        );
+        List<IDFMAgency> agencies = agencyCSVList.stream()
+            .map(IDFMAgency::new)
+            .toList();
+
+        this.idfmAgencyRepository.saveAll(agencies);
 
         log.info("Finish importing agencies");
     }
