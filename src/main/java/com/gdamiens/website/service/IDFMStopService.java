@@ -29,8 +29,12 @@ public class IDFMStopService extends AbstractIDFMService implements IDFMServiceI
     @Override
     public void truncateTable() {
         log.info("Start deleting all stops");
+        
+        long start = System.currentTimeMillis();
         this.idfmStopRepository.deleteAllInBatch();
-        log.info("Finish deleting all stops");
+        long end = System.currentTimeMillis();
+
+        log.info("Finish deleting all stops (took {}ms)", end - start);
     }
 
     public IDFMStop getStop(Integer stopId) {

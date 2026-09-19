@@ -15,6 +15,7 @@ public final class Constants {
     public static final String IDFM_RAIL_SHAPES_URL = "https://data.iledefrance-mobilites.fr/explore/dataset/traces-du-reseau-ferre-idf/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=;";
     public static final String IDFM_NAVITIA_PLACES = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/places";
     public static final String IDFM_NAVITIA_JOURNEYS = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/journeys";
+    public static final String IDFM_NAVITIA_BASE = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia";
 
 
     private Constants() {}

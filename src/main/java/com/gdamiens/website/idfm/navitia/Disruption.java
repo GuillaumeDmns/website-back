@@ -77,7 +77,7 @@ public class Disruption {
     private List<DisruptionProperty> properties = null;
 
     @JsonProperty("exceptions")
-    private List<Exception> exceptions = null;
+    private List<CalendarExc> exceptions = null;
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
@@ -253,12 +253,12 @@ public class Disruption {
     }
 
     @JsonProperty("exceptions")
-    public List<Exception> getExceptions() {
+    public List<CalendarExc> getExceptions() {
         return exceptions;
     }
 
     @JsonProperty("exceptions")
-    public void setExceptions(List<Exception> exceptions) {
+    public void setExceptions(List<CalendarExc> exceptions) {
         this.exceptions = exceptions;
     }
 

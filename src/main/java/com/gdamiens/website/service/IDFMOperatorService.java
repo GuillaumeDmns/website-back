@@ -26,9 +26,13 @@ public class IDFMOperatorService extends AbstractIDFMService implements IDFMServ
     }
 
     public void truncateTable() {
-        log.info("Start deleting all operators");
+        log.info("Start truncating operators table");
+        
+        long start = System.currentTimeMillis();
         this.idfmOperatorRepository.deleteAllInBatch();
-        log.info("Finish deleting all operators");
+        long end = System.currentTimeMillis();
+
+        log.info("Finish truncating operators table (took {}ms)", end - start);
     }
 
     public void saveAllOperatorsFromCSV() {
@@ -36,11 +40,18 @@ public class IDFMOperatorService extends AbstractIDFMService implements IDFMServ
 
         List<OperatorsCSV> operators = csvReader.readFromUrl(Constants.IDFM_OPERATORS_URL);
 
+        if (operators == null || operators.isEmpty()) {
+            log.info("No data has been found in the operators CSV file");
+            return;
+        }
+
         log.info("Start importing operators");
         log.info("{} operators to process", operators.size());
 
         this.idfmOperatorRepository.saveAll(
-            operators.parallelStream().map(IDFMOperator::new).collect(Collectors.toList())
+            operators.stream()
+                .map(IDFMOperator::new)
+                .toList()
         );
 
         log.info("Finish importing operators");

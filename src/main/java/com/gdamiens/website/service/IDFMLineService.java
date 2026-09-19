@@ -178,31 +178,24 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
         log.info("{} lines to process", lines.size());
 
         this.idfmLineRepository.saveAll(
-            lines
-                .parallelStream()
-                .filter(lineCSV -> {
-                    switch (lineCSV.getTransportMode()) {
-                        case "bus":
-                            return lineCSV.getOperatorId() != null && lineCSV.getOperatorId() == 100 && lineCSV.getType().isEmpty();
-                        case "rail":
-                            return !Arrays.asList("C00563", "C01388").contains(lineCSV.getLineId()); // remove CDG val & orly val
-                        case "metro":
-                        case "tram":
-                            return true;
-                        case "funicular":
-                        default:
-                            return false;
-                    }
+            lines.parallelStream()
+                .filter(line -> switch (line.getTransportMode()) {
+                    case "bus" -> line.getOperatorId() != null && 
+                                  line.getOperatorId() == 100 && 
+                                  line.getType().isEmpty();
+                    case "rail" -> !Arrays.asList("C00563", "C01388")
+                        .contains(line.getLineId());
+                    case "metro", "tram" -> true;
+                    default -> false;
                 })
                 .map(LineMapper::csvToDb)
-                .collect(Collectors.toList())
+                .toList()
         );
         log.info("Finish importing lines");
     }
 
     public void updateBusShapes() {
         CSVReader<BusShapesCSV> csvReader = new CSVReader<>(BusShapesCSV.class);
-
         List<BusShapesCSV> busShapes = csvReader.readFromUrl(Constants.IDFM_BUS_SHAPES_URL);
 
         if (busShapes == null || busShapes.isEmpty()) {
@@ -213,13 +206,13 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
         log.info("Start importing bus shapes");
         log.info("{} bus shapes to import", busShapes.size());
 
-        busShapes.forEach(busShape -> {
+        for (BusShapesCSV busShape : busShapes) {
             try {
                 this.idfmLineRepository.updateBusShape(busShape.getLineId(), busShape.getShape());
             } catch (Exception e) {
-                log.warn("Failed to import bus {} shape : {}", busShape.getLineId(), e.getStackTrace());
+                log.warn("Failed to import bus {} shape: {}", busShape.getLineId(), e.getMessage());
             }
-        });
+        }
 
         log.info("Finish importing bus shapes");
     }
@@ -235,28 +228,34 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
         }
 
         log.info("Start importing rail shapes");
-        log.info("{} rail shapes to import", railShapes.size());
+        log.info("{} rail shape groups to import", railShapes.size());
 
-        railShapes
-            .entrySet()
-            .parallelStream()
-            .forEach(lineShapeList -> {
-                GeoJsonReader geoJsonReader = new GeoJsonReader();
-                List<LineString> lineStrings = new ArrayList<>();
+        for (Map.Entry<String, List<RailShapesCSV>> lineShapeList : railShapes.entrySet()) {
+            GeoJsonReader geoJsonReader = new GeoJsonReader();
+            List<LineString> lineStrings = new ArrayList<>();
 
-                lineShapeList.getValue().forEach(lineShape -> {
-                    try {
-                        Geometry geometry = geoJsonReader.read(lineShape.getShape());
-                        if (geometry instanceof LineString) {
-                            lineStrings.add((LineString) geometry);
-                        }
-                    } catch (ParseException e) {
-                        throw new RuntimeException(e);
+            for (RailShapesCSV lineShape : lineShapeList.getValue()) {
+                try {
+                    Geometry geometry = geoJsonReader.read(lineShape.getShape());
+                    
+                    if (geometry instanceof LineString) {
+                        lineStrings.add((LineString) geometry);
                     }
-                });
+                } catch (Exception e) {
+                    log.warn("Failed to parse rail shape for line {}: {}", lineShapeList.getKey(), e.getMessage());
+                    continue;
+                }
+            }
 
-                this.idfmLineRepository.updateRailShape(lineShapeList.getKey(), new MultiLineString(lineStrings.toArray(new LineString[0]), new GeometryFactory()));
-        });
+            try {
+                this.idfmLineRepository.updateRailShape(
+                    lineShapeList.getKey(), 
+                    new MultiLineString(lineStrings.toArray(new LineString[0]), new GeometryFactory())
+                );
+            } catch (Exception e) {
+                log.error("Failed to save rail shape for line {}: {}", lineShapeList.getKey(), e.getMessage());
+            }
+        }
 
         log.info("Finish importing rail shapes");
     }
