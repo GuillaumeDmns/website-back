@@ -1,0 +1,19 @@
+info:
+  name: Get traffic reports
+  type: http
+  seq: 1
+  tags:
+    - Traffic Reports
+
+http:
+  method: GET
+  url: "{{baseUrl}}/traffic_reports"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

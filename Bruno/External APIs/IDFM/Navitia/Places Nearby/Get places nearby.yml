@@ -1,0 +1,57 @@
+info:
+  name: Get places nearby
+  type: http
+  seq: 1
+  tags:
+    - Places Nearby
+
+http:
+  method: GET
+  url: "{{baseUrl}}/places_nearby"
+  params:
+    - name: distance
+      value: ""
+      type: query
+      disabled: true
+    - name: count
+      value: ""
+      type: query
+      disabled: true
+    - name: depth
+      value: ""
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: 200 Response
+    description: OK
+    request:
+      url: "{{baseUrl}}/places_nearby"
+      method: GET
+      params:
+        - name: distance
+          value: ""
+          type: query
+          disabled: true
+        - name: count
+          value: ""
+          type: query
+          disabled: true
+        - name: depth
+          value: ""
+          type: query
+          disabled: true
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: text
+        data: ""

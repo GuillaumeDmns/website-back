@@ -1,0 +1,19 @@
+info:
+  name: Get equipment reports
+  type: http
+  seq: 1
+  tags:
+    - Equipment Reports
+
+http:
+  method: GET
+  url: "{{baseUrl}}/equipment_reports"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,19 @@
+info:
+  name: Get route schedules
+  type: http
+  seq: 1
+  tags:
+    - Route Schedules
+
+http:
+  method: GET
+  url: "{{baseUrl}}/routes/{{routeId}}/route_schedules"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

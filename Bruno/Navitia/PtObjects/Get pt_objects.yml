@@ -1,0 +1,19 @@
+info:
+  name: Get public transport objects
+  type: http
+  seq: 1
+  tags:
+    - PT Objects
+
+http:
+  method: GET
+  url: "{{baseUrl}}/pt_objects"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

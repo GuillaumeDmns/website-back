@@ -1,0 +1,19 @@
+info:
+  name: Get companies list
+  type: http
+  seq: 1
+  tags:
+    - Companies
+
+http:
+  method: GET
+  url: "{{baseUrl}}/companies"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,6 @@
+info:
+  name: Traffic Reports
+  type: folder
+
+request:
+  auth: inherit

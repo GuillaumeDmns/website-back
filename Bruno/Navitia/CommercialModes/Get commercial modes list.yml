@@ -1,0 +1,19 @@
+info:
+  name: Get commercial modes list
+  type: http
+  seq: 1
+  tags:
+    - Commercial Modes
+
+http:
+  method: GET
+  url: "{{baseUrl}}/commercial_modes"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

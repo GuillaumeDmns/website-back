@@ -1,0 +1,19 @@
+info:
+  name: Get stop points list
+  type: http
+  seq: 1
+  tags:
+    - Stop Points
+
+http:
+  method: GET
+  url: "{{baseUrl}}/stop_points"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

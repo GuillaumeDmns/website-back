@@ -1,0 +1,19 @@
+info:
+  name: Get departures for a stop point
+  type: http
+  seq: 1
+  tags:
+    - Departures
+
+http:
+  method: GET
+  url: "{{baseUrl}}/stop_points/{{stopPointId}}/departures"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

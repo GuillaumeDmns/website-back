@@ -1,0 +1,7 @@
+info:
+  name: PT Objects
+  type: folder
+  seq: 13
+
+request:
+  auth: inherit

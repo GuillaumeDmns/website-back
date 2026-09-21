@@ -1,0 +1,19 @@
+info:
+  name: Get places for autocomplete
+  type: http
+  seq: 1
+  tags:
+    - Places
+
+http:
+  method: GET
+  url: "{{baseUrl}}/places"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

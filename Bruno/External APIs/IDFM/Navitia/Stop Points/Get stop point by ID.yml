@@ -1,0 +1,39 @@
+info:
+  name: Get stop point by ID
+  type: http
+  seq: 3
+  tags:
+    - Stop Points
+
+http:
+  method: GET
+  url: "{{baseUrl}}/stop_points/:id"
+  params:
+    - name: id
+      value: ""
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: 200 Response
+    description: OK
+    request:
+      url: "{{baseUrl}}/stop_points/:id"
+      method: GET
+      params:
+        - name: id
+          value: ""
+          type: path
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: text
+        data: ""

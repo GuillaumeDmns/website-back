@@ -1,0 +1,19 @@
+info:
+  name: Get company by ID
+  type: http
+  seq: 1
+  tags:
+    - Companies
+
+http:
+  method: GET
+  url: "{{baseUrl}}/companies/{{id}}"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

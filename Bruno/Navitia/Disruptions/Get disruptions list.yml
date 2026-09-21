@@ -1,0 +1,19 @@
+info:
+  name: Get disruptions list
+  type: http
+  seq: 1
+  tags:
+    - Disruptions
+
+http:
+  method: GET
+  url: "{{baseUrl}}/disruptions"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

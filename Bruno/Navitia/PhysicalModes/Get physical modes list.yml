@@ -1,0 +1,19 @@
+info:
+  name: Get physical modes list
+  type: http
+  seq: 1
+  tags:
+    - Physical Modes
+
+http:
+  method: GET
+  url: "{{baseUrl}}/physical_modes"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

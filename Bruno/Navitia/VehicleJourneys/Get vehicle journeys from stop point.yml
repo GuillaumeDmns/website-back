@@ -1,0 +1,35 @@
+info:
+  name: Get vehicle journeys from a stop point
+  type: http
+  seq: 1
+  tags:
+    - Journeys
+
+http:
+  method: GET
+  url: "{{baseUrl}}/stop_points/{{stopPointId}}/vehicle_journeys"
+  headers:
+    Authorization: "Bearer {{token}}"
+  params:
+    - name: stopPointId
+      value: ""
+      type: path
+      description: Stop point identifier
+    - name: since
+      value: ""
+      type: query
+      description: Since datetime
+    - name: until
+      value: ""
+      type: query
+      description: Until datetime
+    - name: depth
+      value: "3"
+      type: query
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

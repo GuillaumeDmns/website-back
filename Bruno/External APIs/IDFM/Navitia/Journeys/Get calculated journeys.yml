@@ -1,0 +1,83 @@
+info:
+  name: Get calculated journeys
+  type: http
+  seq: 1
+  tags:
+    - Journeys
+
+http:
+  method: GET
+  url: "{{baseUrl}}/journeys"
+  params:
+    - name: startPoint
+      value: ""
+      type: query
+      description: Start point identifier
+    - name: endPoint
+      value: ""
+      type: query
+      description: End point identifier
+    - name: datetime
+      value: ""
+      type: query
+      description: Datetime for the journey
+      disabled: true
+    - name: datetimeRepresents
+      value: ""
+      type: query
+      description: Whether datetime is departure or arrival time
+      disabled: true
+    - name: forbiddenUris[]
+      value: "[]"
+      type: query
+      disabled: true
+    - name: dataFreshness
+      value: realtime
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: 200 Response
+    description: OK
+    request:
+      url: "{{baseUrl}}/journeys"
+      method: GET
+      params:
+        - name: startPoint
+          value: ""
+          type: query
+          description: Start point identifier
+        - name: endPoint
+          value: ""
+          type: query
+          description: End point identifier
+        - name: datetime
+          value: ""
+          type: query
+          description: Datetime for the journey
+          disabled: true
+        - name: datetimeRepresents
+          value: ""
+          type: query
+          description: Whether datetime is departure or arrival time
+          disabled: true
+        - name: forbiddenUris[]
+          value: "[]"
+          type: query
+          disabled: true
+        - name: dataFreshness
+          value: realtime
+          type: query
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: text
+        data: ""

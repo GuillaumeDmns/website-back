@@ -1,0 +1,19 @@
+info:
+  name: Get routes list
+  type: http
+  seq: 1
+  tags:
+    - Routes
+
+http:
+  method: GET
+  url: "{{baseUrl}}/routes"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

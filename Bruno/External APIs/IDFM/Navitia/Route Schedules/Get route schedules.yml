@@ -1,0 +1,63 @@
+info:
+  name: Get route schedules
+  type: http
+  seq: 1
+  tags:
+    - Route Schedules
+
+http:
+  method: GET
+  url: "{{baseUrl}}/routes/:routeId/route_schedules"
+  params:
+    - name: routeId
+      value: ""
+      type: path
+    - name: fromDatetime
+      value: ""
+      type: query
+      disabled: true
+    - name: untilDatetime
+      value: ""
+      type: query
+      disabled: true
+    - name: depth
+      value: ""
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: 200 Response
+    description: OK
+    request:
+      url: "{{baseUrl}}/routes/:routeId/route_schedules"
+      method: GET
+      params:
+        - name: routeId
+          value: ""
+          type: path
+        - name: fromDatetime
+          value: ""
+          type: query
+          disabled: true
+        - name: untilDatetime
+          value: ""
+          type: query
+          disabled: true
+        - name: depth
+          value: ""
+          type: query
+          disabled: true
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: text
+        data: ""

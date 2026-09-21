@@ -1,0 +1,19 @@
+info:
+  name: Get line by ID
+  type: http
+  seq: 1
+  tags:
+    - Lines
+
+http:
+  method: GET
+  url: "{{baseUrl}}/lines/{{id}}"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

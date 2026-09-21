@@ -1,0 +1,19 @@
+info:
+  name: Get arrivals for a stop point
+  type: http
+  seq: 1
+  tags:
+    - Arrivals
+
+http:
+  method: GET
+  url: "{{baseUrl}}/stop_points/{{stopPointId}}/arrivals"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

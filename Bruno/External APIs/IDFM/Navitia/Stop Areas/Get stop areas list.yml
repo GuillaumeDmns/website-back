@@ -1,0 +1,57 @@
+info:
+  name: Get stop areas list
+  type: http
+  seq: 1
+  tags:
+    - Stop Areas
+
+http:
+  method: GET
+  url: "{{baseUrl}}/stop_areas"
+  params:
+    - name: startPage
+      value: ""
+      type: query
+      disabled: true
+    - name: count
+      value: ""
+      type: query
+      disabled: true
+    - name: depth
+      value: ""
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: 200 Response
+    description: OK
+    request:
+      url: "{{baseUrl}}/stop_areas"
+      method: GET
+      params:
+        - name: startPage
+          value: ""
+          type: query
+          disabled: true
+        - name: count
+          value: ""
+          type: query
+          disabled: true
+        - name: depth
+          value: ""
+          type: query
+          disabled: true
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: text
+        data: ""

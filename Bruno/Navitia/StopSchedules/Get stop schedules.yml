@@ -1,0 +1,31 @@
+info:
+  name: Get stop schedules
+  type: http
+  seq: 1
+  tags:
+    - Stop Schedules
+
+http:
+  method: GET
+  url: "{{baseUrl}}/stop_points/{{stopPointId}}/stop_schedules"
+  params:
+    - name: stopPointId
+      value: ""
+      type: path
+      description: Stop point identifier
+    - name: fromDatetime
+      value: ""
+      type: query
+    - name: untilDatetime
+      value: ""
+      type: query
+    - name: depth
+      value: ""
+      type: query
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

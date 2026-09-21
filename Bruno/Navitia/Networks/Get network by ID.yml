@@ -1,0 +1,19 @@
+info:
+  name: Get network by ID
+  type: http
+  seq: 1
+  tags:
+    - Networks
+
+http:
+  method: GET
+  url: "{{baseUrl}}/networks/{{id}}"
+  headers:
+    Authorization: "Bearer {{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
