@@ -7,9 +7,8 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/routes"
-  headers:
-    Authorization: "Bearer {{token}}"
+  url: "{{baseUrl}}/api/navitia/routes"
+  auth: inherit
 
 settings:
   encodeUrl: true

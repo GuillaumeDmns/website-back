@@ -1,4 +1,14 @@
 name: Production
 variables:
   - name: baseUrl
-    value: https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia
+    value: https://guillaumedamiens.com
+    description: ""
+  - name: username
+    value: guillaume
+    description: ""
+  - secret: true
+    name: password
+    description: ""
+  - secret: true
+    name: jwt
+    description: ""

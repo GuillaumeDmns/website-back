@@ -7,31 +7,13 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/journeys"
+  url: "{{baseUrl}}/api/navitia/journeys"
   params:
-    - name: startPoint
-      value: ""
-      type: query
-      description: Start point identifier
-    - name: endPoint
-      value: ""
-      type: query
-      description: End point identifier
-    - name: datetime
-      value: ""
-      type: query
-      description: Datetime for the journey
-    - name: datetimeRepresents
-      value: ""
-      type: query
-      description: Whether datetime is departure or arrival time
     - name: forbiddenUris[]
       value: "[]"
       type: query
       disabled: true
-    - name: dataFreshness
-      value: realtime
-      type: query
+  auth: inherit
 
 settings:
   encodeUrl: true

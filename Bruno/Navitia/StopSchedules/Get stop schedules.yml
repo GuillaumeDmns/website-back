@@ -7,21 +7,8 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/stop_points/{{stopPointId}}/stop_schedules"
-  params:
-    - name: stopPointId
-      value: ""
-      type: path
-      description: Stop point identifier
-    - name: fromDatetime
-      value: ""
-      type: query
-    - name: untilDatetime
-      value: ""
-      type: query
-    - name: depth
-      value: ""
-      type: query
+  url: "{{baseUrl}}/api/navitia/stop_points/{{stopPointId}}/stop_schedules"
+  auth: inherit
 
 settings:
   encodeUrl: true

@@ -16,6 +16,17 @@ http:
         "password": "{{password}}"
       }
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const responseBody = res.getBody();
+        const jwtToken = responseBody.jwt;
+
+        if (jwtToken) {
+          bru.setEnvVar("jwt", jwtToken);
+        }
+
 settings:
   encodeUrl: true
   timeout: 0

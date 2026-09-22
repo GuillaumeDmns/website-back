@@ -7,25 +7,8 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/stop_points/{{stopPointId}}/vehicle_journeys"
-  headers:
-    Authorization: "Bearer {{token}}"
-  params:
-    - name: stopPointId
-      value: ""
-      type: path
-      description: Stop point identifier
-    - name: since
-      value: ""
-      type: query
-      description: Since datetime
-    - name: until
-      value: ""
-      type: query
-      description: Until datetime
-    - name: depth
-      value: "3"
-      type: query
+  url: "{{baseUrl}}/api/navitia/stop_points/{{stopPointId}}/vehicle_journeys"
+  auth: inherit
 
 settings:
   encodeUrl: true
