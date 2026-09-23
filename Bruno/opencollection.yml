@@ -14,13 +14,6 @@ config:
         password: ""
       bypassProxy: ""
 
-request:
-  auth:
-    type: apikey
-    key: apikey
-    value: "{{apiKey}}"
-    placement: header
-
 docs:
   content: Collection complète des endpoints Navitia exposés par le backend IDFM
   type: text/markdown

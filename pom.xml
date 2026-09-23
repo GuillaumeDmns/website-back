@@ -16,9 +16,7 @@
     <properties>
         <java.version>25</java.version>
         <springdoc-openapi-starter-webmvc-ui.version>3.0.0</springdoc-openapi-starter-webmvc-ui.version>
-        <jjwt-api.version>0.13.0</jjwt-api.version>
-        <jjwt-impl.version>0.13.0</jjwt-impl.version>
-        <jjwt-jackson.version>0.13.0</jjwt-jackson.version>
+
         <swagger-parser.version>2.1.36</swagger-parser.version>
         <opencsv.version>5.12.0</opencsv.version>
         <proj4j.version>1.4.1</proj4j.version>
@@ -77,21 +75,8 @@
         </dependency>
 
         <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>${jjwt-api.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt-impl.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt-jackson.version}</version>
-            <scope>runtime</scope>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
         <dependency>
