@@ -1,0 +1,30 @@
+info:
+  name: "Refresh JWT"
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/refresh"
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const jwt = res.getBody()?.jwt;
+        if (jwt) {
+          bru.setEnvVar("jwt", jwt);
+        }
+
+docs:
+  content: |-
+    Renvoie un nouveau JWT pour l'utilisateur courant et le stocke dans `jwt`.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

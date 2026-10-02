@@ -1,0 +1,12 @@
+info:
+  name: "Real-time"
+  type: folder
+  seq: 4
+
+request:
+  auth: inherit
+
+docs:
+  content: |-
+    Temps réel IDFM PRIM (SIRI). Les arrêts sont complétés par le GTFS.
+  type: text/markdown

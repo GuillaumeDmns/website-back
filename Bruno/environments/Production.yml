@@ -1,0 +1,10 @@
+name: Production
+variables:
+  - name: baseUrl
+    value: https://guillaumedamiens.com
+  - name: username
+    value: guillaume
+  - secret: true
+    name: password
+  - secret: true
+    name: jwt

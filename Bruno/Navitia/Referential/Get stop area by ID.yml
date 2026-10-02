@@ -1,0 +1,21 @@
+info:
+  name: "Get stop area by ID"
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/navitia/stop_areas/{{navitiaStopAreaId}}"
+  auth: inherit
+
+docs:
+  content: |-
+    Utilise `navitiaStopAreaId`, renseigné par « Get stop areas ».
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

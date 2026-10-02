@@ -1,6 +1,5 @@
 package com.gdamiens.website.controller.object;
 
-import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.TransportMode;
 
 import java.util.List;

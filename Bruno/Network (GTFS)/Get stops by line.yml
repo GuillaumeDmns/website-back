@@ -1,0 +1,26 @@
+info:
+  name: "Get stops by line"
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/stops-by-line?lineId={{lineId}}"
+  params:
+    - name: "lineId"
+      value: "{{lineId}}"
+      type: query
+      description: "Id IDFM de la ligne (C01742 = RER A, C01371 = métro 1)"
+  auth: inherit
+
+docs:
+  content: |-
+    Arrêts de la ligne (`gtfs.route_stops`) et tracé GeoJSON. Bus/métro/tram/TER/Noctilien : stations parentes ; RER/Transilien : arrêts physiques.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

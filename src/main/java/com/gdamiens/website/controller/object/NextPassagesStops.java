@@ -1,6 +1,6 @@
 package com.gdamiens.website.controller.object;
 
-import com.gdamiens.website.model.IDFMStop;
+import com.gdamiens.website.model.IDFMStopGtfs;
 
 import java.util.List;
 import java.util.Map;
@@ -12,16 +12,16 @@ public class NextPassagesStops {
     private String name;
     private Double latitude;
     private Double longitude;
-    private String type;
 
     private Map<String, List<CallGlobal>> nextPassages;
 
-    public NextPassagesStops(IDFMStop idfmStop, Map<String, List<CallGlobal>> calls) {
-        this.id = idfmStop.getId();
-        this.name = idfmStop.getName();
-        this.latitude = idfmStop.getLatitude();
-        this.longitude = idfmStop.getLongitude();
-        this.type = idfmStop.getType();
+    public NextPassagesStops(Integer id, IDFMStopGtfs stop, Map<String, List<CallGlobal>> calls) {
+        this.id = id;
+        if (stop != null) {
+            this.name = stop.getName();
+            this.latitude = stop.getLatitude();
+            this.longitude = stop.getLongitude();
+        }
         this.nextPassages = calls;
     }
 
@@ -55,14 +55,6 @@ public class NextPassagesStops {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
     }
 
     public Map<String, List<CallGlobal>> getNextPassages() {

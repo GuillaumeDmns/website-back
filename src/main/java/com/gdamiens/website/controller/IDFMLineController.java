@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,22 +42,6 @@ public class IDFMLineController {
                 .forEach((transportMode, idfmLines) -> count.put(transportMode, idfmLines.size()));
 
             return new ResponseEntity<>(new LinesDTO(linesByTransportMode, count), HttpStatus.OK);
-
-        } catch (Exception e) {
-            log.info("error during IDFM get lines request");
-        }
-
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @PostMapping("/update-shapes")
-    @Operation(summary = "Update line shapes", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> updateShapes() {
-        try {
-            this.idfmLineService.updateBusShapes();
-            this.idfmLineService.updateRailShapes();
-
-            return new ResponseEntity<>(HttpStatus.OK);
 
         } catch (Exception e) {
             log.info("error during IDFM get lines request");

@@ -4,11 +4,10 @@ import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.CallUnit;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.idfm.*;
+import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.model.IDFMStopGtfs;
 import com.gdamiens.website.repository.IDFMStopGtfsRepository;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -23,9 +22,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-public class IDFMStopGtfsService extends AbstractIDFMService implements IDFMServiceInterface {
-
-    private static final Logger log = LoggerFactory.getLogger(IDFMStopGtfsService.class);
+public class IDFMStopGtfsService extends AbstractIDFMService {
 
     private final IDFMStopGtfsRepository idfmStopGtfsRepository;
 
@@ -36,13 +33,6 @@ public class IDFMStopGtfsService extends AbstractIDFMService implements IDFMServ
         this.idfmStopGtfsRepository = idfmStopGtfsRepository;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
 
-    }
-
-    @Override
-    public void truncateTable() {
-        log.info("Start deleting all stops");
-        this.idfmStopGtfsRepository.deleteAllInBatch();
-        log.info("Finish deleting all stops");
     }
 
     public List<CallUnit> getStopNextPassage(String stopId, String lineId, String url) {
@@ -80,11 +70,11 @@ public class IDFMStopGtfsService extends AbstractIDFMService implements IDFMServ
     }
 
     public List<IDFMStopGtfs> getStopsFromLineId(String lineId) {
-        return this.idfmStopGtfsRepository.getStopsFromLineId(lineId);
+        return this.idfmStopGtfsRepository.getStopsFromRouteId(IDFMRoute.toRouteId(lineId));
     }
 
     public List<IDFMStopGtfs> getParentStopsFromLineId(String lineId) {
-        return this.idfmStopGtfsRepository.getParentStopsFromLineId(lineId);
+        return this.idfmStopGtfsRepository.getParentStopsFromRouteId(IDFMRoute.toRouteId(lineId));
     }
 
     public IDFMStopGtfs getStop(String stopId) {

@@ -8,10 +8,10 @@ public enum DisruptionStatusEnum {
     PAST("past"),
 
     @JsonProperty("active")
-    FUTURE("active"),
+    ACTIVE("active"),
 
     @JsonProperty("future")
-    OPEN("future");
+    FUTURE("future");
 
     private String value;
 

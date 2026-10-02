@@ -1,11 +1,8 @@
 package com.gdamiens.website.controller.object;
 
 import com.gdamiens.website.model.IDFMStopGtfs;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.io.geojson.GeoJsonWriter;
 
 import java.util.List;
-import java.util.Optional;
 
 public class StopsByLineDTO {
 
@@ -13,10 +10,9 @@ public class StopsByLineDTO {
 
     private String shape;
 
-    public StopsByLineDTO(List<IDFMStopGtfs> stops, Geometry shape) {
+    public StopsByLineDTO(List<IDFMStopGtfs> stops, String shape) {
         this.stops = stops;
-        GeoJsonWriter writer = new GeoJsonWriter();
-        this.shape = Optional.ofNullable(shape).map(writer::write).orElse(null) ;
+        this.shape = shape;
     }
 
     public List<IDFMStopGtfs> getStops() {

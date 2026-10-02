@@ -1,0 +1,21 @@
+info:
+  name: "Import GTFS"
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/gtfs"
+  auth: inherit
+
+docs:
+  content: |-
+    Lance l'import GTFS IDFM en arrière-plan : 202 si lancé, 409 si un import tourne déjà. Suivre les logs du backend.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,21 @@
+info:
+  name: "Get company by ID"
+  type: http
+  seq: 16
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/navitia/companies/{{navitiaCompanyId}}"
+  auth: inherit
+
+docs:
+  content: |-
+    Utilise `navitiaCompanyId`, renseigné par « Get companies ».
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

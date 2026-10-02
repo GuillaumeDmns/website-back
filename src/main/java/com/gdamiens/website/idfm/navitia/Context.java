@@ -19,6 +19,8 @@ public class Context {
     @JsonProperty("timezone")
     private String timezone;
 
+    private Object carDirectPath;
+
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -40,6 +42,16 @@ public class Context {
     @JsonProperty("timezone")
     public void setTimezone(String timezone) {
         this.timezone = timezone;
+    }
+
+    @JsonProperty("carDirectPath")
+    public Object getCarDirectPath() {
+        return carDirectPath;
+    }
+
+    @JsonProperty("car_direct_path")
+    public void setCarDirectPath(Object carDirectPath) {
+        this.carDirectPath = carDirectPath;
     }
 
     @JsonAnyGetter

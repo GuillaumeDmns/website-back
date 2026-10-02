@@ -1,0 +1,13 @@
+info:
+  name: "Auth"
+  type: folder
+  seq: 1
+
+request:
+  auth: inherit
+
+docs:
+  content: |-
+    Le JWT est obtenu et renouvelé automatiquement par le script de la collection.
+    Ces requêtes restent utiles pour le faire à la main ou créer un compte.
+  type: text/markdown

@@ -1,0 +1,14 @@
+info:
+  name: "Navitia"
+  type: folder
+  seq: 5
+
+request:
+  auth: inherit
+
+docs:
+  content: |-
+    Proxy de l'API Navitia IDFM PRIM (`swagger.json` à la racine du projet).
+    Les erreurs Navitia 4xx sont renvoyées telles quelles, les 5xx et problèmes de clé API en 502.
+    Les requêtes « list » remplissent les variables utilisées par les requêtes « by ID ».
+  type: text/markdown

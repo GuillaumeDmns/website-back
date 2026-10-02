@@ -2,7 +2,6 @@ package com.gdamiens.website.controller;
 
 import com.gdamiens.website.controller.object.*;
 import com.gdamiens.website.exceptions.CustomException;
-import com.gdamiens.website.model.IDFMLine;
 import com.gdamiens.website.model.IDFMStopGtfs;
 import com.gdamiens.website.service.IDFMGeneralMessageService;
 import com.gdamiens.website.service.IDFMLineService;
@@ -47,7 +46,7 @@ public class IDFMTimetableController {
         try {
             Map<Integer, NextPassagesStops> calls = this.idfmLineService.getAllStopsByLine(lineId, Constants.IDFM_ESTIMATED_TIMETABLE_URL);
 
-            IDFMLine idfmLine = this.idfmLineService.getLine(lineId);
+            LineDTO idfmLine = this.idfmLineService.getLine(lineId);
 
             log.info("success requesting IDFM next passages");
 

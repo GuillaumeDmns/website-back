@@ -1,0 +1,7 @@
+info:
+  name: "Referential"
+  type: folder
+  seq: 3
+
+request:
+  auth: inherit

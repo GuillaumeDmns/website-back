@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,6 +56,26 @@ public class UserController {
 
         String token = userService.refresh(req.getRemoteUser());
         return new ResponseEntity<>(new JwtDTO(token), token == null ? HttpStatus.UNAUTHORIZED : HttpStatus.OK);
+    }
+
+    @PostMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Create a new user", security = @SecurityRequirement(name = "Auth. Token"))
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "User created"),
+        @ApiResponse(responseCode = "400", description = "Username / password not provided"),
+        @ApiResponse(responseCode = "403", description = "Not authorized (admin only)"),
+        @ApiResponse(responseCode = "409", description = "Login already exists"),
+        @ApiResponse(responseCode = "500", description = "Server error")})
+    public ResponseEntity<Void> createUser(@RequestBody Credentials credentials) {
+
+        if (credentials.getUsername() == null || credentials.getPassword() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return userService.createUser(credentials.getUsername(), credentials.getPassword())
+            .map(user -> new ResponseEntity<Void>(HttpStatus.CREATED))
+            .orElse(ResponseEntity.status(HttpStatus.CONFLICT).build());
     }
 
 }

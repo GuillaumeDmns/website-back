@@ -36,7 +36,6 @@ public class Places {
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
-
     @JsonProperty("feedPublishers")
     public List<FeedPublisher> getFeedPublishers() {
         return feedPublishers;

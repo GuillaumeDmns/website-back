@@ -1,10 +1,7 @@
 package com.gdamiens.website.controller.object;
 
-import com.gdamiens.website.model.IDFMLine;
+import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.model.TransportMode;
-import org.locationtech.jts.io.geojson.GeoJsonWriter;
-
-import java.util.Optional;
 
 public class LineDTO {
 
@@ -14,23 +11,16 @@ public class LineDTO {
 
     private TransportMode transportMode;
 
-    private Integer operatorId;
-
     private String lineIdColor;
 
     private String lineIdBackgroundColor;
 
-    private String shape;
-
-    public LineDTO(IDFMLine idfmLine) {
-        this.id = idfmLine.getId();
-        this.name = idfmLine.getName();
-        this.transportMode = idfmLine.getTransportMode();
-        this.operatorId = idfmLine.getOperatorId();
-        this.lineIdColor = idfmLine.getLineIdColor();
-        this.lineIdBackgroundColor = idfmLine.getLineIdBackgroundColor();
-        GeoJsonWriter writer = new GeoJsonWriter();
-        this.shape = Optional.ofNullable(idfmLine.getShape()).map(writer::write).orElse(null) ;
+    public LineDTO(IDFMRoute route, TransportMode transportMode) {
+        this.id = IDFMRoute.toLineId(route.getId());
+        this.name = route.getShort_name();
+        this.transportMode = transportMode;
+        this.lineIdColor = route.getText_color();
+        this.lineIdBackgroundColor = route.getColor();
     }
 
     public String getId() {
@@ -57,14 +47,6 @@ public class LineDTO {
         this.transportMode = transportMode;
     }
 
-    public Integer getOperatorId() {
-        return operatorId;
-    }
-
-    public void setOperatorId(Integer operatorId) {
-        this.operatorId = operatorId;
-    }
-
     public String getLineIdColor() {
         return lineIdColor;
     }
@@ -79,13 +61,5 @@ public class LineDTO {
 
     public void setLineIdBackgroundColor(String lineIdBackgroundColor) {
         this.lineIdBackgroundColor = lineIdBackgroundColor;
-    }
-
-    public String getShape() {
-        return shape;
-    }
-
-    public void setShape(String shape) {
-        this.shape = shape;
     }
 }
