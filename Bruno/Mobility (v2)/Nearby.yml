@@ -1,0 +1,36 @@
+info:
+  name: "Nearby"
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/nearby?lat={{lat}}&lon={{lon}}&radius=500&limit=20"
+  params:
+    - name: "lat"
+      value: "{{lat}}"
+      type: query
+    - name: "lon"
+      value: "{{lon}}"
+      type: query
+    - name: "radius"
+      value: "500"
+      type: query
+      description: "Mètres, 2000 max"
+    - name: "limit"
+      value: "20"
+      type: query
+      description: "50 max"
+  auth: inherit
+
+docs:
+  content: |-
+    Zones d'arrêt autour de la position avec leurs lignes, les plus proches d'abord (index GiST sur `gtfs.stops.geom`).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

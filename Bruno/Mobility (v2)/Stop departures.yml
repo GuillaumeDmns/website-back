@@ -1,0 +1,31 @@
+info:
+  name: "Stop departures"
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/stops/{{stopAreaId}}/departures?limit=3"
+  params:
+    - name: "lineId"
+      value: "{{lineId}}"
+      type: query
+      description: "Optionnel : seulement cette ligne"
+      disabled: true
+    - name: "limit"
+      value: "3"
+      type: query
+      description: "Départs par ligne et destination, 5 max"
+  auth: inherit
+
+docs:
+  content: |-
+    Prochains départs par ligne et destination. Temps réel PRIM (stop-monitoring, mis en cache 30 s par zone) ; les lignes sans temps réel, ou toutes si PRIM ne répond pas (`realtimeAvailable: false`), utilisent les horaires GTFS (`realtime: false`). Heures en UTC.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

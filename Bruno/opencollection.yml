@@ -25,6 +25,9 @@ request:
     - name: gtfsStopId
       value: IDFM:monomodalStopPlace:45102
       description: Id GTFS d'arrêt (Châtelet - Les Halles, RER A)
+    - name: stopAreaId
+      value: IDFM:71264
+      description: Id de zone d'arrêt (station parente GTFS) pour les endpoints v2 (Châtelet)
     - name: zdeId
       value: "22087"
       description: Id numérique de zone d'embarquement (Châtelet, métro 1)

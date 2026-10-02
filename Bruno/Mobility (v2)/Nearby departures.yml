@@ -1,0 +1,40 @@
+info:
+  name: "Nearby departures"
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/nearby/departures?lat={{lat}}&lon={{lon}}&radius=500&maxStops=5&limit=3"
+  params:
+    - name: "lat"
+      value: "{{lat}}"
+      type: query
+    - name: "lon"
+      value: "{{lon}}"
+      type: query
+    - name: "radius"
+      value: "500"
+      type: query
+      description: "Mètres, 2000 max"
+    - name: "maxStops"
+      value: "5"
+      type: query
+      description: "Zones d'arrêt, 10 max"
+    - name: "limit"
+      value: "3"
+      type: query
+      description: "Départs par ligne et destination, 5 max"
+  auth: inherit
+
+docs:
+  content: |-
+    Prochains départs des zones d'arrêt proches (récupérées en parallèle). Même contenu que « Stop departures » pour chaque zone, avec la distance.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
