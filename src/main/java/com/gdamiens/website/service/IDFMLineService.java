@@ -3,6 +3,7 @@ package com.gdamiens.website.service;
 import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.*;
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.idfm.EstimatedCall;
 import com.gdamiens.website.idfm.EstimatedCalls;
 import com.gdamiens.website.idfm.EstimatedJourneyVersionFrame;
 import com.gdamiens.website.idfm.EstimatedTimetableDelivery;
@@ -12,18 +13,10 @@ import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.idfm.ServiceDelivery;
 import com.gdamiens.website.idfm.Siri;
 import com.gdamiens.website.model.*;
-import com.gdamiens.website.model.mapper.LineMapper;
-import com.gdamiens.website.repository.IDFMLineRepository;
-import com.gdamiens.website.utils.Constants;
+import com.gdamiens.website.repository.IDFMAgencyRepository;
+import com.gdamiens.website.repository.IDFMRouteRepository;
+import com.gdamiens.website.repository.IDFMStopGtfsRepository;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.LineString;
-import org.locationtech.jts.geom.MultiLineString;
-import org.locationtech.jts.io.ParseException;
-import org.locationtech.jts.io.geojson.GeoJsonReader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -34,34 +27,26 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-public class IDFMLineService extends AbstractIDFMService implements IDFMServiceInterface {
+public class IDFMLineService extends AbstractIDFMService {
 
-    private static final Logger log = LoggerFactory.getLogger(IDFMLineService.class);
+    private final IDFMRouteRepository idfmRouteRepository;
 
-    private final IDFMStopService idfmStopService;
+    private final IDFMAgencyRepository idfmAgencyRepository;
 
-    private final IDFMStopInLineService idfmStopInLineService;
-
-    private final IDFMLineRepository idfmLineRepository;
+    private final IDFMStopGtfsRepository idfmStopGtfsRepository;
 
     private final HttpComponentsClientHttpRequestFactory requestFactory;
 
-    public IDFMLineService(IDFMStopService idfmStopService, IDFMStopInLineService idfmStopInLineService, IDFMLineRepository idfmLineRepository, ApplicationProperties applicationProperties) {
+    public IDFMLineService(IDFMRouteRepository idfmRouteRepository, IDFMAgencyRepository idfmAgencyRepository, IDFMStopGtfsRepository idfmStopGtfsRepository, ApplicationProperties applicationProperties) {
         super(applicationProperties);
-        this.idfmStopService = idfmStopService;
-        this.idfmStopInLineService = idfmStopInLineService;
-        this.idfmLineRepository = idfmLineRepository;
+        this.idfmRouteRepository = idfmRouteRepository;
+        this.idfmAgencyRepository = idfmAgencyRepository;
+        this.idfmStopGtfsRepository = idfmStopGtfsRepository;
         this.requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
-    }
-
-    @Override
-    public void truncateTable() {
-        log.info("Start deleting all lines");
-        this.idfmLineRepository.deleteAllInBatch();
-        log.info("Finish deleting all lines");
     }
 
     public Map<Integer, NextPassagesStops> getAllStopsByLine(String lineId, String url) {
@@ -90,7 +75,7 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
             .map(EstimatedJourneyVersionFrame::getEstimatedVehicleJourney)
             .orElseThrow(() -> new CustomException("IDFM response body does not contain any journey", HttpStatus.INTERNAL_SERVER_ERROR));
 
-        return estimatedVehicleJourneys
+        Map<Integer, List<EstimatedCall>> callsByStop = estimatedVehicleJourneys
             .stream()
             .map(Optional::ofNullable)
             .flatMap(estimatedVehicleJourney -> estimatedVehicleJourney
@@ -110,165 +95,59 @@ public class IDFMLineService extends AbstractIDFMService implements IDFMServiceI
                     call.setFirstOrLastJourney(estimatedVehicleJourney.map(EstimatedVehicleJourney::getFirstOrLastJourney).orElse(null));
                 }))
             .filter(estimatedCall -> estimatedCall.getDestinationDisplay() != null && !estimatedCall.getDestinationDisplay().isEmpty())
-            .collect(Collectors.groupingBy(estimatedCall -> Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])))
+            .collect(Collectors.groupingBy(estimatedCall -> Integer.parseInt(estimatedCall.getStopPointRef().getValue().split(":")[3])));
+
+        // SIRI StopPointRef (STIF:StopPoint:Q:<id>:) matches the GTFS stop IDFM:<id>
+        Map<Integer, IDFMStopGtfs> stops = this.idfmStopGtfsRepository
+            .findAllById(callsByStop.keySet().stream().map(stopId -> "IDFM:" + stopId).toList())
+            .stream()
+            .collect(Collectors.toMap(stop -> Integer.parseInt(stop.getId().substring("IDFM:".length())), Function.identity()));
+
+        return callsByStop
             .entrySet()
             .stream()
             .collect(Collectors.toMap(
                 Map.Entry::getKey,
-                e -> {
-                    IDFMStop idfmStop = this.idfmStopService.getStop(e.getKey());
-
-                    return new NextPassagesStops(
-                        idfmStop != null ? idfmStop : new IDFMStop(),
-                        e.getValue()
-                            .stream()
-                            .map(CallGlobal::new)
-                            .collect(Collectors.groupingBy(CallGlobal::getDirectionName))
-                    );
-                }
+                e -> new NextPassagesStops(
+                    e.getKey(),
+                    stops.get(e.getKey()),
+                    e.getValue()
+                        .stream()
+                        .map(CallGlobal::new)
+                        .collect(Collectors.groupingBy(CallGlobal::getDirectionName))
+                )
             ));
     }
 
-    public void refreshStopsInLines() {
-        CSVReader<StopAndLineCSV> csvReader = new CSVReader<>(StopAndLineCSV.class);
-
-        Map<String, List<StopAndLineCSV>> stopsInLines = csvReader.readFromUrl(Constants.IDFM_STOPS_IN_LINES_URL, StopAndLineCSV::getRouteId);
-
-        if (stopsInLines == null || stopsInLines.isEmpty()) {
-            log.info("No data has been found in the stops in lines CSV file");
-            return;
-        }
-
-        log.info("Start importing stops in lines pairs");
-        log.info("{} stops in lines pairs to import", stopsInLines.size());
-
-        List<IDFMLine> allLines = this.idfmLineRepository.findAll();
-
-        stopsInLines
-            .entrySet()
-            .parallelStream()
-            .forEach(stopInLine -> {
-                String lineId = stopInLine.getKey().split(":")[1];
-
-                if (allLines.stream().anyMatch(idfmLine -> idfmLine.getId().equals(lineId))) {
-                    try {
-                        this.idfmStopInLineService.saveAllStopLine(
-                            stopInLine
-                                .getValue()
-                                .stream()
-                                .map(stop -> new IDFMStopInLine(lineId, stop.getStopId()))
-                                .collect(Collectors.toList())
-                        );
-                    }
-                    catch (Exception e) {
-                        log.error(e.getMessage());
-                    }
-                }
-            });
-
-        log.info("Finish importing stops-lines pairs");
+    public LineDTO getLine(String lineId) {
+        return this.idfmRouteRepository.findById(IDFMRoute.toRouteId(lineId))
+            .map(route -> new LineDTO(route, this.getTransportMode(route, this.idfmAgencyRepository.findById(route.getAgency_id()).map(IDFMAgency::getName).orElse(null))))
+            .orElse(null);
     }
 
-    public void saveAllLinesFromCSV() {
-        CSVReader<LineCSV> csvReader = new CSVReader<>(LineCSV.class);
-
-        List<LineCSV> lines = csvReader.readFromUrl(Constants.IDFM_ALL_LINES_URL);
-
-        log.info("Start importing lines");
-        log.info("{} lines to process", lines.size());
-
-        this.idfmLineRepository.saveAll(
-            lines.parallelStream()
-                .filter(line -> switch (line.getTransportMode()) {
-                    case "bus" -> line.getOperatorId() != null && 
-                                  line.getOperatorId() == 100 && 
-                                  line.getType().isEmpty();
-                    case "rail" -> !Arrays.asList("C00563", "C01388")
-                        .contains(line.getLineId());
-                    case "metro", "tram" -> true;
-                    default -> false;
-                })
-                .map(LineMapper::csvToDb)
-                .toList()
-        );
-        log.info("Finish importing lines");
-    }
-
-    public void updateBusShapes() {
-        CSVReader<BusShapesCSV> csvReader = new CSVReader<>(BusShapesCSV.class);
-        List<BusShapesCSV> busShapes = csvReader.readFromUrl(Constants.IDFM_BUS_SHAPES_URL);
-
-        if (busShapes == null || busShapes.isEmpty()) {
-            log.info("No data has been found in the bus shapes CSV file");
-            return;
-        }
-
-        log.info("Start importing bus shapes");
-        log.info("{} bus shapes to import", busShapes.size());
-
-        for (BusShapesCSV busShape : busShapes) {
-            try {
-                this.idfmLineRepository.updateBusShape(busShape.getLineId(), busShape.getShape());
-            } catch (Exception e) {
-                log.warn("Failed to import bus {} shape: {}", busShape.getLineId(), e.getMessage());
-            }
-        }
-
-        log.info("Finish importing bus shapes");
-    }
-
-    public void updateRailShapes() {
-        CSVReader<RailShapesCSV> csvReader = new CSVReader<>(RailShapesCSV.class);
-
-        Map<String, List<RailShapesCSV>> railShapes = csvReader.readFromUrl(Constants.IDFM_RAIL_SHAPES_URL, RailShapesCSV::getLineId);
-
-        if (railShapes == null || railShapes.isEmpty()) {
-            log.info("No data has been found in the rail shapes CSV file");
-            return;
-        }
-
-        log.info("Start importing rail shapes");
-        log.info("{} rail shape groups to import", railShapes.size());
-
-        for (Map.Entry<String, List<RailShapesCSV>> lineShapeList : railShapes.entrySet()) {
-            GeoJsonReader geoJsonReader = new GeoJsonReader();
-            List<LineString> lineStrings = new ArrayList<>();
-
-            for (RailShapesCSV lineShape : lineShapeList.getValue()) {
-                try {
-                    Geometry geometry = geoJsonReader.read(lineShape.getShape());
-                    
-                    if (geometry instanceof LineString) {
-                        lineStrings.add((LineString) geometry);
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to parse rail shape for line {}: {}", lineShapeList.getKey(), e.getMessage());
-                    continue;
-                }
-            }
-
-            try {
-                this.idfmLineRepository.updateRailShape(
-                    lineShapeList.getKey(), 
-                    new MultiLineString(lineStrings.toArray(new LineString[0]), new GeometryFactory())
-                );
-            } catch (Exception e) {
-                log.error("Failed to save rail shape for line {}: {}", lineShapeList.getKey(), e.getMessage());
-            }
-        }
-
-        log.info("Finish importing rail shapes");
-    }
-
-    public IDFMLine getLine(String lineId) {
-        return this.idfmLineRepository.findById(lineId).orElse(null);
+    public String getLineShapeAsGeoJson(String lineId) {
+        return this.idfmRouteRepository.getShapeAsGeoJson(IDFMRoute.toRouteId(lineId));
     }
 
     public Map<TransportMode, List<LineDTO>> getLinesByTransportMode() {
-        return this.idfmLineRepository
-            .findAllByOrderByNameAscWithoutShape()
+        Map<String, String> agencyNames = this.getAgencyNames();
+
+        return this.idfmRouteRepository
+            .findAll()
             .stream()
-            .map(LineDTO::new)
+            .map(route -> new LineDTO(route, this.getTransportMode(route, agencyNames.get(route.getAgency_id()))))
+            .sorted(Comparator.comparing(LineDTO::getName, Comparator.nullsLast(Comparator.naturalOrder())))
             .collect(Collectors.groupingBy(LineDTO::getTransportMode));
+    }
+
+    private Map<String, String> getAgencyNames() {
+        return this.idfmAgencyRepository
+            .findAll()
+            .stream()
+            .collect(Collectors.toMap(IDFMAgency::getId, IDFMAgency::getName));
+    }
+
+    private TransportMode getTransportMode(IDFMRoute route, String agencyName) {
+        return TransportMode.fromGtfs(route.getType(), agencyName, route.getShort_name());
     }
 }

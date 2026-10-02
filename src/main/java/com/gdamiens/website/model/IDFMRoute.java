@@ -1,7 +1,5 @@
 package com.gdamiens.website.model;
 
-import com.gdamiens.website.controller.object.gtfs.AgencyCSV;
-import com.gdamiens.website.controller.object.gtfs.RoutesCSV;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -10,41 +8,41 @@ import jakarta.persistence.Table;
 import java.io.Serializable;
 
 @Entity(name = "IDFMRoute")
-@Table(schema = "public", name = "idfm_route")
+@Table(schema = "gtfs", name = "routes")
 public class IDFMRoute implements Serializable {
 
     @Id
+    @Column(name = "route_id")
     private String id;
 
     @Column(name = "agency_id")
     private String agency_id;
 
-    @Column(name = "short_name")
+    @Column(name = "route_short_name")
     private String short_name;
 
-    @Column(name = "long_name")
+    @Column(name = "route_long_name")
     private String long_name;
 
-    @Column(name = "type")
-    private Integer type;
+    @Column(name = "route_type")
+    private Short type;
 
-    @Column(name = "color")
+    @Column(name = "route_color")
     private String color;
 
-    @Column(name = "text_color")
+    @Column(name = "route_text_color")
     private String text_color;
 
     public IDFMRoute() {
     }
 
-    public IDFMRoute(RoutesCSV routesCSV) {
-        this.id = routesCSV.getRoute_id();
-        this.agency_id = routesCSV.getAgency_id();
-        this.short_name = routesCSV.getRoute_short_name();
-        this.long_name = routesCSV.getRoute_long_name();
-        this.type = routesCSV.getRoute_type();
-        this.color = routesCSV.getRoute_color();
-        this.text_color = routesCSV.getRoute_text_color();
+    // The API exposes IDFM line ids (C01371) while GTFS route ids are prefixed (IDFM:C01371)
+    public static String toRouteId(String lineId) {
+        return "IDFM:" + lineId;
+    }
+
+    public static String toLineId(String routeId) {
+        return routeId.substring(routeId.indexOf(':') + 1);
     }
 
     public String getId() {
@@ -79,11 +77,11 @@ public class IDFMRoute implements Serializable {
         this.long_name = long_name;
     }
 
-    public Integer getType() {
+    public Short getType() {
         return type;
     }
 
-    public void setType(Integer type) {
+    public void setType(Short type) {
         this.type = type;
     }
 

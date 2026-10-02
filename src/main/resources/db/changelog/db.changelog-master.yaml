@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - include:
+      file: changes/001-postgis.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/002-public-baseline.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-gtfs-baseline.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/004-gtfs-types-and-shape-points.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/005-drop-legacy-referential.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/006-gtfs-route-stops.sql
+      relativeToChangelogFile: true

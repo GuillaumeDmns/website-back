@@ -13,7 +13,7 @@ import java.io.Serializable;
 public class User implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @Column(name = "login")
@@ -23,12 +23,6 @@ public class User implements Serializable {
     private String password;
 
     public User() {}
-
-    public User(Integer id, String login, String password) {
-        this.id = id;
-        this.login = login;
-        this.password = password;
-    }
 
     public Integer getId() {
         return id;

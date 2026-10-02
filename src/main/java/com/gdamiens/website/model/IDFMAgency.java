@@ -1,7 +1,5 @@
 package com.gdamiens.website.model;
 
-import com.gdamiens.website.controller.object.OperatorsCSV;
-import com.gdamiens.website.controller.object.gtfs.AgencyCSV;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -10,29 +8,23 @@ import jakarta.persistence.Table;
 import java.io.Serializable;
 
 @Entity(name = "IDFMAgency")
-@Table(schema = "public", name = "idfm_agency")
+@Table(schema = "gtfs", name = "agency")
 public class IDFMAgency implements Serializable {
 
     @Id
+    @Column(name = "agency_id")
     private String id;
 
-    @Column(name = "name")
+    @Column(name = "agency_name")
     private String name;
 
-    @Column(name = "url")
+    @Column(name = "agency_url")
     private String url;
 
-    @Column(name = "timezone")
+    @Column(name = "agency_timezone")
     private String timezone;
 
     public IDFMAgency() {
-    }
-
-    public IDFMAgency(AgencyCSV agencyCSV) {
-        this.id = agencyCSV.getAgency_id();
-        this.name = agencyCSV.getAgency_name();
-        this.url = agencyCSV.getAgency_url();
-        this.timezone = agencyCSV.getAgency_timezone();
     }
 
     public String getId() {

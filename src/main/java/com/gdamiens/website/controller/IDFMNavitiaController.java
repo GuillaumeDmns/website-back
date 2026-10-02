@@ -1,5 +1,6 @@
 package com.gdamiens.website.controller;
 
+import com.gdamiens.website.exceptions.NavitiaException;
 import com.gdamiens.website.idfm.navitia.*;
 import com.gdamiens.website.service.IDFMNavitiaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -7,8 +8,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestClientException;
 
 import java.util.List;
 
@@ -24,18 +27,29 @@ public class IDFMNavitiaController {
         this.idfmNavitiaService = idfmNavitiaService;
     }
 
+    // Client errors (unknown id, bad parameter...) keep the Navitia status and error body. Server errors and
+    // 401/403 (our IDFM API key, not the caller's JWT) become a bad gateway
+    @ExceptionHandler(NavitiaException.class)
+    public ResponseEntity<String> handleNavitiaException(NavitiaException e) {
+        log.error("Error during IDFM Navitia request: {}", e.getMessage());
+        int code = e.getStatusCode().value();
+        HttpStatus status = e.getStatusCode().is4xxClientError() && code != 401 && code != 403 ? HttpStatus.valueOf(code) : HttpStatus.BAD_GATEWAY;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(e.getResponseBody());
+    }
+
+    @ExceptionHandler(RestClientException.class)
+    public ResponseEntity<Void> handleRestClientException(RestClientException e) {
+        log.error("Error during IDFM Navitia request: {}", e.getMessage(), e);
+        return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
+    }
+
     @GetMapping({"/places", "/navitia/places"})
     @Operation(summary = "Get list of places for autocomplete", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Places> getPlaces(
-            @RequestParam(required = false) String query,
-            @RequestParam(required = false) String type,
+            @RequestParam String query,
+            @RequestParam(required = false) List<String> type,
             @RequestParam(required = false) Integer count) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getPlaces(query, type, count), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during IDFM get places: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getPlaces(query, type, count));
     }
 
     @GetMapping({"/journeys", "/navitia/journeys"})
@@ -47,12 +61,7 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) String datetimeRepresents,
             @RequestParam(required = false) List<String> forbiddenUris,
             @RequestParam(required = false, defaultValue = "realtime") String dataFreshness) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getJourneys(startPoint, endPoint, datetime, datetimeRepresents, forbiddenUris, dataFreshness), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during IDFM get journeys: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getJourneys(startPoint, endPoint, datetime, datetimeRepresents, forbiddenUris, dataFreshness));
     }
 
     @GetMapping({"/stop/{stopPointId}/journeys", "/navitia/stop_points/{stopPointId}/vehicle_journeys"})
@@ -62,12 +71,7 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) String since,
             @RequestParam(required = false) String until,
             @RequestParam(required = false, defaultValue = "3") Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getStopPointJourneys(stopPointId, since, until, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during IDFM get stop point journeys: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getStopPointJourneys(stopPointId, since, until, depth));
     }
 
     @GetMapping("/navitia/lines")
@@ -76,23 +80,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getLines(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get lines: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getLines(startPage, count, depth));
     }
 
     @GetMapping("/navitia/lines/{id}")
     @Operation(summary = "Get line by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Lines> getLineById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getLineById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get line by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getLineById(id));
     }
 
     @GetMapping("/navitia/stop_areas")
@@ -101,23 +95,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getStopAreas(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get stop areas: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getStopAreas(startPage, count, depth));
     }
 
     @GetMapping("/navitia/stop_areas/{id}")
     @Operation(summary = "Get stop area by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<StopAreas> getStopAreaById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getStopAreaById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get stop area by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getStopAreaById(id));
     }
 
     @GetMapping("/navitia/stop_points")
@@ -126,23 +110,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getStopPoints(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get stop points: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getStopPoints(startPage, count, depth));
     }
 
     @GetMapping("/navitia/stop_points/{id}")
     @Operation(summary = "Get stop point by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<StopPoints> getStopPointById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getStopPointById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get stop point by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getStopPointById(id));
     }
 
     @GetMapping("/navitia/routes")
@@ -151,23 +125,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getRoutes(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get routes: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getRoutes(startPage, count, depth));
     }
 
     @GetMapping("/navitia/routes/{id}")
     @Operation(summary = "Get route by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Routes> getRouteById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getRouteById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get route by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getRouteById(id));
     }
 
     @GetMapping("/navitia/networks")
@@ -176,23 +140,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getNetworks(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get networks: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getNetworks(startPage, count, depth));
     }
 
     @GetMapping("/navitia/networks/{id}")
     @Operation(summary = "Get network by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Networks> getNetworkById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getNetworkById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get network by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getNetworkById(id));
     }
 
     @GetMapping("/navitia/commercial_modes")
@@ -201,23 +155,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getCommercialModes(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get commercial modes: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getCommercialModes(startPage, count, depth));
     }
 
     @GetMapping("/navitia/commercial_modes/{id}")
     @Operation(summary = "Get commercial mode by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<CommercialModes> getCommercialModeById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getCommercialModeById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get commercial mode by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getCommercialModeById(id));
     }
 
     @GetMapping("/navitia/physical_modes")
@@ -226,23 +170,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getPhysicalModes(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get physical modes: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getPhysicalModes(startPage, count, depth));
     }
 
     @GetMapping("/navitia/physical_modes/{id}")
     @Operation(summary = "Get physical mode by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<PhysicalModes> getPhysicalModeById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getPhysicalModeById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get physical mode by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getPhysicalModeById(id));
     }
 
     @GetMapping("/navitia/companies")
@@ -251,23 +185,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getCompanies(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get companies: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getCompanies(startPage, count, depth));
     }
 
     @GetMapping("/navitia/companies/{id}")
     @Operation(summary = "Get company by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Companies> getCompanyById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getCompanyById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get company by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getCompanyById(id));
     }
 
     @GetMapping("/navitia/disruptions")
@@ -276,23 +200,13 @@ public class IDFMNavitiaController {
             @RequestParam(required = false) Integer startPage,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getDisruptions(startPage, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get disruptions: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getDisruptions(startPage, count, depth));
     }
 
     @GetMapping("/navitia/disruptions/{id}")
     @Operation(summary = "Get disruption by ID", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<Disruptions> getDisruptionById(@PathVariable String id) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getDisruptionById(id), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get disruption by ID: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getDisruptionById(id));
     }
 
     @GetMapping("/navitia/stop_points/{stopPointId}/departures")
@@ -301,13 +215,9 @@ public class IDFMNavitiaController {
             @PathVariable String stopPointId,
             @RequestParam(required = false) String fromDatetime,
             @RequestParam(required = false) String untilDatetime,
-            @RequestParam(required = false) Integer count) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getDepartures(stopPointId, fromDatetime, untilDatetime, count), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get departures: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            @RequestParam(required = false) Integer count,
+            @RequestParam(required = false) String dataFreshness) {
+        return ResponseEntity.ok(this.idfmNavitiaService.getDepartures(stopPointId, fromDatetime, untilDatetime, count, dataFreshness));
     }
 
     @GetMapping("/navitia/stop_points/{stopPointId}/arrivals")
@@ -316,13 +226,9 @@ public class IDFMNavitiaController {
             @PathVariable String stopPointId,
             @RequestParam(required = false) String fromDatetime,
             @RequestParam(required = false) String untilDatetime,
-            @RequestParam(required = false) Integer count) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getArrivals(stopPointId, fromDatetime, untilDatetime, count), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get arrivals: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            @RequestParam(required = false) Integer count,
+            @RequestParam(required = false) String dataFreshness) {
+        return ResponseEntity.ok(this.idfmNavitiaService.getArrivals(stopPointId, fromDatetime, untilDatetime, count, dataFreshness));
     }
 
     @GetMapping("/navitia/traffic_reports")
@@ -330,12 +236,7 @@ public class IDFMNavitiaController {
     public ResponseEntity<TrafficReports> getTrafficReports(
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getTrafficReports(count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get traffic reports: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getTrafficReports(count, depth));
     }
 
     @GetMapping("/navitia/equipment_reports")
@@ -343,12 +244,7 @@ public class IDFMNavitiaController {
     public ResponseEntity<EquipmentReports> getEquipmentReports(
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getEquipmentReports(count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get equipment reports: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getEquipmentReports(count, depth));
     }
 
     @GetMapping("/navitia/routes/{routeId}/route_schedules")
@@ -357,13 +253,9 @@ public class IDFMNavitiaController {
             @PathVariable String routeId,
             @RequestParam(required = false) String fromDatetime,
             @RequestParam(required = false) String untilDatetime,
-            @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getRouteSchedules(routeId, fromDatetime, untilDatetime, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get route schedules: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            @RequestParam(required = false) Integer depth,
+            @RequestParam(required = false) String dataFreshness) {
+        return ResponseEntity.ok(this.idfmNavitiaService.getRouteSchedules(routeId, fromDatetime, untilDatetime, depth, dataFreshness));
     }
 
     @GetMapping("/navitia/stop_points/{stopPointId}/stop_schedules")
@@ -372,40 +264,29 @@ public class IDFMNavitiaController {
             @PathVariable String stopPointId,
             @RequestParam(required = false) String fromDatetime,
             @RequestParam(required = false) String untilDatetime,
-            @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getStopSchedules(stopPointId, fromDatetime, untilDatetime, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get stop schedules: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            @RequestParam(required = false) Integer depth,
+            @RequestParam(required = false) String dataFreshness) {
+        return ResponseEntity.ok(this.idfmNavitiaService.getStopSchedules(stopPointId, fromDatetime, untilDatetime, depth, dataFreshness));
     }
 
     @GetMapping("/navitia/places_nearby")
-    @Operation(summary = "Get places nearby", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Places> getPlacesNearby(
+    @Operation(summary = "Get places nearby a coordinate", security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<PlacesNearby> getPlacesNearby(
+            @RequestParam Double lon,
+            @RequestParam Double lat,
+            @RequestParam(required = false) List<String> type,
             @RequestParam(required = false) Double distance,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Integer depth) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getPlacesNearby(distance, count, depth), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get places nearby: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getPlacesNearby(lon, lat, type, distance, count, depth));
     }
 
     @GetMapping("/navitia/pt_objects")
     @Operation(summary = "Get public transport objects", security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<PtObjects> getPtObjects(
-            @RequestParam(required = false) String query,
-            @RequestParam(required = false) String type,
+            @RequestParam String query,
+            @RequestParam(required = false) List<String> type,
             @RequestParam(required = false) Integer count) {
-        try {
-            return new ResponseEntity<>(this.idfmNavitiaService.getPtObjects(query, type, count), HttpStatus.OK);
-        } catch (java.lang.Exception e) {
-            log.error("Error during get pt_objects: {}", e.getMessage(), e);
-        }
-        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.ok(this.idfmNavitiaService.getPtObjects(query, type, count));
     }
 }

@@ -9,8 +9,6 @@ import com.gdamiens.website.idfm.Siri;
 import com.gdamiens.website.idfm.ServiceDelivery;
 import com.gdamiens.website.idfm.GeneralMessageDelivery;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -26,8 +24,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class IDFMGeneralMessageService extends AbstractIDFMService {
-
-    private static final Logger log = LoggerFactory.getLogger(IDFMGeneralMessageService.class);
 
     private final HttpComponentsClientHttpRequestFactory requestFactory;
 

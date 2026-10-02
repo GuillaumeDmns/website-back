@@ -11,3 +11,4 @@ security:
 
 application:
   idfm-key: aaAAbbBBccCCddDD
+  idfm-static-key: eeEEffFFggGGhhHH

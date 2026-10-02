@@ -8,19 +8,20 @@ import jakarta.persistence.Table;
 import java.io.Serializable;
 
 @Entity(name = "IDFMStopGtfs")
-@Table(schema = "public", name = "idfm_stop_gtfs")
+@Table(schema = "gtfs", name = "stops")
 public class IDFMStopGtfs implements Serializable {
 
     @Id
+    @Column(name = "stop_id")
     private String id;
 
-    @Column(name = "name")
+    @Column(name = "stop_name")
     private String name;
 
-    @Column(name = "latitude")
+    @Column(name = "stop_lat")
     private Double latitude;
 
-    @Column(name = "longitude")
+    @Column(name = "stop_lon")
     private Double longitude;
 
     @Column(name = "parent_station")

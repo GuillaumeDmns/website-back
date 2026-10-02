@@ -1,23 +1,28 @@
 package com.gdamiens.website.service;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
-import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.exceptions.NavitiaException;
 import com.gdamiens.website.idfm.navitia.*;
 import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import tools.jackson.databind.cfg.EnumFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
+import java.util.Optional;
 
+/**
+ * Client of the IDFM PRIM Navitia API (swagger.json at the project root)
+ */
 @Service
 public class IDFMNavitiaService extends AbstractIDFMService {
 
@@ -27,379 +32,226 @@ public class IDFMNavitiaService extends AbstractIDFMService {
 
     public IDFMNavitiaService(ApplicationProperties applicationProperties) {
         super(applicationProperties);
-        HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build());
-        this.restTemplate = new RestTemplate(requestFactory);
+        // Only JSON responses; an enum value added by Navitia must not make the whole response fail
+        this.restTemplate = new RestTemplate(List.of(new JacksonJsonHttpMessageConverter(
+            JsonMapper.builder().enable(EnumFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL).build()
+        )));
+        this.restTemplate.setRequestFactory(new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build()));
     }
 
-    public Places getPlaces(String query) {
-        return getPlaces(query, null, null);
-    }
-
-    public Places getPlaces(String query, String type, Integer count) {
+    public Places getPlaces(String query, List<String> types, Integer count) {
         log.info("Getting places for query {}", query);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_PLACES);
-        if (query != null) uriComponentsBuilder.queryParam("q", query);
-        if (type != null) uriComponentsBuilder.queryParam("type[]", type);
-        if (count != null) uriComponentsBuilder.queryParam("count", count);
-
-        ResponseEntity<Places> response = this.restTemplate.exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, Places.class);
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new CustomException("IDFM Navitia places response != 200", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return response.getBody();
-    }
-
-    public Journeys getJourneys(String startPoint, String endPoint) {
-        return getJourneys(startPoint, endPoint, null, null, null, "realtime");
+        UriComponentsBuilder builder = navitia("places")
+            .queryParam("q", query)
+            .queryParamIfPresent("count", Optional.ofNullable(count));
+        addAll(builder, "type[]", types);
+        return get(builder, Places.class);
     }
 
     public Journeys getJourneys(String startPoint, String endPoint, String datetime, String datetimeRepresents, List<String> forbiddenUris, String dataFreshness) {
         log.info("Getting journeys for start point {} and end point {}", startPoint, endPoint);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_JOURNEYS)
+        UriComponentsBuilder builder = navitia("journeys")
             .queryParam("data_freshness", dataFreshness != null ? dataFreshness : "realtime")
             .queryParam("from", startPoint)
-            .queryParam("to", endPoint);
-
-        if (datetime != null) uriComponentsBuilder.queryParam("datetime", datetime);
-        if (datetimeRepresents != null) uriComponentsBuilder.queryParam("datetime_represents", datetimeRepresents);
-        if (forbiddenUris != null && !forbiddenUris.isEmpty()) {
-            for (String uri : forbiddenUris) {
-                uriComponentsBuilder.queryParam("forbidden_uris[]", uri);
-            }
-        }
-
-        ResponseEntity<Journeys> response = this.restTemplate.exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, Journeys.class);
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new CustomException("IDFM Navitia journeys response != 200", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return response.getBody();
-    }
-
-    public VehicleJourneys getStopPointJourneys(String stopPointId, String since, String until) {
-        return getStopPointJourneys(stopPointId, since, until, 3);
+            .queryParam("to", endPoint)
+            .queryParamIfPresent("datetime", Optional.ofNullable(datetime))
+            .queryParamIfPresent("datetime_represents", Optional.ofNullable(datetimeRepresents));
+        addAll(builder, "forbidden_uris[]", forbiddenUris);
+        return get(builder, Journeys.class);
     }
 
     public VehicleJourneys getStopPointJourneys(String stopPointId, String since, String until, Integer depth) {
-        log.info("Getting next departures for stop point {}", stopPointId);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE)
-            .pathSegment("stop_points", stopPointId, "vehicle_journeys")
-            .queryParam("data_freshness", "realtime")
-            .queryParam("depth", depth != null ? depth : 3);
-
-        if (since != null) uriComponentsBuilder.queryParam("since", since);
-        if (until != null) uriComponentsBuilder.queryParam("until", until);
-
-        ResponseEntity<VehicleJourneys> response = this.restTemplate.exchange(uriComponentsBuilder.build().toUri(), HttpMethod.GET, request, VehicleJourneys.class);
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new CustomException("IDFM Navitia stop point journeys response != 200", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return response.getBody();
+        log.info("Getting vehicle journeys for stop point {}", stopPointId);
+        UriComponentsBuilder builder = navitia("stop_points", stopPointId, "vehicle_journeys")
+            .queryParam("depth", depth != null ? depth : 3)
+            .queryParamIfPresent("since", Optional.ofNullable(since))
+            .queryParamIfPresent("until", Optional.ofNullable(until));
+        return get(builder, VehicleJourneys.class);
     }
 
     public Lines getLines(Integer startPage, Integer count, Integer depth) {
         log.info("Getting lines");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("lines");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<Lines> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Lines.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia lines error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("lines"), startPage, count, depth), Lines.class);
     }
 
     public Lines getLineById(String id) {
         log.info("Getting line {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("lines", id);
-        ResponseEntity<Lines> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Lines.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia line error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("lines", id), Lines.class);
     }
 
     public StopAreas getStopAreas(Integer startPage, Integer count, Integer depth) {
         log.info("Getting stop areas");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("stop_areas");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<StopAreas> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, StopAreas.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia stop_areas error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("stop_areas"), startPage, count, depth), StopAreas.class);
     }
 
     public StopAreas getStopAreaById(String id) {
         log.info("Getting stop area {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("stop_areas", id);
-        ResponseEntity<StopAreas> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, StopAreas.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia stop_area error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("stop_areas", id), StopAreas.class);
     }
 
     public StopPoints getStopPoints(Integer startPage, Integer count, Integer depth) {
         log.info("Getting stop points");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("stop_points");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<StopPoints> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, StopPoints.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia stop_points error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("stop_points"), startPage, count, depth), StopPoints.class);
     }
 
     public StopPoints getStopPointById(String id) {
         log.info("Getting stop point {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("stop_points", id);
-        ResponseEntity<StopPoints> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, StopPoints.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia stop_point error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("stop_points", id), StopPoints.class);
     }
 
     public Routes getRoutes(Integer startPage, Integer count, Integer depth) {
         log.info("Getting routes");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("routes");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<Routes> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Routes.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia routes error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("routes"), startPage, count, depth), Routes.class);
     }
 
     public Routes getRouteById(String id) {
         log.info("Getting route {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("routes", id);
-        ResponseEntity<Routes> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Routes.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia route error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("routes", id), Routes.class);
     }
 
     public Networks getNetworks(Integer startPage, Integer count, Integer depth) {
         log.info("Getting networks");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("networks");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<Networks> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Networks.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia networks error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("networks"), startPage, count, depth), Networks.class);
     }
 
     public Networks getNetworkById(String id) {
         log.info("Getting network {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("networks", id);
-        ResponseEntity<Networks> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Networks.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia network error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("networks", id), Networks.class);
     }
 
     public CommercialModes getCommercialModes(Integer startPage, Integer count, Integer depth) {
         log.info("Getting commercial modes");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("commercial_modes");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<CommercialModes> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, CommercialModes.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia commercial_modes error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("commercial_modes"), startPage, count, depth), CommercialModes.class);
     }
 
     public CommercialModes getCommercialModeById(String id) {
         log.info("Getting commercial mode {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("commercial_modes", id);
-        ResponseEntity<CommercialModes> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, CommercialModes.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia commercial_mode error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("commercial_modes", id), CommercialModes.class);
     }
 
     public PhysicalModes getPhysicalModes(Integer startPage, Integer count, Integer depth) {
         log.info("Getting physical modes");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("physical_modes");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<PhysicalModes> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, PhysicalModes.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia physical_modes error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("physical_modes"), startPage, count, depth), PhysicalModes.class);
     }
 
     public PhysicalModes getPhysicalModeById(String id) {
         log.info("Getting physical mode {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("physical_modes", id);
-        ResponseEntity<PhysicalModes> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, PhysicalModes.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia physical_mode error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("physical_modes", id), PhysicalModes.class);
     }
 
     public Companies getCompanies(Integer startPage, Integer count, Integer depth) {
         log.info("Getting companies");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("companies");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<Companies> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Companies.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia companies error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("companies"), startPage, count, depth), Companies.class);
     }
 
     public Companies getCompanyById(String id) {
         log.info("Getting company {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("companies", id);
-        ResponseEntity<Companies> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Companies.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia company error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("companies", id), Companies.class);
     }
 
     public Disruptions getDisruptions(Integer startPage, Integer count, Integer depth) {
         log.info("Getting disruptions");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("disruptions");
-        if (startPage != null) builder.queryParam("start_page", startPage);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<Disruptions> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Disruptions.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia disruptions error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(paginated(navitia("disruptions"), startPage, count, depth), Disruptions.class);
     }
 
     public Disruptions getDisruptionById(String id) {
         log.info("Getting disruption {}", id);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("disruptions", id);
-        ResponseEntity<Disruptions> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Disruptions.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia disruption error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        return get(navitia("disruptions", id), Disruptions.class);
     }
 
-    public Departures getDepartures(String stopPointId, String fromDatetime, String untilDatetime, Integer count) {
+    public Departures getDepartures(String stopPointId, String fromDatetime, String untilDatetime, Integer count, String dataFreshness) {
         log.info("Getting departures for stop point {}", stopPointId);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE)
-            .pathSegment("stop_points", stopPointId, "departures");
-        if (fromDatetime != null) builder.queryParam("from_datetime", fromDatetime);
-        if (untilDatetime != null) builder.queryParam("until_datetime", untilDatetime);
-        if (count != null) builder.queryParam("count", count);
-
-        ResponseEntity<Departures> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Departures.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia departures error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        UriComponentsBuilder builder = schedule(navitia("stop_points", stopPointId, "departures"), fromDatetime, untilDatetime, dataFreshness)
+            .queryParamIfPresent("count", Optional.ofNullable(count));
+        return get(builder, Departures.class);
     }
 
-    public Arrivals getArrivals(String stopPointId, String fromDatetime, String untilDatetime, Integer count) {
+    public Arrivals getArrivals(String stopPointId, String fromDatetime, String untilDatetime, Integer count, String dataFreshness) {
         log.info("Getting arrivals for stop point {}", stopPointId);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE)
-            .pathSegment("stop_points", stopPointId, "arrivals");
-        if (fromDatetime != null) builder.queryParam("from_datetime", fromDatetime);
-        if (untilDatetime != null) builder.queryParam("until_datetime", untilDatetime);
-        if (count != null) builder.queryParam("count", count);
-
-        ResponseEntity<Arrivals> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Arrivals.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia arrivals error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        UriComponentsBuilder builder = schedule(navitia("stop_points", stopPointId, "arrivals"), fromDatetime, untilDatetime, dataFreshness)
+            .queryParamIfPresent("count", Optional.ofNullable(count));
+        return get(builder, Arrivals.class);
     }
 
     public TrafficReports getTrafficReports(Integer count, Integer depth) {
         log.info("Getting traffic reports");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("traffic_reports");
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<TrafficReports> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, TrafficReports.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia traffic_reports error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        UriComponentsBuilder builder = navitia("traffic_reports")
+            .queryParamIfPresent("count", Optional.ofNullable(count))
+            .queryParamIfPresent("depth", Optional.ofNullable(depth));
+        return get(builder, TrafficReports.class);
     }
 
     public EquipmentReports getEquipmentReports(Integer count, Integer depth) {
         log.info("Getting equipment reports");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("equipment_reports");
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<EquipmentReports> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, EquipmentReports.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia equipment_reports error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        UriComponentsBuilder builder = navitia("equipment_reports")
+            .queryParamIfPresent("count", Optional.ofNullable(count))
+            .queryParamIfPresent("depth", Optional.ofNullable(depth));
+        return get(builder, EquipmentReports.class);
     }
 
-    public RouteSchedules getRouteSchedules(String routeId, String fromDatetime, String untilDatetime, Integer depth) {
+    public RouteSchedules getRouteSchedules(String routeId, String fromDatetime, String untilDatetime, Integer depth, String dataFreshness) {
         log.info("Getting route schedules for route {}", routeId);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE)
-            .pathSegment("routes", routeId, "route_schedules");
-        if (fromDatetime != null) builder.queryParam("from_datetime", fromDatetime);
-        if (untilDatetime != null) builder.queryParam("until_datetime", untilDatetime);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<RouteSchedules> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, RouteSchedules.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia route_schedules error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        UriComponentsBuilder builder = schedule(navitia("routes", routeId, "route_schedules"), fromDatetime, untilDatetime, dataFreshness)
+            .queryParamIfPresent("depth", Optional.ofNullable(depth));
+        return get(builder, RouteSchedules.class);
     }
 
-    public StopSchedules getStopSchedules(String stopPointId, String fromDatetime, String untilDatetime, Integer depth) {
+    public StopSchedules getStopSchedules(String stopPointId, String fromDatetime, String untilDatetime, Integer depth, String dataFreshness) {
         log.info("Getting stop schedules for stop point {}", stopPointId);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE)
-            .pathSegment("stop_points", stopPointId, "stop_schedules");
-        if (fromDatetime != null) builder.queryParam("from_datetime", fromDatetime);
-        if (untilDatetime != null) builder.queryParam("until_datetime", untilDatetime);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<StopSchedules> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, StopSchedules.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia stop_schedules error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+        UriComponentsBuilder builder = schedule(navitia("stop_points", stopPointId, "stop_schedules"), fromDatetime, untilDatetime, dataFreshness)
+            .queryParamIfPresent("depth", Optional.ofNullable(depth));
+        return get(builder, StopSchedules.class);
     }
 
-    public Places getPlacesNearby(Double distance, Integer count, Integer depth) {
-        log.info("Getting places nearby");
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("places_nearby");
-        if (distance != null) builder.queryParam("distance", distance);
-        if (count != null) builder.queryParam("count", count);
-        if (depth != null) builder.queryParam("depth", depth);
-
-        ResponseEntity<Places> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, Places.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia places_nearby error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+    public PlacesNearby getPlacesNearby(Double longitude, Double latitude, List<String> types, Double distance, Integer count, Integer depth) {
+        log.info("Getting places nearby {};{}", longitude, latitude);
+        UriComponentsBuilder builder = navitia("coords", longitude + ";" + latitude, "places_nearby")
+            .queryParamIfPresent("distance", Optional.ofNullable(distance))
+            .queryParamIfPresent("count", Optional.ofNullable(count))
+            .queryParamIfPresent("depth", Optional.ofNullable(depth));
+        addAll(builder, "type[]", types);
+        return get(builder, PlacesNearby.class);
     }
 
-    public PtObjects getPtObjects(String query, String type, Integer count) {
+    public PtObjects getPtObjects(String query, List<String> types, Integer count) {
         log.info("Getting pt_objects for query {}", query);
-        HttpEntity<String> request = this.prepareHttpRequest();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment("pt_objects");
-        if (query != null) builder.queryParam("q", query);
-        if (type != null) builder.queryParam("type[]", type);
-        if (count != null) builder.queryParam("count", count);
+        UriComponentsBuilder builder = navitia("pt_objects")
+            .queryParam("q", query)
+            .queryParamIfPresent("count", Optional.ofNullable(count));
+        addAll(builder, "type[]", types);
+        return get(builder, PtObjects.class);
+    }
 
-        ResponseEntity<PtObjects> response = this.restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request, PtObjects.class);
-        if (!response.getStatusCode().is2xxSuccessful()) throw new CustomException("IDFM Navitia pt_objects error", HttpStatus.INTERNAL_SERVER_ERROR);
-        return response.getBody();
+    private static UriComponentsBuilder navitia(String... pathSegments) {
+        return UriComponentsBuilder.fromUriString(Constants.IDFM_NAVITIA_BASE).pathSegment(pathSegments);
+    }
+
+    private static UriComponentsBuilder paginated(UriComponentsBuilder builder, Integer startPage, Integer count, Integer depth) {
+        return builder
+            .queryParamIfPresent("start_page", Optional.ofNullable(startPage))
+            .queryParamIfPresent("count", Optional.ofNullable(count))
+            .queryParamIfPresent("depth", Optional.ofNullable(depth));
+    }
+
+    private static UriComponentsBuilder schedule(UriComponentsBuilder builder, String fromDatetime, String untilDatetime, String dataFreshness) {
+        return builder
+            .queryParamIfPresent("from_datetime", Optional.ofNullable(fromDatetime))
+            .queryParamIfPresent("until_datetime", Optional.ofNullable(untilDatetime))
+            .queryParamIfPresent("data_freshness", Optional.ofNullable(dataFreshness));
+    }
+
+    private static void addAll(UriComponentsBuilder builder, String name, List<String> values) {
+        if (values != null) {
+            values.forEach(value -> builder.queryParam(name, value));
+        }
+    }
+
+    // Values are percent-encoded (accents, &, = in q...); Navitia errors are rethrown with their status and body
+    private <T> T get(UriComponentsBuilder builder, Class<T> responseType) {
+        try {
+            return this.restTemplate.exchange(builder.encode().build().toUri(), HttpMethod.GET, this.prepareHttpRequest(), responseType).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw new NavitiaException(e.getStatusCode(), e.getResponseBodyAsString());
+        }
     }
 }
