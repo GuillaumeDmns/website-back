@@ -1,16 +1,16 @@
 info:
-  name: "Get disruption by ID"
+  name: "Get physical mode by ID"
   type: http
-  seq: 2
+  seq: 14
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/navitia/disruptions/{{navitiaDisruptionId}}"
+  url: "{{baseUrl}}/api/navitia/physical_modes/{{navitiaPhysicalModeId}}"
   auth: inherit
 
 docs:
   content: |-
-    Utilise `navitiaDisruptionId`, renseigné par « Get disruptions ».
+    Utilise `navitiaPhysicalModeId`, renseigné par « Get physical modes ».
   type: text/markdown
 
 settings:

@@ -1,0 +1,44 @@
+info:
+  name: "Get journeys"
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/navitia/journeys?startPoint={{navitiaStopAreaId}}&endPoint=2.2945;48.8584&dataFreshness=realtime"
+  params:
+    - name: "startPoint"
+      value: "{{navitiaStopAreaId}}"
+      type: query
+      description: "Id Navitia ou coordonnées \"lon;lat\""
+    - name: "endPoint"
+      value: "2.2945;48.8584"
+      type: query
+      description: "Id Navitia ou coordonnées \"lon;lat\" (ici Tour Eiffel)"
+    - name: "datetime"
+      value: "20261002T080000"
+      type: query
+      description: "Format YYYYMMDDThhmmss"
+      disabled: true
+    - name: "datetimeRepresents"
+      value: "departure"
+      type: query
+      description: "departure ou arrival"
+      disabled: true
+    - name: "forbiddenUris"
+      value: "physical_mode:Bus"
+      type: query
+      description: "Répétable"
+      disabled: true
+    - name: "dataFreshness"
+      value: "realtime"
+      type: query
+      description: "realtime ou base_schedule"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

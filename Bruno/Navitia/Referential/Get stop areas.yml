@@ -1,0 +1,39 @@
+info:
+  name: "Get stop areas"
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/navitia/stop_areas?count=10"
+  params:
+    - name: "startPage"
+      value: "0"
+      type: query
+      disabled: true
+    - name: "count"
+      value: "10"
+      type: query
+    - name: "depth"
+      value: "1"
+      type: query
+      description: "0 à 3"
+      disabled: true
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        // Réutilisé par les requêtes « by ID » de la collection
+        const first = (res.getBody()?.stopAreas || [])[0];
+        if (first?.id) {
+          bru.setVar("navitiaStopAreaId", first.id);
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

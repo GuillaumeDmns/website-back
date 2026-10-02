@@ -1,16 +1,16 @@
 info:
-  name: "Get disruption by ID"
+  name: "Get stop point by ID"
   type: http
-  seq: 2
+  seq: 6
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/navitia/disruptions/{{navitiaDisruptionId}}"
+  url: "{{baseUrl}}/api/navitia/stop_points/{{navitiaStopPointId}}"
   auth: inherit
 
 docs:
   content: |-
-    Utilise `navitiaDisruptionId`, renseigné par « Get disruptions ».
+    Utilise `navitiaStopPointId`, renseigné par « Get stop points ».
   type: text/markdown
 
 settings:

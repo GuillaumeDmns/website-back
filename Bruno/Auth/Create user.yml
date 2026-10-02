@@ -1,0 +1,28 @@
+info:
+  name: "Create user"
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/users"
+  body:
+    type: json
+    data: |-
+      {
+        "username": "new_user",
+        "password": "new_user_password"
+      }
+  auth: inherit
+
+docs:
+  content: |-
+    201 si créé, 409 si le login existe déjà.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

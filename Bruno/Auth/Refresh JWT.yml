@@ -1,18 +1,12 @@
 info:
-  name: "Login"
+  name: "Refresh JWT"
   type: http
-  seq: 1
+  seq: 2
 
 http:
-  method: POST
-  url: "{{baseUrl}}/api/signin"
-  body:
-    type: json
-    data: |-
-      {
-        "username": "{{username}}",
-        "password": "{{password}}"
-      }
+  method: GET
+  url: "{{baseUrl}}/api/refresh"
+  auth: inherit
 
 runtime:
   scripts:
@@ -25,7 +19,7 @@ runtime:
 
 docs:
   content: |-
-    Public. Stocke le JWT renvoyé dans la variable d'environnement `jwt`.
+    Renvoie un nouveau JWT pour l'utilisateur courant et le stocke dans `jwt`.
   type: text/markdown
 
 settings:

@@ -1,7 +1,0 @@
-info:
-  name: TrafficReports
-  type: folder
-  seq: 19
-
-request:
-  auth: inherit

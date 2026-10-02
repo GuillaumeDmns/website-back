@@ -1,16 +1,16 @@
 info:
-  name: "Get disruption by ID"
+  name: "Get company by ID"
   type: http
-  seq: 2
+  seq: 16
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/navitia/disruptions/{{navitiaDisruptionId}}"
+  url: "{{baseUrl}}/api/navitia/companies/{{navitiaCompanyId}}"
   auth: inherit
 
 docs:
   content: |-
-    Utilise `navitiaDisruptionId`, renseigné par « Get disruptions ».
+    Utilise `navitiaCompanyId`, renseigné par « Get companies ».
   type: text/markdown
 
 settings:

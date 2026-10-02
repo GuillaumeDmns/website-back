@@ -1,7 +1,7 @@
 info:
-  name: "Disruptions"
+  name: "Search"
   type: folder
-  seq: 5
+  seq: 1
 
 request:
   auth: inherit

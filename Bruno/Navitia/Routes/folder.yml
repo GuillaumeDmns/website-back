@@ -1,7 +1,0 @@
-info:
-  name: Routes
-  type: folder
-  seq: 14
-
-request:
-  auth: inherit
