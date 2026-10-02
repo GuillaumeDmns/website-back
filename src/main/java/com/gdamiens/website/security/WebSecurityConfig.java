@@ -1,5 +1,6 @@
 package com.gdamiens.website.security;
 
+import com.gdamiens.website.configuration.ApplicationProperties;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.jwk.source.JWKSource;
@@ -21,6 +22,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import javax.crypto.SecretKey;
@@ -36,7 +38,8 @@ public class WebSecurityConfig {
     private String jwtSecretKey;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, RateLimiter rateLimiter,
+                                           ApplicationProperties applicationProperties) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
@@ -45,6 +48,10 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
                     "/api/signin",
+                    "/api/signup",
+                    "/api/token/refresh",
+                    "/api/logout",
+                    "/error",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/configuration/**",
@@ -59,7 +66,9 @@ public class WebSecurityConfig {
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
                 )
             )
-            .cors(Customizer.withDefaults());
+            .cors(Customizer.withDefaults())
+            .addFilterAfter(new RateLimitFilter(rateLimiter, applicationProperties.getRateLimit()),
+                BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }

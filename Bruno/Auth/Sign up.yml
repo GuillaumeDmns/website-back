@@ -1,17 +1,18 @@
 info:
-  name: "Login"
+  name: "Sign up"
   type: http
-  seq: 1
+  seq: 2
 
 http:
   method: POST
-  url: "{{baseUrl}}/api/signin"
+  url: "{{baseUrl}}/api/signup"
   body:
     type: json
     data: |-
       {
-        "username": "{{username}}",
-        "password": "{{password}}"
+        "username": "new_user",
+        "email": "new_user@example.com",
+        "password": "new_user_password"
       }
 
 runtime:
@@ -28,7 +29,8 @@ runtime:
 
 docs:
   content: |-
-    Public. Stocke le JWT et le refresh token renvoyés dans les variables d'environnement `jwt` et `refreshToken`.
+    Public. Crée un compte `ROLE_USER` et renvoie directement `jwt` + `refreshToken` (stockés dans l'environnement).
+    201 si créé, 400 si un champ est invalide (username 3-50 caractères `[A-Za-z0-9._-]`, email, mot de passe 8 caractères minimum), 409 si le username ou l'email est déjà utilisé.
   type: text/markdown
 
 settings:

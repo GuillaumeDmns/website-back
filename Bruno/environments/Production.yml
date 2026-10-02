@@ -8,3 +8,5 @@ variables:
     name: password
   - secret: true
     name: jwt
+  - secret: true
+    name: refreshToken

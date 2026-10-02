@@ -33,3 +33,31 @@ security:
     token:
       expire-length: 3600000 # 1 hour
       # secret-key is defined in application-dev.yml
+    refresh-token:
+      expire-days: 60
+
+server:
+  # Behind the reverse proxy: take the client IP from X-Forwarded-For (only trusted from internal proxy addresses)
+  forward-headers-strategy: native
+
+application:
+  cors-allowed-origins:
+    - https://guillaumedamiens.com
+    - http://localhost:3000
+  rate-limit:
+    auth-per-minute: 10
+    user-per-minute: 120
+    anonymous-per-minute: 60
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+# Flutter web dev server runs on a random localhost port
+application:
+  cors-allowed-origins:
+    - https://guillaumedamiens.com
+    - http://localhost:[*]
+    - http://127.0.0.1:[*]
