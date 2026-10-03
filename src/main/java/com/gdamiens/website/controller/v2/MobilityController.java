@@ -1,12 +1,17 @@
 package com.gdamiens.website.controller.v2;
 
+import com.gdamiens.website.controller.object.v2.JourneyPlan;
 import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.SearchResult;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
 import com.gdamiens.website.controller.object.v2.StopDepartures;
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.model.TransportMode;
 import com.gdamiens.website.service.DepartureService;
+import com.gdamiens.website.service.JourneyService;
+import com.gdamiens.website.service.JourneyService.JourneyQuery;
+import com.gdamiens.website.service.JourneyService.WalkingSpeed;
 import com.gdamiens.website.service.NetworkService;
 import com.gdamiens.website.service.SearchService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -37,10 +43,28 @@ public class MobilityController {
 
     private final SearchService searchService;
 
-    public MobilityController(NetworkService networkService, DepartureService departureService, SearchService searchService) {
+    private final JourneyService journeyService;
+
+    public MobilityController(NetworkService networkService, DepartureService departureService, SearchService searchService,
+                              JourneyService journeyService) {
         this.networkService = networkService;
         this.departureService = departureService;
         this.searchService = searchService;
+        this.journeyService = journeyService;
+    }
+
+    @GetMapping("/journeys")
+    @Operation(summary = "Journey options between two places, real time when available", security = @SecurityRequirement(name = "Auth. Token"))
+    public JourneyPlan getJourneys(
+        @Parameter(description = "lat,lon or stop area id", example = "48.8443,2.3730") @RequestParam String from,
+        @Parameter(description = "lat,lon or stop area id", example = "IDFM:71264") @RequestParam String to,
+        @Parameter(description = "ISO-8601 instant (e.g. 2026-10-03T08:30:00Z), now when absent") @RequestParam(required = false) Instant datetime,
+        @Parameter(description = "datetime is the arrival time") @RequestParam(defaultValue = "false") boolean arriveBy,
+        @Parameter(description = "Allowed public transport modes, all when absent") @RequestParam(required = false) List<TransportMode> modes,
+        @Parameter(description = "Step-free journeys only") @RequestParam(defaultValue = "false") boolean wheelchair,
+        @RequestParam(defaultValue = "NORMAL") WalkingSpeed walkingSpeed,
+        @Parameter(description = "At most this many transfers") @RequestParam(required = false) Integer maxTransfers) {
+        return journeyService.plan(new JourneyQuery(from, to, datetime, arriveBy, modes, wheelchair, walkingSpeed, maxTransfers));
     }
 
     @GetMapping("/search")
