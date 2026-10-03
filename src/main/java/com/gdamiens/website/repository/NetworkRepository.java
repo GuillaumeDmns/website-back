@@ -186,6 +186,42 @@ public class NetworkRepository {
     }
 
     /**
+     * Path of a route between two points, cut from the GTFS shape of the route that passes closest to both, in this
+     * order (each point within 300 m of the shape).
+     *
+     * @return GeoJSON LineString, empty if no shape of the route fits
+     */
+    public Optional<String> findShapeBetween(String routeId, double fromLat, double fromLon, double toLat, double toLon) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("routeId", routeId)
+            .addValue("fromLat", fromLat).addValue("fromLon", fromLon)
+            .addValue("toLat", toLat).addValue("toLon", toLon);
+
+        return jdbc.query("""
+                WITH pts AS (
+                  SELECT ST_SetSRID(ST_MakePoint(:fromLon, :fromLat), 4326) AS a, ST_SetSRID(ST_MakePoint(:toLon, :toLat), 4326) AS b
+                ),
+                route_shapes AS (
+                  SELECT DISTINCT shape_id FROM gtfs.trips WHERE route_id = :routeId AND shape_id IS NOT NULL
+                ),
+                candidates AS (
+                  SELECT s.geom,
+                         ST_LineLocatePoint(s.geom, pts.a) AS from_fraction,
+                         ST_LineLocatePoint(s.geom, pts.b) AS to_fraction,
+                         ST_Distance(s.geom::geography, pts.a::geography) + ST_Distance(s.geom::geography, pts.b::geography) AS gap,
+                         ST_DWithin(s.geom::geography, pts.a::geography, 300) AND ST_DWithin(s.geom::geography, pts.b::geography, 300) AS close
+                  FROM route_shapes JOIN gtfs.shapes s USING (shape_id), pts
+                )
+                SELECT ST_AsGeoJSON(ST_LineSubstring(geom, from_fraction, to_fraction), 6)
+                FROM candidates
+                WHERE close AND from_fraction < to_fraction
+                ORDER BY gap
+                LIMIT 1""",
+            params,
+            (rs, i) -> rs.getString(1)).stream().findFirst();
+    }
+
+    /**
      * Scheduled departures from the stop area's quays between {@code fromSeconds} and {@code toSeconds} after midnight
      * of {@code today} (Europe/Paris). Trips of the previous service day running after midnight are included.
      * Quays are read first so that {@code stop_times} is scanned through its {@code (stop_id, departure_time)} index.

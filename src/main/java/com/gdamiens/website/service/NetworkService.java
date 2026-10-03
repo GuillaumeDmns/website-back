@@ -16,10 +16,9 @@ import com.gdamiens.website.repository.NetworkRepository.QuayRow;
 import com.gdamiens.website.repository.NetworkRepository.RouteRow;
 import com.gdamiens.website.repository.NetworkRepository.StopAreaRow;
 import com.gdamiens.website.repository.NetworkRepository.TripPatternRow;
+import com.gdamiens.website.utils.GeoJson;
 import com.gdamiens.website.utils.TtlCache;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -55,8 +54,6 @@ public class NetworkService {
         .thenComparing(LineSummary::name, NetworkService::compareLineNames);
 
     private final NetworkRepository networkRepository;
-
-    private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     private final TtlCache<String, Map<String, LineSummary>> linesCache = new TtlCache<>(Duration.ofHours(1), 1);
 
@@ -174,18 +171,9 @@ public class NetworkService {
             .toList();
 
         String headsign = stopRefs.isEmpty() ? pattern.headsign() : stopRefs.getLast().name();
-        List<double[]> shape = Optional.ofNullable(pattern.shapeId()).map(shapes::get).map(this::parseLineString).orElse(List.of());
+        List<double[]> shape = Optional.ofNullable(pattern.shapeId()).map(shapes::get).map(GeoJson::lineStringCoordinates).orElse(List.of());
 
         return new LineBranch(headsign, pattern.tripCount(), stopRefs, shape);
-    }
-
-    private List<double[]> parseLineString(String geoJson) {
-        List<double[]> coordinates = new ArrayList<>();
-        JsonNode node = jsonMapper.readTree(geoJson).get("coordinates");
-        if (node != null) {
-            node.forEach(point -> coordinates.add(new double[]{point.get(0).asDouble(), point.get(1).asDouble()}));
-        }
-        return coordinates;
     }
 
     /**
