@@ -1,0 +1,32 @@
+info:
+  name: "Favorites - add"
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/v2/me/favorites"
+  body:
+    type: json
+    data: |-
+      {
+        "kind": "STOP",
+        "stopAreaId": "{{stopAreaId}}"
+      }
+  auth: inherit
+
+docs:
+  content: |-
+    Ajoute un favori (201). Exemples de corps :
+    - `{"kind": "HOME", "label": "10 Rue de Rivoli (Paris)", "lat": 48.8555, "lon": 2.3604}` (remplace la maison existante, idem `WORK`)
+    - `{"kind": "PLACE", "label": "Tour Eiffel (Paris)", "lat": 48.8584, "lon": 2.2945}`
+    - `{"kind": "STOP", "stopAreaId": "IDFM:71264"}` / `{"kind": "LINE", "lineId": "C01743"}` (renvoie le favori existant si déjà enregistré)
+    400 si la zone d'arrêt ou la ligne est inconnue, ou si le label / la position manquent.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
