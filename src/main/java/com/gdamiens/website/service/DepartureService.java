@@ -136,7 +136,7 @@ public class DepartureService {
                 .collect(Collectors.toSet());
 
             if (!scheduledLineIds.isEmpty()) {
-                addScheduledDepartures(stopAreaId, now, scheduledLineIds, lines, groups);
+                addScheduledDepartures(stop, now, scheduledLineIds, lines, groups);
             }
 
             List<LineDepartures> lineDepartures = groups.entrySet().stream()
@@ -152,18 +152,18 @@ public class DepartureService {
         });
     }
 
-    private void addScheduledDepartures(String stopAreaId, Instant now, Set<String> lineIds, Map<String, LineSummary> lines,
+    private void addScheduledDepartures(StopAreaSummary stop, Instant now, Set<String> lineIds, Map<String, LineSummary> lines,
                                         Map<GroupKey, List<Departure>> groups) {
         ZonedDateTime localNow = now.atZone(PARIS);
         int nowSeconds = localNow.toLocalTime().toSecondOfDay();
 
-        List<ScheduledDepartureRow> rows = networkRepository.findScheduledDepartures(stopAreaId, localNow.toLocalDate(),
+        List<ScheduledDepartureRow> rows = networkRepository.findScheduledDepartures(stop.id(), localNow.toLocalDate(),
             nowSeconds - (int) PAST_MARGIN.toSeconds(), nowSeconds + (int) SCHEDULE_WINDOW.toSeconds());
 
         for (ScheduledDepartureRow row : rows) {
             String lineId = IDFMRoute.toLineId(row.routeId());
             LineSummary line = lines.get(lineId);
-            if (line == null || row.headsign() == null || !lineIds.contains(lineId)) {
+            if (line == null || row.headsign() == null || !lineIds.contains(lineId) || isTerminating(row.headsign(), stop)) {
                 continue;
             }
 
@@ -195,9 +195,20 @@ public class DepartureService {
             call.getVehicleAtStop());
     }
 
-    /** Vehicles ending their trip at this stop are not departures */
-    private static boolean isTerminating(String destination, StopAreaSummary stop) {
-        return StringUtils.equalsIgnoreCase(StringUtils.stripAccents(destination), StringUtils.stripAccents(stop.name()));
+    /**
+     * Vehicles ending their trip at this stop are not departures. The destination may be longer than the stop name
+     * ("Paris Gare de Lyon" at "Gare de Lyon"), so whole-word containment counts too.
+     */
+    static boolean isTerminating(String destination, StopAreaSummary stop) {
+        String normalizedDestination = normalize(destination);
+        String normalizedStop = normalize(stop.name());
+        return normalizedDestination.equals(normalizedStop)
+            || (" " + normalizedDestination + " ").contains(" " + normalizedStop + " ");
+    }
+
+    private static String normalize(String name) {
+        return StringUtils.stripAccents(StringUtils.defaultString(name)).toLowerCase(java.util.Locale.ROOT)
+            .replaceAll("[^a-z0-9]+", " ").trim();
     }
 
     /** {@code STIF:Line::C01371:} → {@code C01371} */
