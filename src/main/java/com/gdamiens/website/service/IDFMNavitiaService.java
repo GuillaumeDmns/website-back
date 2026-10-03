@@ -88,6 +88,19 @@ public class IDFMNavitiaService extends AbstractIDFMService {
         return get(builder, JsonNode.class);
     }
 
+    /**
+     * Every current and upcoming disruption, grouped by network, line and stop area (raw snake_case Navitia JSON:
+     * the mapping only reads the fields it needs).
+     */
+    public JsonNode getAllTrafficReports() {
+        log.info("Getting all traffic reports");
+        UriComponentsBuilder builder = navitia("traffic_reports")
+            .queryParam("count", 1000)
+            .queryParam("depth", 0)
+            .queryParam("disable_geojson", true);
+        return get(builder, JsonNode.class);
+    }
+
     public VehicleJourneys getStopPointJourneys(String stopPointId, String since, String until, Integer depth) {
         log.info("Getting vehicle journeys for stop point {}", stopPointId);
         UriComponentsBuilder builder = navitia("stop_points", stopPointId, "vehicle_journeys")

@@ -1,0 +1,22 @@
+info:
+  name: "Traffic"
+  type: http
+  seq: 11
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/traffic"
+
+  auth: inherit
+
+docs:
+  content: |-
+    État du trafic : toutes les lignes de métro, RER, Transilien et tram (`severity` null si trafic normal) et toute autre ligne perturbée, avec les titres des perturbations en cours. Navitia `traffic_reports` rechargé en arrière-plan toutes les 2 min (premier appel ~2 s).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
