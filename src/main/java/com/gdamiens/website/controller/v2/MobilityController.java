@@ -1,7 +1,9 @@
 package com.gdamiens.website.controller.v2;
 
+import com.gdamiens.website.controller.object.v2.Disruption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan;
 import com.gdamiens.website.controller.object.v2.LineDetail;
+import com.gdamiens.website.controller.object.v2.LineTraffic;
 import com.gdamiens.website.controller.object.v2.SearchResult;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
@@ -14,6 +16,7 @@ import com.gdamiens.website.service.JourneyService.JourneyQuery;
 import com.gdamiens.website.service.JourneyService.WalkingSpeed;
 import com.gdamiens.website.service.NetworkService;
 import com.gdamiens.website.service.SearchService;
+import com.gdamiens.website.service.TrafficService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -45,12 +48,15 @@ public class MobilityController {
 
     private final JourneyService journeyService;
 
+    private final TrafficService trafficService;
+
     public MobilityController(NetworkService networkService, DepartureService departureService, SearchService searchService,
-                              JourneyService journeyService) {
+                              JourneyService journeyService, TrafficService trafficService) {
         this.networkService = networkService;
         this.departureService = departureService;
         this.searchService = searchService;
         this.journeyService = journeyService;
+        this.trafficService = trafficService;
     }
 
     @GetMapping("/journeys")
@@ -111,6 +117,25 @@ public class MobilityController {
     @Operation(summary = "Line with its ordered stops and drawn path, per direction and branch", security = @SecurityRequirement(name = "Auth. Token"))
     public LineDetail getLine(@Parameter(example = "C01371") @PathVariable String lineId) {
         return networkService.getLineDetail(lineId).orElseThrow(() -> notFound("Line " + lineId));
+    }
+
+    @GetMapping("/lines/{lineId}/disruptions")
+    @Operation(summary = "Active and upcoming (within a week) disruptions of a line", security = @SecurityRequirement(name = "Auth. Token"))
+    public List<Disruption> getLineDisruptions(@Parameter(example = "C01371") @PathVariable String lineId) {
+        networkService.getLine(lineId).orElseThrow(() -> notFound("Line " + lineId));
+        return trafficService.getLineDisruptions(lineId);
+    }
+
+    @GetMapping("/stops/{stopAreaId}/disruptions")
+    @Operation(summary = "Disruptions of a stop area (elevators, stop not served...) and active disruptions of its lines", security = @SecurityRequirement(name = "Auth. Token"))
+    public List<Disruption> getStopDisruptions(@Parameter(example = "IDFM:71264") @PathVariable String stopAreaId) {
+        return trafficService.getStopDisruptions(networkService.getStopArea(stopAreaId).orElseThrow(() -> notFound("Stop area " + stopAreaId)));
+    }
+
+    @GetMapping("/traffic")
+    @Operation(summary = "Traffic state of the metro, RER, Transilien and tram lines, and of every other disrupted line", security = @SecurityRequirement(name = "Auth. Token"))
+    public List<LineTraffic> getTraffic() {
+        return trafficService.getTraffic();
     }
 
     private static void checkPosition(double lat, double lon) {

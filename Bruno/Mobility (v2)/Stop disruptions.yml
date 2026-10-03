@@ -1,0 +1,22 @@
+info:
+  name: "Stop disruptions"
+  type: http
+  seq: 13
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/stops/{{stopAreaId}}/disruptions"
+
+  auth: inherit
+
+docs:
+  content: |-
+    Perturbations de la zone d'arrêt (ascenseurs en panne, arrêt non desservi...) et perturbations en cours de ses lignes de métro, RER, Transilien et tram. 404 si la zone est inconnue.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
