@@ -57,7 +57,11 @@ public class TrafficService {
     /** Lines always listed in the traffic overview, even without disruption */
     private static final Set<TransportMode> MAIN_MODES = EnumSet.of(TransportMode.METRO, TransportMode.RER, TransportMode.TRANSILIEN, TransportMode.TRAM);
 
-    private static final Pattern PARAGRAPH_END = Pattern.compile("(?i)<br\\s*/?>|</p>|</li>|</div>");
+    private static final Pattern LINE_BREAK = Pattern.compile("(?i)<br\\b[^>]*>|</li>");
+
+    private static final Pattern PARAGRAPH_END = Pattern.compile("(?i)</p>|</div>|</ul>");
+
+    private static final Pattern LIST_ITEM = Pattern.compile("(?i)<li\\b[^>]*>");
 
     private static final Pattern TAG = Pattern.compile("<[^>]+>");
 
@@ -262,9 +266,15 @@ public class TrafficService {
         if (html == null) {
             return null;
         }
-        String text = TAG.matcher(PARAGRAPH_END.matcher(html).replaceAll("\n")).replaceAll("");
+        String text = PARAGRAPH_END.matcher(html).replaceAll("\n\n");
+        text = LINE_BREAK.matcher(text).replaceAll("\n");
+        text = TAG.matcher(LIST_ITEM.matcher(text).replaceAll("\n• ")).replaceAll("");
         text = ENTITY.matcher(text).replaceAll(match -> Matcher.quoteReplacement(decodeEntity(match.group(1))));
-        return StringUtils.trimToNull(text.lines().map(String::strip).filter(line -> !line.isEmpty()).collect(Collectors.joining("\n\n")));
+        // Lines kept, blank lines (paragraphs) at most one in a row
+        String lines = text.replace('\u00a0', ' ').lines()
+            .map(line -> line.replaceAll("\\s{2,}", " ").strip())
+            .collect(Collectors.joining("\n"));
+        return StringUtils.trimToNull(lines.replaceAll("\n{3,}", "\n\n"));
     }
 
     private static String decodeEntity(String entity) {
