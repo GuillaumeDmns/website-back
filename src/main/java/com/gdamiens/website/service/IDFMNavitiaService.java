@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.cfg.EnumFeature;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -58,6 +59,33 @@ public class IDFMNavitiaService extends AbstractIDFMService {
             .queryParamIfPresent("datetime_represents", Optional.ofNullable(datetimeRepresents));
         addAll(builder, "forbidden_uris[]", forbiddenUris);
         return get(builder, Journeys.class);
+    }
+
+    /**
+     * Journey planning for the v2 API, with all the options and the raw response (snake_case Navitia JSON): the
+     * mapping only reads the fields it needs.
+     *
+     * @param from          {@code lon;lat} or a Navitia id ({@code stop_area:IDFM:71264})
+     * @param datetime      local Paris time, {@code yyyyMMdd'T'HHmmss}
+     * @param walkingSpeed  meters per second
+     */
+    public JsonNode planJourneys(String from, String to, String datetime, boolean arriveBy, List<String> forbiddenUris,
+                                 boolean wheelchair, Double walkingSpeed, Integer maxTransfers) {
+        log.info("Planning journeys from {} to {}", from, to);
+        UriComponentsBuilder builder = navitia("journeys")
+            .queryParam("from", from)
+            .queryParam("to", to)
+            .queryParam("data_freshness", "realtime")
+            .queryParam("min_nb_journeys", 4)
+            .queryParam("datetime_represents", arriveBy ? "arrival" : "departure")
+            .queryParamIfPresent("datetime", Optional.ofNullable(datetime))
+            .queryParamIfPresent("walking_speed", Optional.ofNullable(walkingSpeed))
+            .queryParamIfPresent("max_nb_transfers", Optional.ofNullable(maxTransfers));
+        if (wheelchair) {
+            builder.queryParam("wheelchair", true);
+        }
+        addAll(builder, "forbidden_uris[]", forbiddenUris);
+        return get(builder, JsonNode.class);
     }
 
     public VehicleJourneys getStopPointJourneys(String stopPointId, String since, String until, Integer depth) {

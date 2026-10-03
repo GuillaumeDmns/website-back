@@ -1,7 +1,7 @@
 info:
   name: "Refresh JWT"
   type: http
-  seq: 2
+  seq: 4
 
 http:
   method: GET
@@ -19,7 +19,8 @@ runtime:
 
 docs:
   content: |-
-    Renvoie un nouveau JWT pour l'utilisateur courant et le stocke dans `jwt`.
+    Ancienne méthode (site React) : renvoie un nouveau JWT à partir d'un JWT encore valide et le stocke dans `jwt`.
+    Les apps utilisent plutôt « Refresh token ».
   type: text/markdown
 
 settings:

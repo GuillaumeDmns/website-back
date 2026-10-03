@@ -1,7 +1,7 @@
 info:
   name: "Create user"
   type: http
-  seq: 3
+  seq: 6
 
 http:
   method: POST
@@ -17,7 +17,7 @@ http:
 
 docs:
   content: |-
-    201 si créé, 409 si le login existe déjà.
+    Admin uniquement. Crée un compte avec le rôle `ROLE_USER`. 201 si créé, 409 si le login existe déjà.
   type: text/markdown
 
 settings:

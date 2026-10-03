@@ -1,17 +1,16 @@
 info:
-  name: "Login"
+  name: "Refresh token"
   type: http
-  seq: 1
+  seq: 3
 
 http:
   method: POST
-  url: "{{baseUrl}}/api/signin"
+  url: "{{baseUrl}}/api/token/refresh"
   body:
     type: json
     data: |-
       {
-        "username": "{{username}}",
-        "password": "{{password}}"
+        "refreshToken": "{{refreshToken}}"
       }
 
 runtime:
@@ -28,7 +27,8 @@ runtime:
 
 docs:
   content: |-
-    Public. Stocke le JWT et le refresh token renvoyés dans les variables d'environnement `jwt` et `refreshToken`.
+    Public. Échange le refresh token contre un nouveau `jwt` et un nouveau `refreshToken` (l'ancien devient invalide).
+    Réutiliser un refresh token déjà échangé révoque tous ceux de l'utilisateur. 401 si invalide, expiré ou révoqué.
   type: text/markdown
 
 settings:

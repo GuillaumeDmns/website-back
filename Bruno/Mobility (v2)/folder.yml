@@ -1,0 +1,13 @@
+info:
+  name: "Mobility (v2)"
+  type: folder
+  seq: 6
+
+request:
+  auth: inherit
+
+docs:
+  content: |-
+    Endpoints pour les apps (`/api/v2`) : DTO compacts, zones d'arrêt (`IDFM:71264`) et ids de ligne IDFM (`C01371`) partout.
+    Erreurs au format problem details (RFC 9457).
+  type: text/markdown

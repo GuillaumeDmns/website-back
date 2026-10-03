@@ -1,0 +1,59 @@
+info:
+  name: "Journeys"
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/journeys?from={{lat}},{{lon}}&to=48.8584,2.2945"
+  params:
+    - name: "from"
+      value: "{{lat}},{{lon}}"
+      type: query
+      description: "lat,lon ou id de zone d'arrêt (IDFM:71264)"
+    - name: "to"
+      value: "48.8584,2.2945"
+      type: query
+      description: "lat,lon ou id de zone d'arrêt"
+    - name: "datetime"
+      value: "2026-10-03T16:00:00Z"
+      type: query
+      description: "Instant ISO-8601, maintenant si absent"
+      disabled: true
+    - name: "arriveBy"
+      value: "true"
+      type: query
+      description: "datetime est l'heure d'arrivée"
+      disabled: true
+    - name: "modes"
+      value: "METRO,RER"
+      type: query
+      description: "Modes autorisés (METRO, RER, TRANSILIEN, TER, TRAM, BUS, NOCTILIEN), tous si absent"
+      disabled: true
+    - name: "wheelchair"
+      value: "true"
+      type: query
+      disabled: true
+    - name: "walkingSpeed"
+      value: "SLOW"
+      type: query
+      description: "SLOW, NORMAL ou FAST"
+      disabled: true
+    - name: "maxTransfers"
+      value: "1"
+      type: query
+      disabled: true
+  auth: inherit
+
+docs:
+  content: |-
+    Itinéraires Navitia (temps réel) au format v2 : par option `type` (best, rapid, comfort, less_fallback_walk, non_pt_walk…), durée, correspondances, marche, prix (centimes), CO₂ ; par section `kind` (WALK, TRANSIT, TRANSFER, WAIT…), ligne GTFS, direction, position de montée conseillée, arrêts desservis, instructions de marche, retard temps réel, tracé `[lon, lat]`.
+    `earlier` / `later` donnent le `datetime` + `arriveBy` à redemander pour les options plus tôt / plus tard. Pas de solution → liste vide.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
