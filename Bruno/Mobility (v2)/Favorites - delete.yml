@@ -1,0 +1,21 @@
+info:
+  name: "Favorites - delete"
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/v2/me/favorites/{{favoriteId}}"
+  auth: inherit
+
+docs:
+  content: |-
+    Supprime un favori de l'utilisateur (204), 404 s'il n'existe pas ou appartient à quelqu'un d'autre. `favoriteId` est renseigné par « Favorites - list ».
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -11,13 +11,20 @@ import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.WalkStep;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.exceptions.NavitiaException;
+import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.model.TransportMode;
+import com.gdamiens.website.repository.NetworkRepository;
+import com.gdamiens.website.utils.GeoJson;
+import com.gdamiens.website.utils.TtlCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.JsonNode;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -26,11 +33,18 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -76,13 +90,25 @@ public class JourneyService {
                                boolean wheelchair, WalkingSpeed walkingSpeed, Integer maxTransfers) {
     }
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(JourneyService.class);
+
+    /** Time the GTFS paths may add to a journey request; slower ones are used by the next requests */
+    private static final Duration SHAPE_BUDGET = Duration.ofMillis(300);
+
     private final IDFMNavitiaService idfmNavitiaService;
 
     private final NetworkService networkService;
 
-    public JourneyService(IDFMNavitiaService idfmNavitiaService, NetworkService networkService) {
+    private final NetworkRepository networkRepository;
+
+    private final ExecutorService shapeExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+    private final TtlCache<String, Optional<List<double[]>>> shapeCache = new TtlCache<>(Duration.ofHours(6), 20000);
+
+    public JourneyService(IDFMNavitiaService idfmNavitiaService, NetworkService networkService, NetworkRepository networkRepository) {
         this.idfmNavitiaService = idfmNavitiaService;
         this.networkService = networkService;
+        this.networkRepository = networkRepository;
     }
 
     public JourneyPlan plan(JourneyQuery query) {
@@ -124,7 +150,82 @@ public class JourneyService {
                 }
             }
         }
-        return new JourneyPlan(journeys, earlier, later);
+        return new JourneyPlan(withGtfsShapes(journeys), earlier, later);
+    }
+
+    /**
+     * Navitia has no path for some trips (e.g. Transilien L direct trains): the section is then drawn as straight
+     * segments between the served stops. Those sections get the GTFS path of their line instead, cut between the
+     * boarding and alighting stops. Lookups run in parallel, cached, within {@link #SHAPE_BUDGET}: what is not ready
+     * keeps Navitia's path and is cached for the next requests.
+     */
+    private List<JourneyOption> withGtfsShapes(List<JourneyOption> journeys) {
+        Map<String, CompletableFuture<Optional<List<double[]>>>> lookups = new LinkedHashMap<>();
+        for (JourneyOption journey : journeys) {
+            for (JourneySection section : journey.sections()) {
+                String key = shapeKey(section);
+                if (key != null && !lookups.containsKey(key)) {
+                    lookups.put(key, CompletableFuture
+                        .supplyAsync(() -> shapeCache.get(key, k -> findGtfsShape(section)), shapeExecutor)
+                        .whenComplete((shape, error) -> {
+                            if (error != null) {
+                                LOGGER.warn("GTFS path lookup failed for {}: {}", key, error.getMessage());
+                            }
+                        }));
+                }
+            }
+        }
+        if (lookups.isEmpty()) {
+            return journeys;
+        }
+
+        try {
+            CompletableFuture.allOf(lookups.values().toArray(CompletableFuture[]::new))
+                .get(SHAPE_BUDGET.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            // Timeout or failure: use the paths that are ready
+        }
+
+        Map<String, List<double[]>> shapes = new HashMap<>();
+        lookups.forEach((key, lookup) -> {
+            Optional<List<double[]>> shape = lookup.isDone() && !lookup.isCompletedExceptionally() ? lookup.join() : Optional.empty();
+            shape.filter(points -> points.size() >= 2).ifPresent(points -> shapes.put(key, points));
+        });
+        if (shapes.isEmpty()) {
+            return journeys;
+        }
+
+        return journeys.stream().map(journey -> new JourneyOption(journey.type(), journey.tags(), journey.departure(),
+            journey.arrival(), journey.duration(), journey.transfers(), journey.walkingDuration(), journey.walkingDistance(),
+            journey.co2(), journey.fare(), journey.sections().stream().map(section -> {
+                String key = shapeKey(section);
+                List<double[]> shape = key == null ? null : shapes.get(key);
+                return shape == null ? section : new JourneySection(section.kind(), section.departure(), section.arrival(),
+                    section.duration(), section.from(), section.to(), section.line(), section.headsign(),
+                    section.boardingPositions(), section.stops(), section.steps(), section.realtime(), section.delay(),
+                    section.length(), shape);
+            }).toList())).toList();
+    }
+
+    /**
+     * @return cache key of a ride whose Navitia path is only its stops (about one point per served stop), null if
+     * the path is fine or the line is not in the GTFS
+     */
+    private static String shapeKey(JourneySection section) {
+        if (section.kind() != Kind.TRANSIT || section.line() == null || section.line().id() == null
+            || section.from() == null || section.to() == null
+            || section.shape().size() > Math.max(section.stops().size(), 2) + 1) {
+            return null;
+        }
+        return "%s|%.4f|%.4f|%.4f|%.4f".formatted(section.line().id(), section.from().lat(), section.from().lon(),
+            section.to().lat(), section.to().lon());
+    }
+
+    /** Failures are thrown, not cached: the next request tries again */
+    private Optional<List<double[]>> findGtfsShape(JourneySection section) {
+        return networkRepository.findShapeBetween(IDFMRoute.toRouteId(section.line().id()),
+                section.from().lat(), section.from().lon(), section.to().lat(), section.to().lon())
+            .map(GeoJson::lineStringCoordinates);
     }
 
     private JourneyOption toJourney(JsonNode journey, Map<String, LineSummary> lines) {
