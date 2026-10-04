@@ -102,6 +102,22 @@ public class NetworkRepository {
         return result;
     }
 
+    /**
+     * @return stop area (parent station) of each quay
+     */
+    public Map<String, String> findStopAreasOfQuays(Collection<String> quayIds) {
+        if (quayIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> result = new HashMap<>();
+        jdbc.query("SELECT stop_id, parent_station FROM gtfs.stops WHERE stop_id IN (:ids) AND parent_station IS NOT NULL",
+            Map.of("ids", quayIds),
+            rs -> {
+                result.put(rs.getString(1), rs.getString(2));
+            });
+        return result;
+    }
+
     public List<QuayRow> findQuays(String stopAreaId) {
         return jdbc.query("""
                 SELECT q.stop_id, q.stop_name, q.stop_lat, q.stop_lon, q.platform_code, q.wheelchair_boarding,

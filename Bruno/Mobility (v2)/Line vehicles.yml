@@ -1,0 +1,22 @@
+info:
+  name: "Line vehicles"
+  type: http
+  seq: 14
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/lines/{{lineId}}/vehicles"
+
+  auth: inherit
+
+docs:
+  content: |-
+    Véhicules de la ligne placés entre deux arrêts d'une de ses branches (`direction` / `branch` = index dans `GET /lines/{id}`), estimés depuis l'estimated-timetable PRIM : prochain arrêt, arrêt quitté, `progress` 0→1 entre les deux. Vide sans temps réel. Mis en cache 30 s. 404 si la ligne est inconnue.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

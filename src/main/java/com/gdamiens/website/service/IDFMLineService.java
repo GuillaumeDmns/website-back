@@ -50,6 +50,14 @@ public class IDFMLineService extends AbstractIDFMService {
     }
 
     public Map<Integer, NextPassagesStops> getAllStopsByLine(String lineId, String url) {
+        List<EstimatedVehicleJourney> estimatedVehicleJourneys = getEstimatedVehicleJourneys(lineId, url);
+        return toStopPassages(estimatedVehicleJourneys);
+    }
+
+    /**
+     * Vehicle journeys of a line with their next calls (PRIM estimated-timetable); all lines when [lineId] is null
+     */
+    public List<EstimatedVehicleJourney> getEstimatedVehicleJourneys(String lineId, String url) {
         HttpEntity<String> request = this.prepareHttpRequest();
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(url)
@@ -74,7 +82,10 @@ public class IDFMLineService extends AbstractIDFMService {
             .map(estimatedJourneyVersionFrames -> estimatedJourneyVersionFrames.get(0))
             .map(EstimatedJourneyVersionFrame::getEstimatedVehicleJourney)
             .orElseThrow(() -> new CustomException("IDFM response body does not contain any journey", HttpStatus.INTERNAL_SERVER_ERROR));
+        return estimatedVehicleJourneys;
+    }
 
+    private Map<Integer, NextPassagesStops> toStopPassages(List<EstimatedVehicleJourney> estimatedVehicleJourneys) {
         Map<Integer, List<EstimatedCall>> callsByStop = estimatedVehicleJourneys
             .stream()
             .map(Optional::ofNullable)
