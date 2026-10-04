@@ -45,8 +45,7 @@ import java.util.Set;
  *     <li>real vehicle journeys (SNCF, Métro 14…): each journey's next calls give its branch, the stop just left
  *     and, from the time to the next stop, the progress between the two;</li>
  *     <li>next passages per stop under made-up journeys mixing several vehicles (most RATP lines, buses): vehicles
- *     are found stop by stop, a vehicle being between two stops when the next one sees a passage before the
- *     previous one (see {@link #fromStops}).</li>
+ *     are followed from stop to stop along each branch (see {@link #fromStops}).</li>
  * </ul>
  */
 @Service
@@ -63,6 +62,9 @@ public class VehicleService {
     private static final Duration MIN_SEGMENT = Duration.ofSeconds(45);
 
     private static final Duration MAX_SEGMENT = Duration.ofMinutes(10);
+
+    /** Two passages of a stop closer than this are the same vehicle; a stop may see a vehicle that much before the previous one */
+    private static final Duration SAME_VEHICLE = Duration.ofSeconds(30);
 
     /** Vehicles at the first stop of their branch are shown when leaving within this time */
     private static final Duration TERMINUS_WINDOW = Duration.ofMinutes(3);
@@ -215,9 +217,8 @@ public class VehicleService {
     }
 
     /**
-     * Vehicles from passages per stop, along each branch: a passage at a stop before the next passage at the previous
-     * stop (give or take half the time between the two) is a vehicle that has already left the previous one. The time
-     * between two stops is the shortest gap seen between a passage at the previous stop and the next one at this stop.
+     * Vehicles from passages per stop, along each branch: each vehicle is followed from stop to stop (see
+     * {@link #trace}); one first seen at a stop has left the previous one.
      */
     private static List<Vehicle> fromStops(LineDetail detail, List<Run> runs, Instant now) {
         // Passages per stop area, the same one listed by several journeys (quays of both sides) counted once
@@ -251,54 +252,48 @@ public class VehicleService {
                 List<List<Passage>> passages = new ArrayList<>();
                 for (int i = 0; i < stops.size(); i++) {
                     int index = i;
-                    passages.add(byStop.getOrDefault(stops.get(i).id(), List.of()).stream()
+                    passages.add(repeated.contains(stops.get(i).id())
+                        // Served several times (loop): its passages can't be told apart
+                        ? List.of()
+                        : byStop.getOrDefault(stops.get(i).id(), List.of()).stream()
                         .filter(passage -> {
                             // Going further on this branch (or ending here, but not at its first stop)
                             int to = destinationIndex(branch, passage.run(), index);
                             return to > index || (to == index && index > 0);
                         })
                         .sorted(Comparator.comparing(passage -> passage.call().expected()))
-                        .toList());
+                        .collect(ArrayList::new, (list, passage) -> {
+                            // The same vehicle listed by several quays with slightly different times
+                            if (list.isEmpty() || Duration.between(list.getLast().call().expected(), passage.call().expected()).compareTo(SAME_VEHICLE) > 0) {
+                                list.add(passage);
+                            }
+                        }, ArrayList::addAll));
+                }
+                List<Duration> segments = new ArrayList<>();
+                for (int i = 0; i < stops.size(); i++) {
+                    segments.add(i == 0 ? DEFAULT_SEGMENT : segment(passages.get(i - 1), passages.get(i)));
                 }
 
-                for (int i = 0; i < stops.size(); i++) {
-                    List<Passage> here = passages.get(i);
-                    if (here.isEmpty()) {
-                        continue;
-                    }
+                for (Trace trace : trace(passages, segments)) {
+                    int i = trace.first();
+                    Passage passage = trace.start();
+                    Duration toNext = Duration.between(now, passage.call().expected());
+                    Vehicle vehicle;
                     if (i == 0) {
                         // Waiting at the first stop
-                        Passage first = here.getFirst();
-                        if (Duration.between(now, first.call().expected()).compareTo(TERMINUS_WINDOW) <= 0) {
-                            add(vehicles, onOwnBranch, vehicle(null, first.run(), branch, d, b, 0, null, first.call(), 1),
-                                destinationIndex(branch, first.run(), 0) == last);
+                        if (toNext.compareTo(TERMINUS_WINDOW) > 0) {
+                            continue;
                         }
-                        continue;
-                    }
-                    StopRef from = stops.get(i - 1);
-                    if (repeated.contains(stops.get(i).id())) {
-                        // Served several times (loop): its passages can't be told apart
-                        continue;
-                    }
-                    List<Passage> before = passages.get(i - 1);
-                    Duration segment = segment(before, here);
-                    for (Passage passage : here) {
-                        Instant expected = passage.call().expected();
-                        // Without passages at the previous stop, only the first one here is known to be between them
-                        boolean between = before.isEmpty()
-                            ? passage == here.getFirst()
-                            : expected.isBefore(before.getFirst().call().expected().plus(segment.dividedBy(2)));
-                        if (!between) {
-                            break;
-                        }
-                        Duration toNext = Duration.between(now, expected);
+                        vehicle = vehicle(null, passage.run(), branch, d, b, 0, null, passage.call(), 1);
+                    } else {
+                        Duration segment = segments.get(i);
                         if (toNext.compareTo(segment.multipliedBy(2).plusMinutes(1)) > 0) {
-                            // Not coming from the previous stop (skipped it, or a gap in the data)
-                            break;
+                            // Seen from here on only: beyond what earlier stops list, or not coming from the previous stop
+                            continue;
                         }
-                        add(vehicles, onOwnBranch, vehicle(null, passage.run(), branch, d, b, i, from, passage.call(), progress(toNext, segment)),
-                            destinationIndex(branch, passage.run(), i) == last);
+                        vehicle = vehicle(null, passage.run(), branch, d, b, i, stops.get(i - 1), passage.call(), progress(toNext, segment));
                     }
+                    add(vehicles, onOwnBranch, vehicle, destinationIndex(branch, passage.run(), i) == last);
                 }
             }
         }
@@ -318,26 +313,71 @@ public class VehicleService {
         }
     }
 
-    /** Shortest time from a passage at the previous stop to the next one at this stop */
-    private static Duration segment(List<Passage> before, List<Passage> here) {
-        Duration shortest = null;
-        for (Passage passage : here) {
-            Instant expected = passage.call().expected();
-            Instant left = null;
-            for (Passage previous : before) {
-                if (previous.call().expected().isAfter(expected)) {
-                    break;
+    /**
+     * A vehicle followed along a branch
+     *
+     * @param first index of the first stop where it is seen, it is between the previous stop and this one
+     * @param start its passage there
+     * @param last  index of the last stop where it is seen so far
+     * @param time  its passage there
+     */
+    private record Trace(int first, Passage start, int last, Instant time) {
+    }
+
+    /**
+     * Vehicles followed stop by stop: a passage continues the earliest vehicle seen at one of the two previous stops
+     * that can get there by then (vehicles don't overtake, and a stop sometimes misses a vehicle for a while), or
+     * is a vehicle first seen there, i.e. that has left the previous stop.
+     */
+    private static List<Trace> trace(List<List<Passage>> passages, List<Duration> segments) {
+        List<Trace> traces = new ArrayList<>();
+        for (int i = 0; i < passages.size(); i++) {
+            int index = i;
+            List<Integer> candidates = new ArrayList<>();
+            for (int t = 0; t < traces.size(); t++) {
+                if (traces.get(t).last() < i && traces.get(t).last() >= i - 2) {
+                    candidates.add(t);
                 }
-                left = previous.call().expected();
             }
-            if (left != null) {
-                Duration gap = Duration.between(left, expected);
-                if (gap.isPositive() && gap.compareTo(MAX_SEGMENT) <= 0 && (shortest == null || gap.compareTo(shortest) < 0)) {
-                    shortest = gap;
+            candidates.sort(Comparator.comparing(t -> traces.get(t).time()));
+            for (Passage passage : passages.get(i)) {
+                Instant expected = passage.call().expected();
+                Integer match = candidates.stream().filter(t -> {
+                    Trace trace = traces.get(t);
+                    Duration bound = Duration.ZERO;
+                    for (int k = trace.last() + 1; k <= index; k++) {
+                        bound = bound.plus(segments.get(k).multipliedBy(2)).plusMinutes(1);
+                    }
+                    return expected.isAfter(trace.time().minus(SAME_VEHICLE)) && !expected.isAfter(trace.time().plus(bound));
+                }).findFirst().orElse(null);
+                if (match == null) {
+                    traces.add(new Trace(i, passage, i, expected));
+                } else {
+                    candidates.remove(match);
+                    Trace trace = traces.get(match);
+                    traces.set(match, new Trace(trace.first(), trace.start(), i, expected));
                 }
             }
         }
-        return shortest == null ? DEFAULT_SEGMENT : clamp(shortest, MIN_SEGMENT, MAX_SEGMENT);
+        return traces;
+    }
+
+    /** Usual time from a passage at the previous stop to the next one at this stop (median) */
+    private static Duration segment(List<Passage> before, List<Passage> here) {
+        List<Duration> gaps = new ArrayList<>();
+        for (Passage previous : before) {
+            Instant left = previous.call().expected();
+            here.stream()
+                .map(passage -> Duration.between(left, passage.call().expected()))
+                .filter(gap -> gap.isPositive() && gap.compareTo(MAX_SEGMENT) <= 0)
+                .findFirst()
+                .ifPresent(gaps::add);
+        }
+        if (gaps.isEmpty()) {
+            return DEFAULT_SEGMENT;
+        }
+        gaps.sort(null);
+        return clamp(gaps.get(gaps.size() / 2), MIN_SEGMENT, MAX_SEGMENT);
     }
 
     private static double progress(Duration toNext, Duration segment) {
