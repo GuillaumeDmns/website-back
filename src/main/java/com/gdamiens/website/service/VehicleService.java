@@ -5,7 +5,9 @@ import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.LineDirection;
 import com.gdamiens.website.controller.object.v2.StopRef;
 import com.gdamiens.website.controller.object.v2.Vehicle;
+import com.gdamiens.website.controller.object.v2.VehicleCall;
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.idfm.ArrivalPlatformName;
 import com.gdamiens.website.idfm.DatedVehicleJourneyRef;
 import com.gdamiens.website.idfm.DestinationDisplay;
 import com.gdamiens.website.idfm.DestinationName;
@@ -13,7 +15,9 @@ import com.gdamiens.website.idfm.DestinationRef;
 import com.gdamiens.website.idfm.EstimatedCall;
 import com.gdamiens.website.idfm.EstimatedCalls;
 import com.gdamiens.website.idfm.EstimatedVehicleJourney;
+import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.idfm.StopPointRef;
+import com.gdamiens.website.idfm.VehicleJourneyName;
 import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.utils.Constants;
 import com.gdamiens.website.utils.TtlCache;
@@ -94,15 +98,16 @@ public class VehicleService {
     }
 
     /** A call of a journey at a stop area */
-    private record TimedCall(String stopAreaId, Instant expected, Instant aimed) {
+    private record TimedCall(String stopAreaId, Instant expected, Instant aimed, String platform) {
     }
 
     /**
      * A journey of the feed with its future calls in time order
      *
+     * @param name          mission code or train number, when given
      * @param destinationId stop area of its destination, when known
      */
-    private record Run(String id, String destination, String destinationId, List<TimedCall> calls) {
+    private record Run(String id, String name, String destination, String destinationId, List<TimedCall> calls) {
     }
 
     private List<Vehicle> load(String lineId) {
@@ -150,7 +155,9 @@ public class VehicleService {
                 String stopAreaId = stopArea(quayId(call), quayStopAreas);
                 Instant expected = Optional.ofNullable(parse(call.getExpectedArrivalTime())).orElse(parse(call.getExpectedDepartureTime()));
                 Instant aimed = Optional.ofNullable(parse(call.getAimedArrivalTime())).orElse(parse(call.getAimedDepartureTime()));
-                return stopAreaId == null || expected == null ? null : new TimedCall(stopAreaId, expected, aimed);
+                String platform = Optional.ofNullable(call.getArrivalPlatformName()).map(ArrivalPlatformName::getValue)
+                    .filter(StringUtils::isNotBlank).orElse(null);
+                return stopAreaId == null || expected == null ? null : new TimedCall(stopAreaId, expected, aimed, platform);
             })
             .filter(Objects::nonNull)
             .filter(call -> call.expected().isAfter(now.minus(PAST_MARGIN)))
@@ -161,7 +168,12 @@ public class VehicleService {
         // A stop area ref (STIF:StopArea:SP:<id>:) may directly be the GTFS one
         String destinationId = destinationRef == null ? null
             : Optional.ofNullable(stopArea(destinationRef, quayStopAreas)).orElse(destinationRef);
-        return new Run(id, destination(journey), destinationId, calls);
+        String name = Optional.ofNullable(journey.getVehicleJourneyName()).orElse(List.of()).stream()
+            .map(VehicleJourneyName::getValue).filter(StringUtils::isNotBlank).findFirst()
+            .or(() -> Optional.ofNullable(journey.getJourneyNote()).orElse(List.of()).stream()
+                .map(JourneyNote::getValue).filter(StringUtils::isNotBlank).findFirst())
+            .orElse(null);
+        return new Run(id, name, destination(journey), destinationId, calls);
     }
 
     /**
@@ -169,13 +181,17 @@ public class VehicleService {
      */
     private static List<Vehicle> fromJourneys(LineDetail detail, List<Run> runs, Instant now) {
         List<Vehicle> vehicles = new ArrayList<>();
+        // Names of the line's stops, for the calls
+        Map<String, String> names = new HashMap<>();
+        detail.directions().forEach(direction -> direction.branches()
+            .forEach(branch -> branch.stops().forEach(stop -> names.putIfAbsent(stop.id(), stop.name()))));
         for (Run run : runs) {
-            toVehicle(run, detail, now).ifPresent(vehicles::add);
+            toVehicle(run, detail, names, now).ifPresent(vehicles::add);
         }
         return vehicles;
     }
 
-    private static Optional<Vehicle> toVehicle(Run run, LineDetail detail, Instant now) {
+    private static Optional<Vehicle> toVehicle(Run run, LineDetail detail, Map<String, String> names, Instant now) {
         List<TimedCall> calls = run.calls();
         TimedCall next = calls.getFirst();
         TimedCall following = calls.size() > 1 ? calls.get(1) : null;
@@ -209,7 +225,12 @@ public class VehicleService {
         }
 
         String id = Optional.ofNullable(run.id()).orElse(position.direction() + ":" + position.branch() + ":" + next.expected());
-        return Optional.of(vehicle(id, run, branch, position.direction(), position.branch(), position.index(), from, next, progress));
+        List<VehicleCall> nextCalls = calls.stream()
+            .filter(call -> names.containsKey(call.stopAreaId()))
+            .map(call -> call(call, names.get(call.stopAreaId())))
+            .toList();
+        return Optional.of(vehicle(id, run, run.name(), branch, position.direction(), position.branch(), position.index(), from, next,
+            progress, nextCalls));
     }
 
     /** A passage at a stop of a branch */
@@ -276,7 +297,11 @@ public class VehicleService {
 
                 for (Trace trace : trace(passages, segments)) {
                     int i = trace.first();
-                    Passage passage = trace.start();
+                    Passage passage = trace.passages().getFirst();
+                    List<VehicleCall> calls = new ArrayList<>();
+                    for (int k = 0; k < trace.passages().size(); k++) {
+                        calls.add(call(trace.passages().get(k).call(), stops.get(trace.stops().get(k)).name()));
+                    }
                     Duration toNext = Duration.between(now, passage.call().expected());
                     Vehicle vehicle;
                     if (i == 0) {
@@ -284,14 +309,15 @@ public class VehicleService {
                         if (toNext.compareTo(TERMINUS_WINDOW) > 0) {
                             continue;
                         }
-                        vehicle = vehicle(null, passage.run(), branch, d, b, 0, null, passage.call(), 1);
+                        vehicle = vehicle(null, passage.run(), null, branch, d, b, 0, null, passage.call(), 1, calls);
                     } else {
                         Duration segment = segments.get(i);
                         if (toNext.compareTo(segment.multipliedBy(2).plusMinutes(1)) > 0) {
                             // Seen from here on only: beyond what earlier stops list, or not coming from the previous stop
                             continue;
                         }
-                        vehicle = vehicle(null, passage.run(), branch, d, b, i, stops.get(i - 1), passage.call(), progress(toNext, segment));
+                        vehicle = vehicle(null, passage.run(), null, branch, d, b, i, stops.get(i - 1), passage.call(),
+                            progress(toNext, segment), calls);
                     }
                     add(vehicles, onOwnBranch, vehicle, destinationIndex(branch, passage.run(), i) == last);
                 }
@@ -316,12 +342,22 @@ public class VehicleService {
     /**
      * A vehicle followed along a branch
      *
-     * @param first index of the first stop where it is seen, it is between the previous stop and this one
-     * @param start its passage there
-     * @param last  index of the last stop where it is seen so far
-     * @param time  its passage there
+     * @param stops    indexes of the stops where it is seen; it is between the stop before the first one and that one
+     * @param passages its passages there
      */
-    private record Trace(int first, Passage start, int last, Instant time) {
+    private record Trace(List<Integer> stops, List<Passage> passages) {
+
+        int first() {
+            return stops.getFirst();
+        }
+
+        int last() {
+            return stops.getLast();
+        }
+
+        Instant time() {
+            return passages.getLast().call().expected();
+        }
     }
 
     /**
@@ -351,11 +387,11 @@ public class VehicleService {
                     return expected.isAfter(trace.time().minus(SAME_VEHICLE)) && !expected.isAfter(trace.time().plus(bound));
                 }).findFirst().orElse(null);
                 if (match == null) {
-                    traces.add(new Trace(i, passage, i, expected));
+                    traces.add(new Trace(new ArrayList<>(List.of(i)), new ArrayList<>(List.of(passage))));
                 } else {
                     candidates.remove(match);
-                    Trace trace = traces.get(match);
-                    traces.set(match, new Trace(trace.first(), trace.start(), i, expected));
+                    traces.get(match).stops().add(i);
+                    traces.get(match).passages().add(passage);
                 }
             }
         }
@@ -386,21 +422,30 @@ public class VehicleService {
 
     /**
      * @param id    journey id, null for a vehicle found from passages per stop (an id is made from where it is)
+     * @param name  mission code or train number
      * @param index position of the next stop in the branch
+     * @param calls its next stops, from the next one
      */
-    private static Vehicle vehicle(String id, Run run, LineBranch branch, int direction, int branchIndex, int index, StopRef from,
-                                   TimedCall next, double progress) {
+    private static Vehicle vehicle(String id, Run run, String name, LineBranch branch, int direction, int branchIndex, int index,
+                                   StopRef from, TimedCall next, double progress, List<VehicleCall> calls) {
         StopRef to = branch.stops().get(index);
         int destination = destinationIndex(branch, run, index);
         if (id == null) {
             id = "%d:%s:%s".formatted(direction, to.id(), next.expected().getEpochSecond());
         }
-        Integer delay = next.aimed() == null ? null : (int) Duration.between(next.aimed(), next.expected()).toSeconds();
         // The announced destination when it is a stop ahead on the branch (it is sometimes the other end of the line),
         // the branch's terminus otherwise
-        String name = destination >= 0 && run.destination() != null ? run.destination() : branch.stops().getLast().name();
-        return new Vehicle(id, name, direction, branchIndex, from == null ? null : from.id(), to.id(), to.name(), progress,
-            next.expected(), delay);
+        String headsign = destination >= 0 && run.destination() != null ? run.destination() : branch.stops().getLast().name();
+        return new Vehicle(id, name, headsign, direction, branchIndex, from == null ? null : from.id(), to.id(), to.name(), progress,
+            next.expected(), delay(next), calls);
+    }
+
+    private static VehicleCall call(TimedCall call, String stopName) {
+        return new VehicleCall(call.stopAreaId(), stopName, call.expected(), delay(call), call.platform());
+    }
+
+    private static Integer delay(TimedCall call) {
+        return call.aimed() == null ? null : (int) Duration.between(call.aimed(), call.expected()).toSeconds();
     }
 
     /**
