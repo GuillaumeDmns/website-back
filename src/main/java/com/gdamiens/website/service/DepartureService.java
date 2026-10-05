@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -56,6 +57,10 @@ public class DepartureService {
 
     /** Departures that just left are still shown for a short while */
     private static final Duration PAST_MARGIN = Duration.ofSeconds(60);
+
+    private static final Pattern MISSION = Pattern.compile("[A-Z]{4}[0-9]{0,2}");
+
+    private static final Pattern TRAIN_NUMBER = Pattern.compile("[0-9]{4,6}");
 
     private final NetworkService networkService;
 
@@ -169,7 +174,7 @@ public class DepartureService {
 
             Instant time = toInstant(row.serviceDate(), row.departureSeconds());
             groups.computeIfAbsent(new GroupKey(line, row.headsign()), k -> new ArrayList<>())
-                .add(new Departure(time, time, false, null, null, null));
+                .add(new Departure(time, time, false, null, null, null, null, null));
         }
     }
 
@@ -191,8 +196,21 @@ public class DepartureService {
 
         return new Departure(time, aimed, true,
             firstNonBlank(call.getDepartureStatus(), call.getArrivalStatus()),
-            StringUtils.trimToNull(call.getArrivalPlatformName()),
-            call.getVehicleAtStop());
+            platform(call.getArrivalPlatformName()),
+            call.getVehicleAtStop(),
+            Stream.of(call.getVehicleJourneyName(), call.getJourneyNote()).filter(DepartureService::isMission).findFirst().orElse(null),
+            Optional.ofNullable(call.getVehicleJourneyName()).filter(name -> TRAIN_NUMBER.matcher(name).matches()).orElse(null));
+    }
+
+    /** SNCF mission code: four letters, sometimes followed by digits ({@code POPI}, {@code TETE31}) */
+    public static boolean isMission(String value) {
+        return value != null && MISSION.matcher(value).matches();
+    }
+
+    /** "unknown" is sometimes given for no platform */
+    private static String platform(String value) {
+        String platform = StringUtils.trimToNull(value);
+        return platform == null || platform.equalsIgnoreCase("unknown") ? null : platform;
     }
 
     /**

@@ -34,6 +34,8 @@ public class NetworkRepository {
 
     public record ScheduledDepartureRow(String routeId, String headsign, LocalDate serviceDate, int departureSeconds) {}
 
+    public record ScheduledRideRow(String headsign, String tripShortName, LocalDate serviceDate, int departureSeconds, int arrivalSeconds) {}
+
     private static final String STOP_AREA_COLUMNS = "p.stop_id, p.stop_name, p.stop_lat, p.stop_lon";
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -280,6 +282,57 @@ public class NetworkRepository {
                 ORDER BY c.service_date + c.departure_time""",
             params,
             (rs, i) -> new ScheduledDepartureRow(rs.getString(1), rs.getString(2), rs.getObject(3, LocalDate.class), rs.getInt(4)));
+    }
+
+    /**
+     * Scheduled trips of the route leaving a quay of {@code fromId} between {@code fromSeconds} and {@code toSeconds}
+     * after midnight of {@code today} (Europe/Paris, trips of the previous service day included) and stopping
+     * further at a quay of {@code toId}, with the times at both.
+     */
+    public List<ScheduledRideRow> findScheduledRides(String routeId, String fromId, String toId, LocalDate today, int fromSeconds, int toSeconds) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("routeId", routeId).addValue("fromId", fromId).addValue("toId", toId).addValue("today", today)
+            .addValue("from", fromSeconds).addValue("to", toSeconds);
+
+        return jdbc.query("""
+                WITH days AS (
+                  SELECT CAST(:today AS date) AS service_date, make_interval(secs => :from) AS lo, make_interval(secs => :to) AS hi
+                  UNION ALL
+                  SELECT CAST(:today AS date) - 1, make_interval(secs => :from + 86400), make_interval(secs => :to + 86400)
+                ),
+                active AS (
+                  SELECT d.service_date, c.service_id
+                  FROM days d JOIN gtfs.calendar c ON d.service_date BETWEEN c.start_date AND c.end_date
+                   AND (ARRAY[c.monday, c.tuesday, c.wednesday, c.thursday, c.friday, c.saturday, c.sunday])[extract(isodow FROM d.service_date)::int]
+                  UNION
+                  SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 1
+                  EXCEPT
+                  SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 2
+                ),
+                from_quays AS MATERIALIZED (
+                  SELECT stop_id FROM gtfs.stops WHERE parent_station = :fromId
+                ),
+                to_quays AS MATERIALIZED (
+                  SELECT stop_id FROM gtfs.stops WHERE parent_station = :toId
+                ),
+                candidates AS MATERIALIZED (
+                  SELECT d.service_date, st.trip_id, st.departure_time, st.stop_sequence, st.stop_headsign
+                  FROM days d CROSS JOIN from_quays fq
+                  JOIN LATERAL (
+                    SELECT s.trip_id, s.departure_time, s.stop_sequence, s.stop_headsign FROM gtfs.stop_times s
+                    WHERE s.stop_id = fq.stop_id AND s.departure_time BETWEEN d.lo AND d.hi AND coalesce(s.pickup_type, 0) <> 1
+                  ) st ON true
+                )
+                SELECT DISTINCT coalesce(c.stop_headsign, t.trip_headsign), t.trip_short_name, c.service_date,
+                       extract(epoch FROM c.departure_time)::int, extract(epoch FROM a.arrival_time)::int
+                FROM candidates c
+                JOIN gtfs.trips t ON t.trip_id = c.trip_id AND t.route_id = :routeId
+                JOIN active ac ON ac.service_id = t.service_id AND ac.service_date = c.service_date
+                JOIN gtfs.stop_times a ON a.trip_id = c.trip_id AND a.stop_sequence > c.stop_sequence
+                 AND a.stop_id IN (SELECT stop_id FROM to_quays) AND coalesce(a.drop_off_type, 0) <> 1
+                ORDER BY 3, 4""",
+            params,
+            (rs, i) -> new ScheduledRideRow(rs.getString(1), rs.getString(2), rs.getObject(3, LocalDate.class), rs.getInt(4), rs.getInt(5)));
     }
 
     private static Short getShort(ResultSet rs, int column) throws SQLException {
