@@ -14,10 +14,12 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
@@ -62,8 +64,11 @@ public class TimetableService {
         // else per GTFS direction. Trips ending here are arrivals, not departures.
         Map<String, Integer> directionOf = directionsOfTermini(key);
         Map<Integer, List<TimetableRow>> byDirection = new TreeMap<>();
+        // The GTFS sometimes lists a train under several calendars active the same day: once per time and destination
+        // (two trains may still leave the same minute, e.g. a direct one and a stopping one)
+        Set<String> seen = new HashSet<>();
         for (TimetableRow row : networkRepository.findTimetable(key.stopAreaId(), IDFMRoute.toRouteId(key.lineId()), key.date())) {
-            if (!key.stopAreaId().equals(row.terminusId())) {
+            if (!key.stopAreaId().equals(row.terminusId()) && seen.add(row.departureSeconds() + "|" + row.terminusId())) {
                 int direction = Optional.ofNullable(directionOf.get(row.terminusId()))
                     .orElse(100 + Optional.ofNullable(row.directionId()).map(Short::intValue).orElse(0));
                 byDirection.computeIfAbsent(direction, d -> new ArrayList<>()).add(row);
