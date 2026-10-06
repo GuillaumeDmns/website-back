@@ -1,0 +1,37 @@
+info:
+  name: "Bike stations nearby"
+  type: http
+  seq: 18
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/bikes/nearby?lat={{lat}}&lon={{lon}}&radius=500&limit=5"
+  params:
+    - name: "lat"
+      value: "{{lat}}"
+      type: query
+    - name: "lon"
+      value: "{{lon}}"
+      type: query
+    - name: "radius"
+      value: "500"
+      type: query
+      description: "Mètres, 2000 max"
+    - name: "limit"
+      value: "5"
+      type: query
+      description: "20 max"
+
+  auth: inherit
+
+docs:
+  content: |-
+    Stations Vélib autour d'une position, les plus proches d'abord, avec leur distance.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

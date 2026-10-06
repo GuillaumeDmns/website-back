@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.controller.object.v2.BikeStation;
 import com.gdamiens.website.controller.object.v2.JourneyOption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan;
 import com.gdamiens.website.controller.object.v2.JourneyPlan.PageCursor;
@@ -87,10 +88,22 @@ public class JourneyService {
      * @param modes    public transport modes allowed, all when empty
      */
     public record JourneyQuery(String from, String to, Instant datetime, boolean arriveBy, Collection<TransportMode> modes,
-                               boolean wheelchair, WalkingSpeed walkingSpeed, Integer maxTransfers) {
+                               boolean wheelchair, WalkingSpeed walkingSpeed, Integer maxTransfers, boolean bikeShare) {
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JourneyService.class);
+
+    /** Time the Vélib option may take beyond the public transport ones */
+    private static final Duration BIKE_SHARE_BUDGET = Duration.ofSeconds(4);
+
+    /** Vélib stations looked for around the start and the end */
+    private static final int BIKE_STATION_RADIUS = 600;
+
+    /** Meters per second on a Vélib, stops at lights included (about 15 km/h) */
+    private static final double BIKE_SPEED = 4.2;
+
+    /** Taking or returning a bike */
+    private static final Duration BIKE_HANDLING = Duration.ofMinutes(1);
 
     /** Time the GTFS paths may add to a journey request; slower ones are used by the next requests */
     private static final Duration SHAPE_BUDGET = Duration.ofMillis(300);
@@ -101,17 +114,25 @@ public class JourneyService {
 
     private final NetworkRepository networkRepository;
 
+    private final BikeService bikeService;
+
     private final ExecutorService shapeExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     private final TtlCache<String, Optional<List<double[]>>> shapeCache = new TtlCache<>(Duration.ofHours(6), 20000);
 
-    public JourneyService(IDFMNavitiaService idfmNavitiaService, NetworkService networkService, NetworkRepository networkRepository) {
+    public JourneyService(IDFMNavitiaService idfmNavitiaService, NetworkService networkService, NetworkRepository networkRepository,
+                          BikeService bikeService) {
         this.idfmNavitiaService = idfmNavitiaService;
         this.networkService = networkService;
         this.networkRepository = networkRepository;
+        this.bikeService = bikeService;
     }
 
     public JourneyPlan plan(JourneyQuery query) {
+        // Navitia has no Vélib stations in Île-de-France: that option is built here, alongside
+        CompletableFuture<Optional<JourneyOption>> bikeShare = query.bikeShare()
+            ? CompletableFuture.supplyAsync(() -> bikeShareJourney(query), shapeExecutor)
+            : CompletableFuture.completedFuture(Optional.empty());
         JsonNode response;
         try {
             response = idfmNavitiaService.planJourneys(
@@ -139,6 +160,11 @@ public class JourneyService {
         for (JsonNode journey : response.path("journeys").values()) {
             journeys.add(toJourney(journey, lines));
         }
+        try {
+            bikeShare.get(BIKE_SHARE_BUDGET.toMillis(), TimeUnit.MILLISECONDS).ifPresent(journeys::add);
+        } catch (Exception e) {
+            LOGGER.warn("Vélib journey unavailable: {}", e.toString());
+        }
 
         PageCursor earlier = null;
         PageCursor later = null;
@@ -151,6 +177,106 @@ public class JourneyService {
             }
         }
         return new JourneyPlan(withGtfsShapes(journeys), earlier, later);
+    }
+
+    /**
+     * Vélib option: walk to the closest station with a bike, ride to the closest station with a free dock near the
+     * end, walk from there. Navitia gives the walking paths; PRIM has no bike routing, so the ride follows the walking
+     * path between the stations at {@link #BIKE_SPEED}. Empty when there is no such pair of stations.
+     */
+    private Optional<JourneyOption> bikeShareJourney(JourneyQuery query) {
+        double[] from = coordinates(query.from());
+        double[] to = coordinates(query.to());
+        if (from == null || to == null) {
+            return Optional.empty();
+        }
+        BikeStation take = bikeService.getNearby(from[0], from[1], BIKE_STATION_RADIUS, 10).stream()
+            .filter(station -> station.renting() && station.mechanical() + station.electric() > 0)
+            .findFirst().orElse(null);
+        BikeStation leave = bikeService.getNearby(to[0], to[1], BIKE_STATION_RADIUS, 10).stream()
+            .filter(station -> station.returning() && station.docks() > 0)
+            .findFirst().orElse(null);
+        if (take == null || leave == null || take.id().equals(leave.id())) {
+            return Optional.empty();
+        }
+
+        Double walkingSpeed = query.walkingSpeed() == null ? null : query.walkingSpeed().metersPerSecond;
+        String datetime = query.datetime() == null ? null : NAVITIA_DATETIME.format(query.datetime().atZone(PARIS));
+        String takePlace = take.lon() + ";" + take.lat();
+        String leavePlace = leave.lon() + ";" + leave.lat();
+        CompletableFuture<JsonNode> walkTo = CompletableFuture.supplyAsync(() ->
+            idfmNavitiaService.planWalkingPath(toNavitiaPlace(query.from()), takePlace, datetime, walkingSpeed), shapeExecutor);
+        CompletableFuture<JsonNode> ride = CompletableFuture.supplyAsync(() ->
+            idfmNavitiaService.planWalkingPath(takePlace, leavePlace, datetime, null), shapeExecutor);
+        CompletableFuture<JsonNode> walkFrom = CompletableFuture.supplyAsync(() ->
+            idfmNavitiaService.planWalkingPath(leavePlace, toNavitiaPlace(query.to()), datetime, walkingSpeed), shapeExecutor);
+
+        Map<String, LineSummary> lines = Map.of();
+        List<JourneySection> parts = new ArrayList<>();
+        List<JsonNode> responses = List.of(walkTo.join(), ride.join(), walkFrom.join());
+        for (int i = 0; i < responses.size(); i++) {
+            JsonNode journey = responses.get(i).path("journeys").path(0);
+            if (journey.isMissingNode()) {
+                return Optional.empty();
+            }
+            for (JourneySection section : toJourney(journey, lines).sections()) {
+                if (i == 1) {
+                    // The ride: the walking path at bike speed
+                    int length = Optional.ofNullable(section.length()).orElse((int) Math.round(section.duration() * 1.1));
+                    int duration = Math.max(60, (int) Math.round(length / BIKE_SPEED));
+                    parts.add(new JourneySection(Kind.BIKE, section.departure(), section.arrival(), duration, section.from(),
+                        section.to(), null, null, List.of(), List.of(), List.of(), null, null, length, section.shape()));
+                } else if (section.duration() > 0) {
+                    parts.add(section);
+                }
+            }
+        }
+        if (parts.stream().noneMatch(section -> section.kind() == Kind.BIKE)) {
+            return Optional.empty();
+        }
+
+        // One after the other, from the time asked (or to it, for an arrival time)
+        long total = parts.stream().mapToLong(JourneySection::duration).sum() + 2 * BIKE_HANDLING.toSeconds();
+        Instant asked = query.datetime() == null ? Instant.now() : query.datetime();
+        Instant cursor = query.arriveBy() ? asked.minusSeconds(total) : asked;
+        Instant departure = cursor;
+        List<JourneySection> sections = new ArrayList<>();
+        int walking = 0;
+        int walkingDistance = 0;
+        for (int i = 0; i < parts.size(); i++) {
+            JourneySection part = parts.get(i);
+            boolean bike = part.kind() == Kind.BIKE;
+            // Walks end and start at the stations rather than at their addresses
+            JourneyPoint startPoint = bike || (i > 0 && parts.get(i - 1).kind() == Kind.BIKE) ? stationPoint(bike ? take : leave) : part.from();
+            JourneyPoint endPoint = bike || (i + 1 < parts.size() && parts.get(i + 1).kind() == Kind.BIKE) ? stationPoint(bike ? leave : take) : part.to();
+            if (bike) {
+                cursor = cursor.plus(BIKE_HANDLING);
+            } else {
+                walking += part.duration();
+                walkingDistance += Optional.ofNullable(part.length()).orElse(0);
+            }
+            Instant end = cursor.plusSeconds(part.duration());
+            sections.add(new JourneySection(part.kind(), cursor, end, part.duration(),
+                startPoint, endPoint,
+                null, null, List.of(), List.of(), part.steps(), null, null, part.length(), part.shape()));
+            cursor = bike ? end.plus(BIKE_HANDLING) : end;
+        }
+        return Optional.of(new JourneyOption("bike_share", List.of("bike_share"), departure, cursor,
+            (int) Duration.between(departure, cursor).toSeconds(), 0, walking, walkingDistance, 0.0, null, sections));
+    }
+
+    private static JourneyPoint stationPoint(BikeStation station) {
+        return new JourneyPoint("Station Vélib " + station.name(), station.lat(), station.lon(), null);
+    }
+
+    /** {@code [lat, lon]} of a journey place ({@code lat,lon} or a stop area id), null when unknown */
+    private double[] coordinates(String place) {
+        String value = place.trim();
+        if (COORDINATES.matcher(value).matches()) {
+            String[] parts = value.split(",");
+            return new double[]{Double.parseDouble(parts[0]), Double.parseDouble(parts[1])};
+        }
+        return networkService.getStopAreaSummary(value).map(stop -> new double[]{stop.lat(), stop.lon()}).orElse(null);
     }
 
     /**

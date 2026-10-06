@@ -1,0 +1,31 @@
+info:
+  name: "Stop timetable"
+  type: http
+  seq: 16
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/stops/IDFM:72124/timetable?lineId=C01740"
+  params:
+    - name: "lineId"
+      value: "C01740"
+      type: query
+    - name: "date"
+      value: "2026-10-07"
+      type: query
+      description: "Jour de service (AAAA-MM-JJ), aujourd'hui par défaut"
+      disabled: true
+
+  auth: inherit
+
+docs:
+  content: |-
+    Horaires théoriques (GTFS) d'une ligne à un arrêt pour une journée, par direction de la ligne (ici Transilien L à Bécon-les-Bruyères). Les départs après minuit appartiennent au jour de service précédent. Code mission pour le SNCF. Mis en cache 6 h. 404 si l'arrêt ou la ligne est inconnu.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

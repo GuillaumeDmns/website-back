@@ -1,0 +1,35 @@
+info:
+  name: "Bike stations"
+  type: http
+  seq: 17
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/bikes/stations?minLat=48.85&minLon=2.33&maxLat=48.87&maxLon=2.36"
+  params:
+    - name: "minLat"
+      value: "48.85"
+      type: query
+    - name: "minLon"
+      value: "2.33"
+      type: query
+    - name: "maxLat"
+      value: "48.87"
+      type: query
+    - name: "maxLon"
+      value: "2.36"
+      type: query
+
+  auth: inherit
+
+docs:
+  content: |-
+    Stations Vélib dans un rectangle (300 max, les plus proches du centre), avec vélos mécaniques / électriques et places libres. Open data GBFS : emplacements rafraîchis toutes les 6 h, disponibilités chaque minute.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -43,12 +43,17 @@ http:
       value: "1"
       type: query
       disabled: true
+    - name: "bikeShare"
+      value: "true"
+      type: query
+      description: "Ajoute une option Vélib (type bike_share) : marche, vélo, marche"
+      disabled: true
   auth: inherit
 
 docs:
   content: |-
     Itinéraires Navitia (temps réel) au format v2 : par option `type` (best, rapid, comfort, less_fallback_walk, non_pt_walk…), durée, correspondances, marche, prix (centimes), CO₂ ; par section `kind` (WALK, TRANSIT, TRANSFER, WAIT…), ligne GTFS, direction, position de montée conseillée, arrêts desservis, instructions de marche, retard temps réel, tracé `[lon, lat]`.
-    `earlier` / `later` donnent le `datetime` + `arriveBy` à redemander pour les options plus tôt / plus tard. Pas de solution → liste vide.
+    `earlier` / `later` donnent le `datetime` + `arriveBy` à redemander pour les options plus tôt / plus tard. Pas de solution → liste vide. Avec `bikeShare`, une option `bike_share` (WALK, BIKE, WALK) : stations Vélib les plus proches avec un vélo au départ et une place à l'arrivée, chemins piétons Navitia, vélo estimé à 15 km/h (PRIM ne calcule pas les trajets à vélo).
   type: text/markdown
 
 settings:

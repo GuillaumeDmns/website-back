@@ -241,7 +241,7 @@ public class DepartureService {
     }
 
     /** GTFS times are counted from noon minus 12 h of the service day, which matters on DST change days */
-    private static Instant toInstant(LocalDate serviceDate, int seconds) {
+    static Instant toInstant(LocalDate serviceDate, int seconds) {
         return ZonedDateTime.of(serviceDate, LocalTime.NOON, PARIS).minusHours(12).plusSeconds(seconds).toInstant();
     }
 
