@@ -34,7 +34,7 @@ public class NetworkRepository {
 
     public record ScheduledDepartureRow(String routeId, String headsign, LocalDate serviceDate, int departureSeconds) {}
 
-    public record ScheduledRideRow(String headsign, String tripShortName, LocalDate serviceDate, int departureSeconds, int arrivalSeconds) {}
+    public record ScheduledRideRow(String headsign, String tripShortName, String terminus, LocalDate serviceDate, int departureSeconds, int arrivalSeconds) {}
 
     private static final String STOP_AREA_COLUMNS = "p.stop_id, p.stop_name, p.stop_lat, p.stop_lon";
 
@@ -287,7 +287,7 @@ public class NetworkRepository {
     /**
      * Scheduled trips of the route leaving a quay of {@code fromId} between {@code fromSeconds} and {@code toSeconds}
      * after midnight of {@code today} (Europe/Paris, trips of the previous service day included) and stopping
-     * further at a quay of {@code toId}, with the times at both.
+     * further at a quay of {@code toId}, with the times at both and the name of the trip's last stop.
      */
     public List<ScheduledRideRow> findScheduledRides(String routeId, String fromId, String toId, LocalDate today, int fromSeconds, int toSeconds) {
         MapSqlParameterSource params = new MapSqlParameterSource()
@@ -323,16 +323,21 @@ public class NetworkRepository {
                     WHERE s.stop_id = fq.stop_id AND s.departure_time BETWEEN d.lo AND d.hi AND coalesce(s.pickup_type, 0) <> 1
                   ) st ON true
                 )
-                SELECT DISTINCT coalesce(c.stop_headsign, t.trip_headsign), t.trip_short_name, c.service_date,
+                SELECT DISTINCT coalesce(c.stop_headsign, t.trip_headsign), t.trip_short_name, last.name, c.service_date,
                        extract(epoch FROM c.departure_time)::int, extract(epoch FROM a.arrival_time)::int
                 FROM candidates c
                 JOIN gtfs.trips t ON t.trip_id = c.trip_id AND t.route_id = :routeId
                 JOIN active ac ON ac.service_id = t.service_id AND ac.service_date = c.service_date
                 JOIN gtfs.stop_times a ON a.trip_id = c.trip_id AND a.stop_sequence > c.stop_sequence
                  AND a.stop_id IN (SELECT stop_id FROM to_quays) AND coalesce(a.drop_off_type, 0) <> 1
-                ORDER BY 3, 4""",
+                CROSS JOIN LATERAL (
+                  SELECT coalesce(p.stop_name, q.stop_name) AS name
+                  FROM gtfs.stop_times l JOIN gtfs.stops q ON q.stop_id = l.stop_id LEFT JOIN gtfs.stops p ON p.stop_id = q.parent_station
+                  WHERE l.trip_id = c.trip_id ORDER BY l.stop_sequence DESC LIMIT 1
+                ) last
+                ORDER BY 4, 5""",
             params,
-            (rs, i) -> new ScheduledRideRow(rs.getString(1), rs.getString(2), rs.getObject(3, LocalDate.class), rs.getInt(4), rs.getInt(5)));
+            (rs, i) -> new ScheduledRideRow(rs.getString(1), rs.getString(2), rs.getString(3), rs.getObject(4, LocalDate.class), rs.getInt(5), rs.getInt(6)));
     }
 
     private static Short getShort(ResultSet rs, int column) throws SQLException {

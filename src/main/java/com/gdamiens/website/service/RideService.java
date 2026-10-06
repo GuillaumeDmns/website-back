@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -50,6 +51,12 @@ public class RideService {
     /** Same vehicle in the stop's departures and the line's real-time trips */
     private static final Duration SAME_PASSAGE = Duration.ofSeconds(90);
 
+    /** A list starting this soon starts now */
+    private static final Duration NEAR_FUTURE = Duration.ofMinutes(5);
+
+    /** A list starting at a given time keeps the departures this much before */
+    private static final Duration PAST_MARGIN = Duration.ofMinutes(10);
+
     /** Same trip in the real-time departures and the schedule */
     private static final Duration SAME_SCHEDULE = Duration.ofSeconds(60);
 
@@ -77,30 +84,38 @@ public class RideService {
         this.networkRepository = networkRepository;
     }
 
-    private record Key(String lineId, String fromId, String toId) {
+    /**
+     * @param after start of the list (to the minute), null for now
+     */
+    private record Key(String lineId, String fromId, String toId, Instant after) {
     }
 
     /**
+     * @param after departures from then on (e.g. arrival at a connection), now when null or in the past
      * @param limit rides returned, at most {@link #MAX_RIDES}
      * @return departures of the line at [fromId] stopping at [toId], earliest first
      */
-    public List<Ride> getRides(String lineId, String fromId, String toId, int limit) {
-        return cache.get(new Key(lineId, fromId, toId), this::load).stream().limit(Math.clamp(limit, 1, MAX_RIDES)).toList();
+    public List<Ride> getRides(String lineId, String fromId, String toId, Instant after, int limit) {
+        Instant now = Instant.now();
+        // Close to now, the list from now is shared
+        Instant start = after == null || after.isBefore(now.plus(NEAR_FUTURE)) ? null
+            : after.truncatedTo(ChronoUnit.MINUTES);
+        return cache.get(new Key(lineId, fromId, toId, start), this::load).stream()
+            .filter(ride -> start == null || !ride.departure().time().isBefore(start.minus(PAST_MARGIN)))
+            .limit(Math.clamp(limit, 1, MAX_RIDES))
+            .toList();
     }
 
     private List<Ride> load(Key key) {
         List<LineDepartures> groups = departureService.getDepartures(key.fromId(), key.lineId(), DepartureService.MAX_DEPARTURES)
             .map(StopDepartures::lines).orElse(List.of());
-        if (groups.isEmpty()) {
-            return List.of();
-        }
 
         Instant now = Instant.now();
-        ZonedDateTime localNow = now.atZone(PARIS);
-        int nowSeconds = localNow.toLocalTime().toSecondOfDay();
+        ZonedDateTime base = Optional.ofNullable(key.after()).orElse(now).atZone(PARIS);
+        int baseSeconds = base.toLocalTime().toSecondOfDay();
         List<Scheduled> scheduled = networkRepository.findScheduledRides(IDFMRoute.toRouteId(key.lineId()), key.fromId(), key.toId(),
-                localNow.toLocalDate(), nowSeconds - 3600, nowSeconds + 3 * 3600).stream()
-            .map(row -> new Scheduled(row.headsign(), row.tripShortName(), toInstant(row.serviceDate(), row.departureSeconds()),
+                base.toLocalDate(), baseSeconds - 3600, baseSeconds + 3 * 3600).stream()
+            .map(row -> new Scheduled(row.headsign(), DepartureService.isTrainNumber(row.tripShortName()) ? row.tripShortName() : null, row.terminus(), toInstant(row.serviceDate(), row.departureSeconds()),
                 toInstant(row.serviceDate(), row.arrivalSeconds())))
             .toList();
         boolean realtime = groups.stream().anyMatch(group -> group.departures().stream().anyMatch(Departure::realtime));
@@ -108,10 +123,32 @@ public class RideService {
         Set<String> destinations = destinations(key, scheduled);
 
         List<Ride> rides = new ArrayList<>();
+        // Departures listed by the stop for the destinations going to [to], until when each destination is listed
+        List<Departure> listed = new ArrayList<>();
+        Instant covered = null;
         for (LineDepartures group : groups) {
             boolean towards = served(group.destination(), destinations);
+            int before = rides.size();
             for (Departure departure : group.departures()) {
                 ride(key, group.destination(), departure, towards, trips, scheduled).ifPresent(rides::add);
+            }
+            if (rides.size() > before) {
+                listed.addAll(group.departures());
+                Instant last = group.departures().getLast().time();
+                covered = covered == null || last.isBefore(covered) ? last : covered;
+            }
+        }
+
+        // Beyond what the stop lists (real time only goes so far): the schedule, without the trips already listed
+        Instant until = Optional.ofNullable(covered).orElse(now);
+        for (Scheduled ride : scheduled) {
+            boolean known = listed.stream().anyMatch(departure -> ride.number() != null
+                ? ride.number().equals(departure.trainNumber())
+                : departure.aimedTime() != null && Duration.between(departure.aimedTime(), ride.departure()).abs().compareTo(SAME_SCHEDULE) <= 0);
+            if (!known && ride.departure().isAfter(until)) {
+                String mission = DepartureService.isMission(ride.headsign()) ? ride.headsign() : null;
+                Departure departure = new Departure(ride.departure(), ride.departure(), false, null, null, null, mission, ride.number());
+                rides.add(new Ride(departure, Optional.ofNullable(ride.terminus()).orElse(ride.headsign()), ride.arrival(), "scheduled"));
             }
         }
         rides.sort(Comparator.comparing(ride -> ride.departure().time()));
@@ -119,7 +156,7 @@ public class RideService {
     }
 
     /** A scheduled trip from [from] to [to] */
-    private record Scheduled(String headsign, String number, Instant departure, Instant arrival) {
+    private record Scheduled(String headsign, String number, String terminus, Instant departure, Instant arrival) {
 
         Duration duration() {
             return Duration.between(departure, arrival);

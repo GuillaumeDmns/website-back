@@ -15,6 +15,10 @@ http:
       value: "IDFM:71370"
       type: query
       description: "Zone d'arrêt de descente"
+    - name: "after"
+      value: ""
+      type: query
+      description: "Départs à partir de cette heure (ISO, ex. arrivée à une correspondance), maintenant par défaut ; les 10 min avant sont gardées"
     - name: "limit"
       value: "6"
       type: query
@@ -24,7 +28,7 @@ http:
 
 docs:
   content: |-
-    Prochains départs de la ligne depuis l'arrêt `from` qui desservent l'arrêt `to` (ici Transilien L, Bécon-les-Bruyères → Saint-Lazare), avec l'heure d'arrivée à `to` : `arrivalSource` = `realtime` (appels temps réel du train), `scheduled` (son trajet théorique décalé de son retard) ou `typical` (temps de trajet habituel de la ligne). Code mission (`POPI`) et numéro de train pour le SNCF. Mis en cache 30 s. 404 si la ligne est inconnue.
+    Prochains départs de la ligne depuis l'arrêt `from` qui desservent l'arrêt `to` (ici Transilien L, Bécon-les-Bruyères → Saint-Lazare), avec l'heure d'arrivée à `to` : `arrivalSource` = `realtime` (appels temps réel du train), `scheduled` (son trajet théorique décalé de son retard) ou `typical` (temps de trajet habituel de la ligne). Code mission (`POPI`) et numéro de train pour le SNCF. Avec `after`, la liste commence à cette heure et se poursuit avec l'horaire théorique au-delà de ce que donne le temps réel. Mis en cache 30 s. 404 si la ligne est inconnue.
   type: text/markdown
 
 settings:

@@ -207,6 +207,11 @@ public class DepartureService {
         return value != null && MISSION.matcher(value).matches();
     }
 
+    /** SNCF train number: digits only */
+    public static boolean isTrainNumber(String value) {
+        return value != null && TRAIN_NUMBER.matcher(value).matches();
+    }
+
     /** "unknown" is sometimes given for no platform */
     private static String platform(String value) {
         String platform = StringUtils.trimToNull(value);

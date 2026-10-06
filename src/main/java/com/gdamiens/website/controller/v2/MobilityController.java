@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -142,9 +143,14 @@ public class MobilityController {
     public List<Ride> getLineRides(@Parameter(example = "C01740") @PathVariable String lineId,
                                    @Parameter(description = "Boarding stop area", example = "IDFM:72124") @RequestParam String from,
                                    @Parameter(description = "Alighting stop area", example = "IDFM:71370") @RequestParam String to,
+                                   @Parameter(description = "Departures from then on (arrival at a connection), now by default; the 10 minutes before are kept")
+                                   @RequestParam(required = false) Instant after,
                                    @Parameter(description = "At most 10") @RequestParam(defaultValue = "6") int limit) {
         networkService.getLine(lineId).orElseThrow(() -> notFound("Line " + lineId));
-        return rideService.getRides(lineId, from, to, limit);
+        if (after != null && after.isAfter(Instant.now().plus(Duration.ofHours(12)))) {
+            throw new CustomException("after must be within 12 hours", HttpStatus.BAD_REQUEST);
+        }
+        return rideService.getRides(lineId, from, to, after, limit);
     }
 
     @GetMapping("/lines/{lineId}/disruptions")
