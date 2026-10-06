@@ -10,6 +10,7 @@ import com.gdamiens.website.idfm.MonitoredCall;
 import com.gdamiens.website.idfm.MonitoredStopVisit;
 import com.gdamiens.website.idfm.MonitoredVehicleJourney;
 import com.gdamiens.website.idfm.OperatorRef;
+import com.gdamiens.website.idfm.VehicleJourneyName;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Optional;
@@ -36,6 +37,8 @@ public class CallUnit extends Call {
     private String destinationName;
 
     private String journeyNote;
+
+    private String vehicleJourneyName;
 
 
     public CallUnit(MonitoredStopVisit monitoredStopVisit) {
@@ -74,6 +77,7 @@ public class CallUnit extends Call {
             this.directionName = Optional.ofNullable(monitoredVehicleJourney.getDirectionName()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(DirectionName::getValue).orElse(null);
             this.destinationName = Optional.ofNullable(monitoredVehicleJourney.getDestinationName()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(DestinationName::getValue).orElse(null);
             this.journeyNote = Optional.ofNullable(monitoredVehicleJourney.getJourneyNote()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(JourneyNote::getValue).orElse(null);
+            this.vehicleJourneyName = Optional.ofNullable(monitoredVehicleJourney.getVehicleJourneyName()).filter(l -> !l.isEmpty()).map(d -> d.get(0)).map(VehicleJourneyName::getValue).orElse(null);
         }
 
     }
@@ -156,5 +160,13 @@ public class CallUnit extends Call {
 
     public void setJourneyNote(String journeyNote) {
         this.journeyNote = journeyNote;
+    }
+
+    public String getVehicleJourneyName() {
+        return vehicleJourneyName;
+    }
+
+    public void setVehicleJourneyName(String vehicleJourneyName) {
+        this.vehicleJourneyName = vehicleJourneyName;
     }
 }

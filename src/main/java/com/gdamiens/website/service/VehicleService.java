@@ -82,7 +82,7 @@ public class VehicleService {
 
     private final NetworkRepository networkRepository;
 
-    private final TtlCache<String, List<Vehicle>> cache = new TtlCache<>(Duration.ofSeconds(30), 500);
+    private final TtlCache<String, Snapshot> cache = new TtlCache<>(Duration.ofSeconds(30), 500);
 
     public VehicleService(IDFMLineService idfmLineService, NetworkService networkService, NetworkRepository networkRepository) {
         this.idfmLineService = idfmLineService;
@@ -94,7 +94,29 @@ public class VehicleService {
      * @return vehicles of the line, empty when it is unknown or has no real time
      */
     public List<Vehicle> getVehicles(String lineId) {
-        return cache.get(lineId, this::load);
+        return cache.get(lineId, this::load).vehicles();
+    }
+
+    /**
+     * @return trips of the line known from real time, running or not yet, empty when it is unknown or has no real time
+     */
+    public List<Trip> getTrips(String lineId) {
+        return cache.get(lineId, this::load).trips();
+    }
+
+    /**
+     * A trip of the line from real time
+     *
+     * @param name        mission code or train number, when given
+     * @param destination announced destination, when given
+     * @param calls       its next calls in time order
+     * @param complete    the calls go to its destination: it doesn't stop where it has no call
+     */
+    public record Trip(String name, String destination, List<VehicleCall> calls, boolean complete) {
+    }
+
+    private record Snapshot(List<Vehicle> vehicles, List<Trip> trips) {
+        static final Snapshot EMPTY = new Snapshot(List.of(), List.of());
     }
 
     /** A call of a journey at a stop area */
@@ -110,10 +132,10 @@ public class VehicleService {
     private record Run(String id, String name, String destination, String destinationId, List<TimedCall> calls) {
     }
 
-    private List<Vehicle> load(String lineId) {
+    private Snapshot load(String lineId) {
         Optional<LineDetail> detail = networkService.getLineDetail(lineId);
         if (detail.isEmpty()) {
-            return List.of();
+            return Snapshot.EMPTY;
         }
         List<EstimatedVehicleJourney> journeys;
         try {
@@ -121,7 +143,7 @@ public class VehicleService {
         } catch (CustomException e) {
             // No real time for this line
             log.info("No vehicles for line {}: {}", lineId, e.getMessage());
-            return List.of();
+            return Snapshot.EMPTY;
         }
 
         // SIRI StopPointRef (STIF:StopPoint:Q:<id>:) is the GTFS quay IDFM:<id>, or IDFM:monomodalStopPlace:<id> (RER)
@@ -144,9 +166,10 @@ public class VehicleService {
         }).count();
         boolean perStop = !multiCall.isEmpty() && mixed > multiCall.size() * MIXED_JOURNEYS;
 
-        List<Vehicle> vehicles = perStop ? fromStops(detail.get(), runs, now) : fromJourneys(detail.get(), runs, now);
+        List<Trip> trips = new ArrayList<>();
+        List<Vehicle> vehicles = perStop ? fromStops(detail.get(), runs, now, trips) : fromJourneys(detail.get(), runs, now, trips);
         log.info("{} vehicles on line {} ({} journeys, {})", vehicles.size(), lineId, journeys.size(), perStop ? "passages per stop" : "vehicle journeys");
-        return vehicles;
+        return new Snapshot(vehicles, trips);
     }
 
     private static Run toRun(EstimatedVehicleJourney journey, Map<String, String> quayStopAreas, Instant now) {
@@ -177,21 +200,32 @@ public class VehicleService {
     }
 
     /**
-     * Vehicles from real vehicle journeys: each one is placed from its next calls
+     * Vehicles from real vehicle journeys: each one is placed from its next calls. Every journey is added to [trips].
      */
-    private static List<Vehicle> fromJourneys(LineDetail detail, List<Run> runs, Instant now) {
+    private static List<Vehicle> fromJourneys(LineDetail detail, List<Run> runs, Instant now, List<Trip> trips) {
         List<Vehicle> vehicles = new ArrayList<>();
         // Names of the line's stops, for the calls
         Map<String, String> names = new HashMap<>();
         detail.directions().forEach(direction -> direction.branches()
             .forEach(branch -> branch.stops().forEach(stop -> names.putIfAbsent(stop.id(), stop.name()))));
         for (Run run : runs) {
-            toVehicle(run, detail, names, now).ifPresent(vehicles::add);
+            List<VehicleCall> calls = calls(run, names);
+            toVehicle(run, detail, calls, now).ifPresent(vehicles::add);
+            boolean complete = run.destinationId() != null && run.destinationId().equals(run.calls().getLast().stopAreaId());
+            trips.add(new Trip(run.name(), run.destination(), calls, complete));
         }
         return vehicles;
     }
 
-    private static Optional<Vehicle> toVehicle(Run run, LineDetail detail, Map<String, String> names, Instant now) {
+    /** Calls of the run at stops of the line */
+    private static List<VehicleCall> calls(Run run, Map<String, String> names) {
+        return run.calls().stream()
+            .filter(call -> names.containsKey(call.stopAreaId()))
+            .map(call -> call(call, names.get(call.stopAreaId())))
+            .toList();
+    }
+
+    private static Optional<Vehicle> toVehicle(Run run, LineDetail detail, List<VehicleCall> nextCalls, Instant now) {
         List<TimedCall> calls = run.calls();
         TimedCall next = calls.getFirst();
         TimedCall following = calls.size() > 1 ? calls.get(1) : null;
@@ -225,10 +259,6 @@ public class VehicleService {
         }
 
         String id = Optional.ofNullable(run.id()).orElse(position.direction() + ":" + position.branch() + ":" + next.expected());
-        List<VehicleCall> nextCalls = calls.stream()
-            .filter(call -> names.containsKey(call.stopAreaId()))
-            .map(call -> call(call, names.get(call.stopAreaId())))
-            .toList();
         return Optional.of(vehicle(id, run, run.name(), branch, position.direction(), position.branch(), position.index(), from, next,
             progress, nextCalls));
     }
@@ -239,9 +269,10 @@ public class VehicleService {
 
     /**
      * Vehicles from passages per stop, along each branch: each vehicle is followed from stop to stop (see
-     * {@link #trace}); one first seen at a stop has left the previous one.
+     * {@link #trace}); one first seen at a stop has left the previous one. Every vehicle followed, running or not
+     * yet, is added to [trips].
      */
-    private static List<Vehicle> fromStops(LineDetail detail, List<Run> runs, Instant now) {
+    private static List<Vehicle> fromStops(LineDetail detail, List<Run> runs, Instant now, List<Trip> trips) {
         // Passages per stop area, the same one listed by several journeys (quays of both sides) counted once
         Map<String, List<Passage>> byStop = new HashMap<>();
         Set<String> seen = new HashSet<>();
@@ -302,6 +333,7 @@ public class VehicleService {
                     for (int k = 0; k < trace.passages().size(); k++) {
                         calls.add(call(trace.passages().get(k).call(), stops.get(trace.stops().get(k)).name()));
                     }
+                    trips.add(new Trip(null, trace.passages().getFirst().run().destination(), calls, false));
                     Duration toNext = Duration.between(now, passage.call().expected());
                     Vehicle vehicle;
                     if (i == 0) {

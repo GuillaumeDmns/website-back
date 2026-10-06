@@ -1,0 +1,39 @@
+info:
+  name: "Line rides"
+  type: http
+  seq: 15
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/lines/C01740/rides?from=IDFM:72124&to=IDFM:71370&limit=6"
+  params:
+    - name: "from"
+      value: "IDFM:72124"
+      type: query
+      description: "Zone d'arrêt de montée"
+    - name: "to"
+      value: "IDFM:71370"
+      type: query
+      description: "Zone d'arrêt de descente"
+    - name: "after"
+      value: ""
+      type: query
+      description: "Départs à partir de cette heure (ISO, ex. arrivée à une correspondance), maintenant par défaut ; les 10 min avant sont gardées"
+    - name: "limit"
+      value: "6"
+      type: query
+      description: "10 max"
+
+  auth: inherit
+
+docs:
+  content: |-
+    Prochains départs de la ligne depuis l'arrêt `from` qui desservent l'arrêt `to` (ici Transilien L, Bécon-les-Bruyères → Saint-Lazare), avec l'heure d'arrivée à `to` : `arrivalSource` = `realtime` (appels temps réel du train), `scheduled` (son trajet théorique décalé de son retard) ou `typical` (temps de trajet habituel de la ligne). Code mission (`POPI`) et numéro de train pour le SNCF. Avec `after`, la liste commence à cette heure et se poursuit avec l'horaire théorique au-delà de ce que donne le temps réel. Mis en cache 30 s. 404 si la ligne est inconnue.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

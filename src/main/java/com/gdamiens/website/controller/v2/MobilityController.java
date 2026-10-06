@@ -4,6 +4,7 @@ import com.gdamiens.website.controller.object.v2.Disruption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan;
 import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.LineTraffic;
+import com.gdamiens.website.controller.object.v2.Ride;
 import com.gdamiens.website.controller.object.v2.SearchResult;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
@@ -16,6 +17,7 @@ import com.gdamiens.website.service.JourneyService;
 import com.gdamiens.website.service.JourneyService.JourneyQuery;
 import com.gdamiens.website.service.JourneyService.WalkingSpeed;
 import com.gdamiens.website.service.NetworkService;
+import com.gdamiens.website.service.RideService;
 import com.gdamiens.website.service.SearchService;
 import com.gdamiens.website.service.TrafficService;
 import com.gdamiens.website.service.VehicleService;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -54,14 +57,18 @@ public class MobilityController {
 
     private final VehicleService vehicleService;
 
+    private final RideService rideService;
+
     public MobilityController(NetworkService networkService, DepartureService departureService, SearchService searchService,
-                              JourneyService journeyService, TrafficService trafficService, VehicleService vehicleService) {
+                              JourneyService journeyService, TrafficService trafficService, VehicleService vehicleService,
+                              RideService rideService) {
         this.networkService = networkService;
         this.departureService = departureService;
         this.searchService = searchService;
         this.journeyService = journeyService;
         this.trafficService = trafficService;
         this.vehicleService = vehicleService;
+        this.rideService = rideService;
     }
 
     @GetMapping("/journeys")
@@ -129,6 +136,21 @@ public class MobilityController {
     public List<Vehicle> getLineVehicles(@Parameter(example = "C01371") @PathVariable String lineId) {
         networkService.getLine(lineId).orElseThrow(() -> notFound("Line " + lineId));
         return vehicleService.getVehicles(lineId);
+    }
+
+    @GetMapping("/lines/{lineId}/rides")
+    @Operation(summary = "Next departures of a line from a stop area that stop at a further one, with their arrival there", security = @SecurityRequirement(name = "Auth. Token"))
+    public List<Ride> getLineRides(@Parameter(example = "C01740") @PathVariable String lineId,
+                                   @Parameter(description = "Boarding stop area", example = "IDFM:72124") @RequestParam String from,
+                                   @Parameter(description = "Alighting stop area", example = "IDFM:71370") @RequestParam String to,
+                                   @Parameter(description = "Departures from then on (arrival at a connection), now by default; the 10 minutes before are kept")
+                                   @RequestParam(required = false) Instant after,
+                                   @Parameter(description = "At most 10") @RequestParam(defaultValue = "6") int limit) {
+        networkService.getLine(lineId).orElseThrow(() -> notFound("Line " + lineId));
+        if (after != null && after.isAfter(Instant.now().plus(Duration.ofHours(12)))) {
+            throw new CustomException("after must be within 12 hours", HttpStatus.BAD_REQUEST);
+        }
+        return rideService.getRides(lineId, from, to, after, limit);
     }
 
     @GetMapping("/lines/{lineId}/disruptions")
