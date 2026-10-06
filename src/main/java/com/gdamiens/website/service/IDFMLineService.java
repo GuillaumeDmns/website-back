@@ -58,6 +58,7 @@ public class IDFMLineService extends AbstractIDFMService {
      * Vehicle journeys of a line with their next calls (PRIM estimated-timetable); all lines when [lineId] is null
      */
     public List<EstimatedVehicleJourney> getEstimatedVehicleJourneys(String lineId, String url) {
+        consume(ApiQuota.Api.ESTIMATED_TIMETABLE);
         HttpEntity<String> request = this.prepareHttpRequest();
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(url)

@@ -307,6 +307,7 @@ public class IDFMNavitiaService extends AbstractIDFMService {
 
     // Values are percent-encoded (accents, &, = in q...); Navitia errors are rethrown with their status and body
     private <T> T get(UriComponentsBuilder builder, Class<T> responseType) {
+        consume(ApiQuota.Api.NAVITIA);
         try {
             return this.restTemplate.exchange(builder.encode().build().toUri(), HttpMethod.GET, this.prepareHttpRequest(), responseType).getBody();
         } catch (HttpStatusCodeException e) {

@@ -1,6 +1,7 @@
 package com.gdamiens.website.service;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -16,6 +17,20 @@ public abstract class AbstractIDFMService {
     protected AbstractIDFMService(ApplicationProperties applicationProperties) {
         this.applicationProperties = applicationProperties;
         this.idfmStaticKey = this.applicationProperties.getIdfmStaticKey();
+    }
+
+    private ApiQuota apiQuota;
+
+    @Autowired
+    void setApiQuota(ApiQuota apiQuota) {
+        this.apiQuota = apiQuota;
+    }
+
+    /** Counts a request against the daily quota of [api] (refused when used up) */
+    protected void consume(ApiQuota.Api api) {
+        if (apiQuota != null) {
+            apiQuota.consume(api);
+        }
     }
 
     public String getIdfmStaticKey() {

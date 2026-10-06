@@ -7,10 +7,9 @@ import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.Ride;
 import com.gdamiens.website.controller.object.v2.StopDepartures;
 import com.gdamiens.website.controller.object.v2.StopRef;
-import com.gdamiens.website.controller.object.v2.VehicleCall;
 import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.repository.NetworkRepository;
-import com.gdamiens.website.service.VehicleService.Trip;
+import com.gdamiens.website.service.DepartureService.Arrival;
 import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -35,8 +34,10 @@ import java.util.stream.Stream;
  * Next departures of a line from a stop area that stop at a further one, with their arrival there: what a traveller
  * can take for a ride of a journey. Cached 30 s per line and stop pair.
  * <p>
- * The arrival comes from the vehicle's real-time calls (estimated-timetable trips of {@link VehicleService}), else
- * from its scheduled GTFS trip shifted by its delay, else from the line's usual ride time between the two stops.
+ * The arrival comes from the real-time arrivals at the alighting stop (its stop-monitoring: same train number, else
+ * the vehicle expected there about when it should arrive), else from its scheduled GTFS trip shifted by its delay,
+ * else from the line's usual ride time between the two stops. No estimated-timetable here: its daily quota is
+ * small (see {@link ApiQuota}).
  */
 @Service
 public class RideService {
@@ -45,8 +46,8 @@ public class RideService {
 
     public static final int MAX_RIDES = 10;
 
-    /** Same vehicle in the stop's departures and the line's real-time trips */
-    private static final Duration SAME_PASSAGE = Duration.ofSeconds(90);
+    /** A real-time arrival at [to] this close to when a vehicle should get there is that vehicle */
+    private static final Duration SAME_ARRIVAL = Duration.ofMinutes(2);
 
     /** A list starting this soon starts now */
     private static final Duration NEAR_FUTURE = Duration.ofMinutes(5);
@@ -65,18 +66,14 @@ public class RideService {
 
     private final DepartureService departureService;
 
-    private final VehicleService vehicleService;
-
     private final NetworkService networkService;
 
     private final NetworkRepository networkRepository;
 
     private final TtlCache<Key, List<Ride>> cache = new TtlCache<>(Duration.ofSeconds(30), 5000);
 
-    public RideService(DepartureService departureService, VehicleService vehicleService, NetworkService networkService,
-                       NetworkRepository networkRepository) {
+    public RideService(DepartureService departureService, NetworkService networkService, NetworkRepository networkRepository) {
         this.departureService = departureService;
-        this.vehicleService = vehicleService;
         this.networkService = networkService;
         this.networkRepository = networkRepository;
     }
@@ -116,7 +113,7 @@ public class RideService {
                 DepartureService.toInstant(row.serviceDate(), row.arrivalSeconds())))
             .toList();
         boolean realtime = groups.stream().anyMatch(group -> group.departures().stream().anyMatch(Departure::realtime));
-        List<Trip> trips = realtime ? vehicleService.getTrips(key.lineId()) : List.of();
+        List<Arrival> arrivals = realtime ? departureService.getArrivals(key.toId(), key.lineId()) : List.of();
         Set<String> destinations = destinations(key, scheduled);
 
         List<Ride> rides = new ArrayList<>();
@@ -127,7 +124,7 @@ public class RideService {
             boolean towards = served(group.destination(), destinations);
             int before = rides.size();
             for (Departure departure : group.departures()) {
-                ride(key, group.destination(), departure, towards, trips, scheduled).ifPresent(rides::add);
+                ride(group.destination(), departure, towards, arrivals, scheduled).ifPresent(rides::add);
             }
             if (rides.size() > before) {
                 listed.addAll(group.departures());
@@ -142,7 +139,8 @@ public class RideService {
             boolean known = listed.stream().anyMatch(departure -> ride.number() != null
                 ? ride.number().equals(departure.trainNumber())
                 : departure.aimedTime() != null && Duration.between(departure.aimedTime(), ride.departure()).abs().compareTo(SAME_SCHEDULE) <= 0);
-            if (!known && ride.departure().isAfter(until)) {
+            // (a minute after the last one listed: the same vehicle a few seconds off in the schedule)
+            if (!known && ride.departure().isAfter(until.plus(SAME_SCHEDULE))) {
                 String mission = DepartureService.isMission(ride.headsign()) ? ride.headsign() : null;
                 Departure departure = new Departure(ride.departure(), ride.departure(), false, null, null, null, mission, ride.number());
                 rides.add(new Ride(departure, Optional.ofNullable(ride.terminus()).orElse(ride.headsign()), ride.arrival(), "scheduled"));
@@ -164,37 +162,10 @@ public class RideService {
      * @param towards the destination is beyond [to] on the line
      * @return the departure when it stops at [to]
      */
-    private static Optional<Ride> ride(Key key, String destination, Departure departure, boolean towards, List<Trip> trips,
+    private static Optional<Ride> ride(String destination, Departure departure, boolean towards, List<Arrival> arrivals,
                                        List<Scheduled> scheduled) {
         String number = departure.trainNumber();
         Instant aimed = Optional.ofNullable(departure.aimedTime()).orElse(departure.time());
-
-        // Its real-time trip: same train number, else calling at [from] at the same time towards the same destination
-        Trip trip = null;
-        boolean skips = false;
-        Duration best = SAME_PASSAGE;
-        for (Trip candidate : trips) {
-            boolean sameNumber = number != null && number.equals(candidate.name());
-            if (!sameNumber && (candidate.destination() != null && !sameName(candidate.destination(), destination))) {
-                continue;
-            }
-            Optional<VehicleCall> call = candidate.calls().stream().filter(c -> c.stopId().equals(key.fromId())).findFirst();
-            Duration gap = call.map(c -> Duration.between(c.expectedAt(), departure.time()).abs()).orElse(null);
-            if (gap == null || (!sameNumber && gap.compareTo(SAME_PASSAGE) > 0)) {
-                continue;
-            }
-            if (arrival(candidate, key) == null) {
-                // A trip whose calls go to its destination doesn't stop there
-                skips |= candidate.complete() && (sameNumber || number == null);
-            } else if (sameNumber || gap.compareTo(best) <= 0) {
-                best = sameNumber ? Duration.ZERO : gap;
-                trip = candidate;
-            }
-        }
-        VehicleCall arrival = trip == null ? null : arrival(trip, key);
-        if (arrival == null && skips) {
-            return Optional.empty();
-        }
 
         // Its scheduled trip: same train number, else leaving at the same scheduled time towards the same destination
         // (none for real-time departures without scheduled time: metros, whose GTFS trips are only frequencies)
@@ -206,43 +177,52 @@ public class RideService {
                     && (towards || sameName(ride.headsign(), destination)))
             .min(Comparator.comparing(ride -> Duration.between(ride.departure(), aimed).abs()))
             .orElse(null);
-        if (arrival == null && same == null && (numbered || !towards)) {
-            // Not stopping at [to], or not going that way
-            return Optional.empty();
-        }
-
-        String mission = Stream.of(departure.mission(), same == null ? null : same.headsign(), trip == null ? null : trip.name())
-            .filter(DepartureService::isMission).findFirst().orElse(null);
-        Departure shown = Objects.equals(mission, departure.mission()) ? departure : new Departure(departure.time(), departure.aimedTime(),
-            departure.realtime(), departure.status(), departure.platform(), departure.atStop(), mission, number);
-        if (arrival != null) {
-            return Optional.of(new Ride(shown, destination, arrival.expectedAt(), "realtime"));
-        }
-        if (same != null) {
-            Duration delay = Duration.between(aimed, departure.time());
-            return Optional.of(new Ride(shown, destination, same.arrival().plus(delay), "scheduled"));
-        }
-
         // Usual ride time around then
         List<Duration> durations = scheduled.stream()
             .filter(ride -> Duration.between(ride.departure(), departure.time()).abs().compareTo(TYPICAL_WINDOW) <= 0)
             .map(Scheduled::duration)
             .sorted()
             .toList();
-        Instant arrivalAt = durations.isEmpty() ? null : departure.time().plus(durations.get(durations.size() / 2));
-        return Optional.of(new Ride(shown, destination, arrivalAt, arrivalAt == null ? null : "typical"));
-    }
+        Duration typical = durations.isEmpty() ? null : durations.get(durations.size() / 2);
 
-    /** Call of the trip at [to] after its call at [from] */
-    private static VehicleCall arrival(Trip trip, Key key) {
-        List<VehicleCall> calls = trip.calls();
-        for (int i = 0; i < calls.size(); i++) {
-            if (calls.get(i).stopId().equals(key.fromId())) {
-                return calls.subList(i + 1, calls.size()).stream()
-                    .filter(call -> call.stopId().equals(key.toId())).findFirst().orElse(null);
+        // Its real-time arrival at [to]: same train number, else the vehicle towards the same destination expected
+        // there about when it should arrive
+        Arrival arrival = null;
+        if (number != null) {
+            arrival = arrivals.stream()
+                .filter(candidate -> number.equals(candidate.trainNumber()) && candidate.time().isAfter(departure.time()))
+                .findFirst().orElse(null);
+        } else if (towards || same != null) {
+            // (a vehicle going the other way may leave [to] towards the same destination)
+            Duration expected = same != null ? same.duration() : typical;
+            if (expected != null) {
+                Instant target = departure.time().plus(expected);
+                arrival = arrivals.stream()
+                    .filter(candidate -> candidate.time().isAfter(departure.time()))
+                    .filter(candidate -> candidate.destination() == null || sameName(candidate.destination(), destination))
+                    .filter(candidate -> Duration.between(candidate.time(), target).abs().compareTo(SAME_ARRIVAL) <= 0)
+                    .min(Comparator.comparing(candidate -> Duration.between(candidate.time(), target).abs()))
+                    .orElse(null);
             }
         }
-        return null;
+        if (arrival == null && same == null && (numbered || !towards)) {
+            // Not stopping at [to], or not going that way
+            return Optional.empty();
+        }
+
+        String mission = Stream.of(departure.mission(), same == null ? null : same.headsign())
+            .filter(DepartureService::isMission).findFirst().orElse(null);
+        Departure shown = Objects.equals(mission, departure.mission()) ? departure : new Departure(departure.time(), departure.aimedTime(),
+            departure.realtime(), departure.status(), departure.platform(), departure.atStop(), mission, number);
+        if (arrival != null) {
+            return Optional.of(new Ride(shown, destination, arrival.time(), "realtime"));
+        }
+        if (same != null) {
+            Duration delay = Duration.between(aimed, departure.time());
+            return Optional.of(new Ride(shown, destination, same.arrival().plus(delay), "scheduled"));
+        }
+        Instant arrivalAt = typical == null ? null : departure.time().plus(typical);
+        return Optional.of(new Ride(shown, destination, arrivalAt, arrivalAt == null ? null : "typical"));
     }
 
     /**

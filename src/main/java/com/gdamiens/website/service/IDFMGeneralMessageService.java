@@ -34,6 +34,7 @@ public class IDFMGeneralMessageService extends AbstractIDFMService {
     }
 
     public List<InfoMessageCustom> getGeneralMessages(String lineId, Integer stopId, String url) {
+        consume(ApiQuota.Api.GENERAL_MESSAGE);
         HttpEntity<String> request = this.prepareHttpRequest();
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(url);
