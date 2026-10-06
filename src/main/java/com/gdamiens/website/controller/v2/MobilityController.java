@@ -1,5 +1,6 @@
 package com.gdamiens.website.controller.v2;
 
+import com.gdamiens.website.controller.object.v2.BikeStation;
 import com.gdamiens.website.controller.object.v2.Disruption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan;
 import com.gdamiens.website.controller.object.v2.LineDetail;
@@ -9,9 +10,11 @@ import com.gdamiens.website.controller.object.v2.SearchResult;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
 import com.gdamiens.website.controller.object.v2.StopDepartures;
+import com.gdamiens.website.controller.object.v2.Timetable;
 import com.gdamiens.website.controller.object.v2.Vehicle;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.TransportMode;
+import com.gdamiens.website.service.BikeService;
 import com.gdamiens.website.service.DepartureService;
 import com.gdamiens.website.service.JourneyService;
 import com.gdamiens.website.service.JourneyService.JourneyQuery;
@@ -19,6 +22,7 @@ import com.gdamiens.website.service.JourneyService.WalkingSpeed;
 import com.gdamiens.website.service.NetworkService;
 import com.gdamiens.website.service.RideService;
 import com.gdamiens.website.service.SearchService;
+import com.gdamiens.website.service.TimetableService;
 import com.gdamiens.website.service.TrafficService;
 import com.gdamiens.website.service.VehicleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +37,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -59,9 +65,14 @@ public class MobilityController {
 
     private final RideService rideService;
 
+    private final TimetableService timetableService;
+
+    private final BikeService bikeService;
+
     public MobilityController(NetworkService networkService, DepartureService departureService, SearchService searchService,
                               JourneyService journeyService, TrafficService trafficService, VehicleService vehicleService,
-                              RideService rideService) {
+                              RideService rideService, TimetableService timetableService,
+                              BikeService bikeService) {
         this.networkService = networkService;
         this.departureService = departureService;
         this.searchService = searchService;
@@ -69,6 +80,8 @@ public class MobilityController {
         this.trafficService = trafficService;
         this.vehicleService = vehicleService;
         this.rideService = rideService;
+        this.timetableService = timetableService;
+        this.bikeService = bikeService;
     }
 
     @GetMapping("/journeys")
@@ -81,8 +94,9 @@ public class MobilityController {
         @Parameter(description = "Allowed public transport modes, all when absent") @RequestParam(required = false) List<TransportMode> modes,
         @Parameter(description = "Step-free journeys only") @RequestParam(defaultValue = "false") boolean wheelchair,
         @RequestParam(defaultValue = "NORMAL") WalkingSpeed walkingSpeed,
-        @Parameter(description = "At most this many transfers") @RequestParam(required = false) Integer maxTransfers) {
-        return journeyService.plan(new JourneyQuery(from, to, datetime, arriveBy, modes, wheelchair, walkingSpeed, maxTransfers));
+        @Parameter(description = "At most this many transfers") @RequestParam(required = false) Integer maxTransfers,
+        @Parameter(description = "Vélib allowed before and after public transport") @RequestParam(defaultValue = "false") boolean bikeShare) {
+        return journeyService.plan(new JourneyQuery(from, to, datetime, arriveBy, modes, wheelchair, walkingSpeed, maxTransfers, bikeShare));
     }
 
     @GetMapping("/search")
@@ -123,6 +137,35 @@ public class MobilityController {
                                             @Parameter(description = "Only this line", example = "C01371") @RequestParam(required = false) String lineId,
                                             @Parameter(description = "Departures per line and destination, at most 5") @RequestParam(defaultValue = "3") int limit) {
         return departureService.getDepartures(stopAreaId, lineId, limit).orElseThrow(() -> notFound("Stop area " + stopAreaId));
+    }
+
+    @GetMapping("/stops/{stopAreaId}/timetable")
+    @Operation(summary = "Scheduled departures of a line from a stop area over a day, per direction", security = @SecurityRequirement(name = "Auth. Token"))
+    public Timetable getTimetable(@Parameter(example = "IDFM:71264") @PathVariable String stopAreaId,
+                                  @Parameter(example = "C01742") @RequestParam String lineId,
+                                  @Parameter(description = "Service day, today by default (departures after midnight belong to the day before)")
+                                  @RequestParam(required = false) LocalDate date) {
+        LocalDate day = date == null ? LocalDate.now(ZoneId.of("Europe/Paris")) : date;
+        return timetableService.getTimetable(stopAreaId, lineId, day)
+            .orElseThrow(() -> notFound("Stop area " + stopAreaId + " or line " + lineId));
+    }
+
+    @GetMapping("/bikes/stations")
+    @Operation(summary = "Vélib stations inside a box with their available bikes and docks (at most 300)", security = @SecurityRequirement(name = "Auth. Token"))
+    public List<BikeStation> getBikeStations(@RequestParam double minLat, @RequestParam double minLon,
+                                             @RequestParam double maxLat, @RequestParam double maxLon) {
+        checkPosition(minLat, minLon);
+        checkPosition(maxLat, maxLon);
+        return bikeService.getStations(minLat, minLon, maxLat, maxLon);
+    }
+
+    @GetMapping("/bikes/nearby")
+    @Operation(summary = "Vélib stations around a position, closest first", security = @SecurityRequirement(name = "Auth. Token"))
+    public List<BikeStation> getNearbyBikeStations(@RequestParam double lat, @RequestParam double lon,
+                                                   @Parameter(description = "Meters, at most 2000") @RequestParam(defaultValue = "500") int radius,
+                                                   @Parameter(description = "At most 20") @RequestParam(defaultValue = "5") int limit) {
+        checkPosition(lat, lon);
+        return bikeService.getNearby(lat, lon, Math.clamp(radius, 1, MAX_RADIUS), Math.clamp(limit, 1, 20));
     }
 
     @GetMapping("/lines/{lineId}")

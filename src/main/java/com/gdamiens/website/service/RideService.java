@@ -10,7 +10,6 @@ import com.gdamiens.website.controller.object.v2.StopRef;
 import com.gdamiens.website.controller.object.v2.VehicleCall;
 import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.repository.NetworkRepository;
-import com.gdamiens.website.repository.NetworkRepository.ScheduledRideRow;
 import com.gdamiens.website.service.VehicleService.Trip;
 import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
@@ -18,8 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -115,8 +112,8 @@ public class RideService {
         int baseSeconds = base.toLocalTime().toSecondOfDay();
         List<Scheduled> scheduled = networkRepository.findScheduledRides(IDFMRoute.toRouteId(key.lineId()), key.fromId(), key.toId(),
                 base.toLocalDate(), baseSeconds - 3600, baseSeconds + 3 * 3600).stream()
-            .map(row -> new Scheduled(row.headsign(), DepartureService.isTrainNumber(row.tripShortName()) ? row.tripShortName() : null, row.terminus(), toInstant(row.serviceDate(), row.departureSeconds()),
-                toInstant(row.serviceDate(), row.arrivalSeconds())))
+            .map(row -> new Scheduled(row.headsign(), DepartureService.isTrainNumber(row.tripShortName()) ? row.tripShortName() : null, row.terminus(), DepartureService.toInstant(row.serviceDate(), row.departureSeconds()),
+                DepartureService.toInstant(row.serviceDate(), row.arrivalSeconds())))
             .toList();
         boolean realtime = groups.stream().anyMatch(group -> group.departures().stream().anyMatch(Departure::realtime));
         List<Trip> trips = realtime ? vehicleService.getTrips(key.lineId()) : List.of();
@@ -293,10 +290,5 @@ public class RideService {
 
     private static String normalize(String name) {
         return StringUtils.stripAccents(StringUtils.defaultString(name)).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
-    }
-
-    /** GTFS times are counted from noon minus 12 h of the service day, which matters on DST change days */
-    private static Instant toInstant(LocalDate serviceDate, int seconds) {
-        return ZonedDateTime.of(serviceDate, LocalTime.NOON, PARIS).minusHours(12).plusSeconds(seconds).toInstant();
     }
 }

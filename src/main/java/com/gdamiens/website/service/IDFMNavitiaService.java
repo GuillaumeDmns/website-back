@@ -89,6 +89,24 @@ public class IDFMNavitiaService extends AbstractIDFMService {
     }
 
     /**
+     * Walking path only (no public transport) between two places, raw Navitia JSON. PRIM only computes walking paths:
+     * other street modes ({@code bike}, {@code bss}) come back as walking.
+     *
+     * @param walkingSpeed meters per second
+     */
+    public JsonNode planWalkingPath(String from, String to, String datetime, Double walkingSpeed) {
+        log.info("Planning a walking path from {} to {}", from, to);
+        UriComponentsBuilder builder = navitia("journeys")
+            .queryParam("from", from)
+            .queryParam("to", to)
+            .queryParam("direct_path", "only")
+            .queryParam("direct_path_mode[]", "walking")
+            .queryParamIfPresent("datetime", Optional.ofNullable(datetime))
+            .queryParamIfPresent("walking_speed", Optional.ofNullable(walkingSpeed));
+        return get(builder, JsonNode.class);
+    }
+
+    /**
      * Every current and upcoming disruption, grouped by network, line and stop area (raw snake_case Navitia JSON:
      * the mapping only reads the fields it needs).
      */

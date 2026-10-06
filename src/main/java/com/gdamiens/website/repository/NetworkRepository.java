@@ -34,6 +34,8 @@ public class NetworkRepository {
 
     public record ScheduledDepartureRow(String routeId, String headsign, LocalDate serviceDate, int departureSeconds) {}
 
+    public record TimetableRow(Short directionId, int departureSeconds, String headsign, String terminusId, String terminus) {}
+
     public record ScheduledRideRow(String headsign, String tripShortName, String terminus, LocalDate serviceDate, int departureSeconds, int arrivalSeconds) {}
 
     private static final String STOP_AREA_COLUMNS = "p.stop_id, p.stop_name, p.stop_lat, p.stop_lon";
@@ -338,6 +340,43 @@ public class NetworkRepository {
                 ORDER BY 4, 5""",
             params,
             (rs, i) -> new ScheduledRideRow(rs.getString(1), rs.getString(2), rs.getString(3), rs.getObject(4, LocalDate.class), rs.getInt(5), rs.getInt(6)));
+    }
+
+    /**
+     * Scheduled departures of a route from the stop area's quays over the service day {@code date} (times may go past
+     * 24:00), with the trip's direction, headsign and last stop
+     */
+    public List<TimetableRow> findTimetable(String stopAreaId, String routeId, LocalDate date) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", stopAreaId).addValue("routeId", routeId).addValue("date", date);
+
+        return jdbc.query("""
+                WITH active AS (
+                  SELECT c.service_id FROM gtfs.calendar c
+                  WHERE CAST(:date AS date) BETWEEN c.start_date AND c.end_date
+                    AND (ARRAY[c.monday, c.tuesday, c.wednesday, c.thursday, c.friday, c.saturday, c.sunday])[extract(isodow FROM CAST(:date AS date))::int]
+                  UNION
+                  SELECT service_id FROM gtfs.calendar_dates WHERE date = :date AND exception_type = 1
+                  EXCEPT
+                  SELECT service_id FROM gtfs.calendar_dates WHERE date = :date AND exception_type = 2
+                ),
+                trips AS MATERIALIZED (
+                  SELECT t.trip_id, t.direction_id, t.trip_headsign FROM gtfs.trips t JOIN active a ON a.service_id = t.service_id
+                  WHERE t.route_id = :routeId
+                )
+                SELECT DISTINCT t.direction_id, extract(epoch FROM st.departure_time)::int, coalesce(st.stop_headsign, t.trip_headsign),
+                       last.id, last.name
+                FROM trips t
+                JOIN gtfs.stop_times st ON st.trip_id = t.trip_id AND coalesce(st.pickup_type, 0) <> 1
+                JOIN gtfs.stops q ON q.stop_id = st.stop_id AND q.parent_station = :id
+                CROSS JOIN LATERAL (
+                  SELECT coalesce(p.stop_id, lq.stop_id) AS id, coalesce(p.stop_name, lq.stop_name) AS name
+                  FROM gtfs.stop_times l JOIN gtfs.stops lq ON lq.stop_id = l.stop_id LEFT JOIN gtfs.stops p ON p.stop_id = lq.parent_station
+                  WHERE l.trip_id = t.trip_id ORDER BY l.stop_sequence DESC LIMIT 1
+                ) last
+                ORDER BY 2""",
+            params,
+            (rs, i) -> new TimetableRow(getShort(rs, 1), rs.getInt(2), rs.getString(3), rs.getString(4), rs.getString(5)));
     }
 
     private static Short getShort(ResultSet rs, int column) throws SQLException {

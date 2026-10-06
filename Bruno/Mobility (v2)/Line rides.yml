@@ -16,9 +16,10 @@ http:
       type: query
       description: "Zone d'arrêt de descente"
     - name: "after"
-      value: ""
+      value: "2026-10-07T08:00:00Z"
       type: query
       description: "Départs à partir de cette heure (ISO, ex. arrivée à une correspondance), maintenant par défaut ; les 10 min avant sont gardées"
+      disabled: true
     - name: "limit"
       value: "6"
       type: query
