@@ -104,9 +104,9 @@ Dans `/etc/guillaumedamiens/application-prod.yml`, sous `application:` :
 
 Sans client id, `POST /api/auth/google` répond 503. Aucun secret Google n'est nécessaire sur le serveur.
 
-### App web (plus tard)
+### App web
 
-Le site `app.guillaumedamiens.com` est prêt dans `/etc/nginx/sites-available/` ; ses premières lignes expliquent comment l'activer une fois l'entrée DNS créée (lien dans `sites-enabled`, puis `certbot --nginx -d app.guillaumedamiens.com`). Les builds vont dans `/var/www/guillaumedamiens-app/releases/<version>/`, avec un lien `current`.
+En ligne depuis le 9 octobre 2026 sur `https://app.guillaumedamiens.com` : site nginx activé (`/etc/nginx/sites-enabled/app.guillaumedamiens.com`), certificat Let's Encrypt posé par certbot (renouvelé par `certbot.timer`). Les builds arrivent par la CI de website-app (tag `v*`) dans `/var/www/guillaumedamiens-app/releases/<version>/`, avec un lien `current`. `deploy/nginx/apply.sh` n'installe ce site que la première fois : certbot y a ajouté son bloc HTTPS, qu'il ne faut pas écraser.
 
 ## Licence
 
