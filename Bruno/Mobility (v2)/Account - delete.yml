@@ -1,0 +1,22 @@
+info:
+  name: "Account - delete"
+  type: http
+  seq: 22
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/v2/me"
+
+  auth: inherit
+
+docs:
+  content: |-
+    Compte (`ROLE_USER` ou `ROLE_ADMIN`). Supprime définitivement le compte, ses favoris et ses sessions (refresh tokens).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

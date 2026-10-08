@@ -15,6 +15,10 @@ security:
       secret-key: change-me-dev-only-0123456789abcdef0123456789abcdef
 
 application:
+  # Sign-in with Google: OAuth client ids whose ID tokens are accepted (none = disabled), emails made admins
+  google:
+    client-ids: []
+  admin-emails: []
   # PRIM keys, the production's for now: local runs use the production's daily quotas
   idfm-key: aaAAbbBBccCCddDD
   idfm-static-key: eeEEffFFggGGhhHH

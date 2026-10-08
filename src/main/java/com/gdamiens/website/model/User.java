@@ -36,6 +36,17 @@ public class User implements Serializable {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    /** Google account ({@code sub} of its ID tokens), null for a password account */
+    @Column(name = "google_sub")
+    private String googleSub;
+
+    /** First name given by Google */
+    @Column(name = "display_name")
+    private String displayName;
+
+    @Column(name = "last_login_at")
+    private OffsetDateTime lastLoginAt;
+
     public User() {}
 
     public Integer getId() {
@@ -80,6 +91,30 @@ public class User implements Serializable {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getGoogleSub() {
+        return googleSub;
+    }
+
+    public void setGoogleSub(String googleSub) {
+        this.googleSub = googleSub;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public OffsetDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(OffsetDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
     }
 
     @Override

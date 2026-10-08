@@ -1,6 +1,7 @@
 package com.gdamiens.website.controller;
 
 import com.gdamiens.website.controller.object.Credentials;
+import com.gdamiens.website.controller.object.GoogleSignInRequest;
 import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.controller.object.RefreshTokenRequest;
 import com.gdamiens.website.controller.object.SignUpRequest;
@@ -60,6 +61,17 @@ public class UserController {
     public ResponseEntity<JwtDTO> signUp(@RequestBody SignUpRequest request) {
         JwtDTO tokens = userService.signUp(request.username(), request.email(), request.password());
         return new ResponseEntity<>(tokens, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/auth/google")
+    @Operation(summary = "Sign in with Google: exchange a Google ID token for an access JWT and a refresh token (account created at the first sign-in)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Signed in"),
+        @ApiResponse(responseCode = "400", description = "ID token not provided"),
+        @ApiResponse(responseCode = "401", description = "Invalid Google ID token (signature, issuer, audience, expiry, unverified email)"),
+        @ApiResponse(responseCode = "503", description = "Sign-in with Google is not configured")})
+    public ResponseEntity<JwtDTO> signInWithGoogle(@RequestBody GoogleSignInRequest request) {
+        return ResponseEntity.ok(userService.signInWithGoogle(request.idToken()));
     }
 
     @PostMapping("/auth/guest")

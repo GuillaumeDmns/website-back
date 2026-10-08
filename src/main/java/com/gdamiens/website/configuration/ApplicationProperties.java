@@ -26,6 +26,11 @@ public class ApplicationProperties {
 
     private final Gtfs gtfs = new Gtfs();
 
+    private final Google google = new Google();
+
+    /** Verified emails (Google) given {@code ROLE_ADMIN} when they sign in */
+    private List<String> adminEmails = new ArrayList<>();
+
     public String getIdfmKey() {
         return idfmKey;
     }
@@ -64,6 +69,45 @@ public class ApplicationProperties {
 
     public Gtfs getGtfs() {
         return gtfs;
+    }
+
+    public Google getGoogle() {
+        return google;
+    }
+
+    public List<String> getAdminEmails() {
+        return adminEmails;
+    }
+
+    public void setAdminEmails(List<String> adminEmails) {
+        this.adminEmails = adminEmails;
+    }
+
+    /**
+     * Sign-in with Google: the apps send a Google ID token, checked against Google's public keys
+     */
+    public static class Google {
+        /** OAuth client ids whose ID tokens are accepted (web, iOS, desktop: the {@code aud} claim); none = disabled */
+        private List<String> clientIds = new ArrayList<>();
+
+        /** Google's public keys (cached), configurable for local checks */
+        private String jwkSetUri = "https://www.googleapis.com/oauth2/v3/certs";
+
+        public List<String> getClientIds() {
+            return clientIds;
+        }
+
+        public void setClientIds(List<String> clientIds) {
+            this.clientIds = clientIds;
+        }
+
+        public String getJwkSetUri() {
+            return jwkSetUri;
+        }
+
+        public void setJwkSetUri(String jwkSetUri) {
+            this.jwkSetUri = jwkSetUri;
+        }
     }
 
     /**
