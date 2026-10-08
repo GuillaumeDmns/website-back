@@ -9,6 +9,7 @@ import com.gdamiens.website.controller.object.v2.JourneySection;
 import com.gdamiens.website.controller.object.v2.JourneySection.Kind;
 import com.gdamiens.website.controller.object.v2.JourneyStop;
 import com.gdamiens.website.controller.object.v2.LineSummary;
+import com.gdamiens.website.controller.object.v2.StopAreaSummary;
 import com.gdamiens.website.controller.object.v2.WalkStep;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.exceptions.NavitiaException;
@@ -116,6 +117,8 @@ public class JourneyService {
 
     private final BikeService bikeService;
 
+    private final TtlCache<String, RidePath> rideCache = new TtlCache<>(Duration.ofHours(24), 5000);
+
     private final ExecutorService shapeExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     private final TtlCache<String, Optional<List<double[]>>> shapeCache = new TtlCache<>(Duration.ofHours(6), 20000);
@@ -200,40 +203,20 @@ public class JourneyService {
             return Optional.empty();
         }
 
-        Double walkingSpeed = query.walkingSpeed() == null ? null : query.walkingSpeed().metersPerSecond;
-        String datetime = query.datetime() == null ? null : NAVITIA_DATETIME.format(query.datetime().atZone(PARIS));
-        String takePlace = take.lon() + ";" + take.lat();
-        String leavePlace = leave.lon() + ";" + leave.lat();
-        CompletableFuture<JsonNode> walkTo = CompletableFuture.supplyAsync(() ->
-            idfmNavitiaService.planWalkingPath(toNavitiaPlace(query.from()), takePlace, datetime, walkingSpeed), shapeExecutor);
-        CompletableFuture<JsonNode> ride = CompletableFuture.supplyAsync(() ->
-            idfmNavitiaService.planWalkingPath(takePlace, leavePlace, datetime, null), shapeExecutor);
-        CompletableFuture<JsonNode> walkFrom = CompletableFuture.supplyAsync(() ->
-            idfmNavitiaService.planWalkingPath(leavePlace, toNavitiaPlace(query.to()), datetime, walkingSpeed), shapeExecutor);
-
-        Map<String, LineSummary> lines = Map.of();
-        List<JourneySection> parts = new ArrayList<>();
-        List<JsonNode> responses = List.of(walkTo.join(), ride.join(), walkFrom.join());
-        for (int i = 0; i < responses.size(); i++) {
-            JsonNode journey = responses.get(i).path("journeys").path(0);
-            if (journey.isMissingNode()) {
-                return Optional.empty();
-            }
-            for (JourneySection section : toJourney(journey, lines).sections()) {
-                if (i == 1) {
-                    // The ride: the walking path at bike speed
-                    int length = Optional.ofNullable(section.length()).orElse((int) Math.round(section.duration() * 1.1));
-                    int duration = Math.max(60, (int) Math.round(length / BIKE_SPEED));
-                    parts.add(new JourneySection(Kind.BIKE, section.departure(), section.arrival(), duration, section.from(),
-                        section.to(), null, null, List.of(), List.of(), List.of(), null, null, length, section.shape()));
-                } else if (section.duration() > 0) {
-                    parts.add(section);
-                }
-            }
-        }
-        if (parts.stream().noneMatch(section -> section.kind() == Kind.BIKE)) {
-            return Optional.empty();
-        }
+        // Walks to and from the stations (600 m at most) estimated from the distance; the ride from Navitia's walking
+        // path between the stations, kept a day per pair (PRIM's quota)
+        Double chosenSpeed = query.walkingSpeed() == null ? null : query.walkingSpeed().metersPerSecond;
+        // Navitia's default walking speed for NORMAL
+        double walkingSpeed = chosenSpeed == null ? 1.12 : chosenSpeed;
+        JourneyPoint origin = place(query.from(), from);
+        JourneyPoint destination = place(query.to(), to);
+        RidePath ridePath = rideCache.get(take.id() + "|" + leave.id(), key -> ridePath(take, leave));
+        int rideDuration = Math.max(60, (int) Math.round(ridePath.length() / BIKE_SPEED));
+        List<JourneySection> parts = List.of(
+            walk(origin, stationPoint(take), walkingSpeed),
+            new JourneySection(Kind.BIKE, null, null, rideDuration, stationPoint(take), stationPoint(leave), null, null, List.of(),
+                List.of(), List.of(), null, null, ridePath.length(), ridePath.shape()),
+            walk(stationPoint(leave), destination, walkingSpeed));
 
         // One after the other, from the time asked (or to it, for an arrival time)
         long total = parts.stream().mapToLong(JourneySection::duration).sum() + 2 * BIKE_HANDLING.toSeconds();
@@ -246,9 +229,6 @@ public class JourneyService {
         for (int i = 0; i < parts.size(); i++) {
             JourneySection part = parts.get(i);
             boolean bike = part.kind() == Kind.BIKE;
-            // Walks end and start at the stations rather than at their addresses
-            JourneyPoint startPoint = bike || (i > 0 && parts.get(i - 1).kind() == Kind.BIKE) ? stationPoint(bike ? take : leave) : part.from();
-            JourneyPoint endPoint = bike || (i + 1 < parts.size() && parts.get(i + 1).kind() == Kind.BIKE) ? stationPoint(bike ? leave : take) : part.to();
             if (bike) {
                 cursor = cursor.plus(BIKE_HANDLING);
             } else {
@@ -257,12 +237,54 @@ public class JourneyService {
             }
             Instant end = cursor.plusSeconds(part.duration());
             sections.add(new JourneySection(part.kind(), cursor, end, part.duration(),
-                startPoint, endPoint,
-                null, null, List.of(), List.of(), part.steps(), null, null, part.length(), part.shape()));
+                part.from(), part.to(), null, null, List.of(), List.of(), part.steps(), null, null, part.length(), part.shape()));
             cursor = bike ? end.plus(BIKE_HANDLING) : end;
         }
         return Optional.of(new JourneyOption("bike_share", List.of("bike_share"), departure, cursor,
             (int) Duration.between(departure, cursor).toSeconds(), 0, walking, walkingDistance, 0.0, null, sections));
+    }
+
+    /** Path of a Vélib ride between two stations */
+    private record RidePath(int length, List<double[]> shape) {
+    }
+
+    /** Navitia's walking path between the stations (bike routing is missing from PRIM), else the straight line */
+    private RidePath ridePath(BikeStation take, BikeStation leave) {
+        try {
+            JsonNode journey = idfmNavitiaService.planWalkingPath(take.lon() + ";" + take.lat(), leave.lon() + ";" + leave.lat(), null, null)
+                .path("journeys").path(0);
+            List<JourneySection> sections = journey.isMissingNode() ? List.of() : toJourney(journey, Map.of()).sections();
+            if (!sections.isEmpty()) {
+                List<double[]> shape = sections.stream().flatMap(section -> section.shape().stream()).toList();
+                int length = sections.stream().mapToInt(section -> Optional.ofNullable(section.length())
+                    .orElse((int) Math.round(section.duration() * 1.1))).sum();
+                return new RidePath(length, shape);
+            }
+        } catch (RuntimeException e) {
+            LOGGER.warn("Vélib ride path unavailable: {}", e.getMessage());
+        }
+        return new RidePath(walkingLength(take.lat(), take.lon(), leave.lat(), leave.lon()),
+            List.of(new double[]{take.lon(), take.lat()}, new double[]{leave.lon(), leave.lat()}));
+    }
+
+    /** Walk on a straight line, a bit longer for the streets (times are set later) */
+    private static JourneySection walk(JourneyPoint from, JourneyPoint to, double metersPerSecond) {
+        int length = walkingLength(from.lat(), from.lon(), to.lat(), to.lon());
+        return new JourneySection(Kind.WALK, null, null, (int) Math.round(length / metersPerSecond), from, to, null, null, List.of(),
+            List.of(), List.of(), null, null, length, List.of(new double[]{from.lon(), from.lat()}, new double[]{to.lon(), to.lat()}));
+    }
+
+    /** Streets are about 30 % longer than the straight line */
+    private static int walkingLength(double lat1, double lon1, double lat2, double lon2) {
+        double x = Math.toRadians(lon2 - lon1) * Math.cos(Math.toRadians((lat1 + lat2) / 2));
+        double y = Math.toRadians(lat2 - lat1);
+        return (int) Math.round(Math.sqrt(x * x + y * y) * 6_371_000 * 1.3);
+    }
+
+    /** Start or end of a journey: the stop area's name, else a position */
+    private JourneyPoint place(String place, double[] coordinates) {
+        String name = networkService.getStopAreaSummary(place.trim()).map(StopAreaSummary::name).orElse("Position");
+        return new JourneyPoint(name, coordinates[0], coordinates[1], STOP_AREA.matcher(place.trim()).matches() ? place.trim() : null);
     }
 
     private static JourneyPoint stationPoint(BikeStation station) {

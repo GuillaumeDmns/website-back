@@ -36,6 +36,7 @@ public class IDFMStopGtfsService extends AbstractIDFMService {
     }
 
     public List<CallUnit> getStopNextPassage(String stopId, String lineId, String url) {
+        consume(ApiQuota.Api.STOP_MONITORING);
         HttpEntity<String> request = this.prepareHttpRequest();
 
         String[] splittedStopId = stopId.split(":");

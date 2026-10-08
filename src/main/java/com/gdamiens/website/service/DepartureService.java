@@ -70,6 +70,8 @@ public class DepartureService {
 
     private final TtlCache<String, Optional<StopDepartures>> cache = new TtlCache<>(Duration.ofSeconds(30), 10000);
 
+    private final TtlCache<String, Optional<List<CallUnit>>> callCache = new TtlCache<>(Duration.ofSeconds(30), 10000);
+
     public DepartureService(NetworkService networkService, NetworkRepository networkRepository, IDFMStopGtfsService idfmStopGtfsService) {
         this.networkService = networkService;
         this.networkRepository = networkRepository;
@@ -107,17 +109,46 @@ public class DepartureService {
         }
     }
 
+    /** A vehicle expected at a stop area (terminating there or not) */
+    public record Arrival(Instant time, String lineId, String trainNumber, String destination) {
+    }
+
+    /**
+     * Vehicles of a line expected at a stop area, from its stop-monitoring (shared with its departures), empty
+     * without real time
+     */
+    public List<Arrival> getArrivals(String stopAreaId, String lineId) {
+        return calls(stopAreaId).orElse(List.of()).stream()
+            .filter(call -> call.getLineId() != null && lineId.equals(siriLineToLineId(call.getLineId())))
+            .map(call -> {
+                Instant time = parse(firstNonBlank(call.getExpectedArrivalTime(), call.getExpectedDepartureTime(),
+                    call.getAimedArrivalTime(), call.getAimedDepartureTime()));
+                String number = Optional.ofNullable(call.getVehicleJourneyName()).filter(TRAIN_NUMBER.asMatchPredicate()).orElse(null);
+                return time == null ? null : new Arrival(time, lineId, number,
+                    firstNonBlank(call.getDestinationName(), call.getDestinationDisplay(), call.getDirectionName()));
+            })
+            .filter(Objects::nonNull)
+            .toList();
+    }
+
+    /** Stop-monitoring of a stop area, fetched at most every 30 s; empty when PRIM can't be reached */
+    private Optional<List<CallUnit>> calls(String stopAreaId) {
+        return callCache.get(stopAreaId, id -> {
+            try {
+                return Optional.of(idfmStopGtfsService.getStopNextPassage(id, null, Constants.IDFM_STOP_MONITORING_URL));
+            } catch (RuntimeException e) {
+                LOGGER.warn("Real-time departures unavailable for {}: {}", id, e.getMessage());
+                return Optional.empty();
+            }
+        });
+    }
+
     private Optional<StopDepartures> loadDepartures(String stopAreaId) {
         return networkService.getStopAreaSummary(stopAreaId).map(stop -> {
             Instant now = Instant.now();
             Map<String, LineSummary> lines = networkService.getLines();
 
-            List<CallUnit> calls = null;
-            try {
-                calls = idfmStopGtfsService.getStopNextPassage(stopAreaId, null, Constants.IDFM_STOP_MONITORING_URL);
-            } catch (RuntimeException e) {
-                LOGGER.warn("Real-time departures unavailable for {}: {}", stopAreaId, e.getMessage());
-            }
+            List<CallUnit> calls = calls(stopAreaId).orElse(null);
 
             Map<GroupKey, List<Departure>> groups = new LinkedHashMap<>();
 
