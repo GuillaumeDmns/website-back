@@ -44,13 +44,11 @@ public class IDFMRealtimeService extends AbstractIDFMService {
      * @param stopAreaId GTFS stop area ({@code IDFM:71264}), i.e. SIRI {@code STIF:StopArea:SP:71264:}
      */
     public List<CallUnit> getStopCalls(String stopAreaId) {
-        consume(ApiQuota.Api.STOP_MONITORING);
-
         String[] splitStopAreaId = stopAreaId.split(":");
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_STOP_MONITORING_URL)
             .queryParam("MonitoringRef", "STIF:StopArea:SP:" + splitStopAreaId[splitStopAreaId.length - 1] + ":");
 
-        List<MonitoredStopVisit> monitoredStopVisits = get(builder)
+        List<MonitoredStopVisit> monitoredStopVisits = get(ApiQuota.Api.STOP_MONITORING, builder)
             .map(ServiceDelivery::getStopMonitoringDelivery)
             .filter(deliveries -> !deliveries.isEmpty())
             .map(deliveries -> deliveries.get(0))
@@ -69,12 +67,10 @@ public class IDFMRealtimeService extends AbstractIDFMService {
      * @param lineId IDFM line id ({@code C01371})
      */
     public List<EstimatedVehicleJourney> getEstimatedVehicleJourneys(String lineId) {
-        consume(ApiQuota.Api.ESTIMATED_TIMETABLE);
-
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(Constants.IDFM_ESTIMATED_TIMETABLE_URL)
             .queryParam("LineRef", "STIF:Line::" + lineId + ":");
 
-        return get(builder)
+        return get(ApiQuota.Api.ESTIMATED_TIMETABLE, builder)
             .map(ServiceDelivery::getEstimatedTimetableDelivery)
             .filter(deliveries -> !deliveries.isEmpty())
             .map(deliveries -> deliveries.get(0))
@@ -85,8 +81,9 @@ public class IDFMRealtimeService extends AbstractIDFMService {
             .orElseThrow(() -> new CustomException("IDFM response body does not contain any journey", HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
-    private Optional<ServiceDelivery> get(UriComponentsBuilder builder) {
-        ResponseEntity<IDFMResponse> response = restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, prepareHttpRequest(), IDFMResponse.class);
+    private Optional<ServiceDelivery> get(ApiQuota.Api api, UriComponentsBuilder builder) {
+        ResponseEntity<IDFMResponse> response = call(api,
+            () -> restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, prepareHttpRequest(), IDFMResponse.class));
 
         if (!response.getStatusCode().is2xxSuccessful()) {
             throw new CustomException("IDFM real-time response " + response.getStatusCode(), HttpStatus.INTERNAL_SERVER_ERROR);

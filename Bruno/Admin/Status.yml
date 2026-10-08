@@ -1,0 +1,22 @@
+info:
+  name: "Status"
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/admin/status"
+
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. État du service, pour la supervision : quotas PRIM du jour (`used` / `limit`, part des invités), coupe-circuits PRIM (`CLOSED`, `OPEN` jusqu'à `openUntil`, `TRIAL`), dernier import GTFS réussi et dernier import (`gtfsStale` : aucun succès depuis 26 h), heure du snapshot trafic.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

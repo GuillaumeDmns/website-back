@@ -11,7 +11,9 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -103,6 +105,18 @@ public class ApiQuota {
         if (count == limit / 2 || count == limit * 8 / 10) {
             log.warn("{} requests to {} today ({} allowed, {} by guests)", count, api, limit, counter.guestDay().get());
         }
+    }
+
+    /** Use of a quota today, for the admin status */
+    public record Usage(Api api, int used, int limit, int guestUsed, int guestLimit) {
+    }
+
+    public List<Usage> usage() {
+        resetOnNewPeriod();
+        List<Usage> usage = new ArrayList<>();
+        counters.forEach((api, counter) -> usage.add(new Usage(api, counter.day().get(), (int) (api.perDay * SAFETY),
+            counter.guestDay().get(), (int) (api.perDay * guestShare))));
+        return usage;
     }
 
     /** Requests counted today, per API */
