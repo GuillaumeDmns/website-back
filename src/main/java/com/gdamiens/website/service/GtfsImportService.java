@@ -1,12 +1,17 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.configuration.HttpClientConfig;
+import com.gdamiens.website.model.GtfsImport;
+import com.gdamiens.website.repository.GtfsImportRepository;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.postgresql.PGConnection;
 import org.postgresql.copy.CopyManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.HttpMethod;
@@ -27,6 +32,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -82,16 +88,26 @@ public class GtfsImportService {
 
     private final ReentrantLock lock = new ReentrantLock();
 
+    private final GtfsImportRepository gtfsImportRepository;
+
+    private final ApplicationEventPublisher eventPublisher;
+
+    private final long minFreeDiskBytes;
+
     public GtfsImportService(DataSource dataSource, IDFMMainService idfmMainService, @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
-                             HttpClient httpClient) {
+                             HttpClient httpClient, GtfsImportRepository gtfsImportRepository, ApplicationEventPublisher eventPublisher,
+                             ApplicationProperties applicationProperties) {
         this.dataSource = dataSource;
         this.idfmMainService = idfmMainService;
         this.taskExecutor = taskExecutor;
         this.restTemplate = new RestTemplate(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.BULK_READ_TIMEOUT));
+        this.gtfsImportRepository = gtfsImportRepository;
+        this.eventPublisher = eventPublisher;
+        this.minFreeDiskBytes = applicationProperties.getGtfs().getMinFreeDiskGb() * 1024L * 1024 * 1024;
     }
 
     /**
-     * Launches the import in background.
+     * Launches an import in background, whatever the version already imported.
      *
      * @return false if an import is already running
      */
@@ -100,33 +116,59 @@ public class GtfsImportService {
             return false;
         }
 
-        this.taskExecutor.execute(this::importGtfs);
+        this.taskExecutor.execute(() -> this.importGtfs(GtfsImport.MANUAL, this.publishedVersion().orElse(null)));
         return true;
     }
 
-    public void importGtfs() {
+    /**
+     * @return the version of the GTFS dataset published now (Opendatasoft processing date), empty when unknown
+     */
+    public Optional<Instant> publishedVersion() {
+        try {
+            return this.idfmMainService.getGtfsDataDate();
+        } catch (RuntimeException e) {
+            log.warn("GTFS dataset version unavailable: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Imports the GTFS published now and records it in {@code public.gtfs_import}. On success, {@link GtfsImportedEvent}
+     * is published; on failure the current data stay.
+     *
+     * @param source   {@link GtfsImport#WATCH} or {@link GtfsImport#MANUAL}
+     * @param feedDate version expected (recorded with the import), null when unknown
+     */
+    public void importGtfs(String source, Instant feedDate) {
         if (!this.lock.tryLock()) {
             log.warn("GTFS import already running, skipping");
             return;
         }
 
         Path zipPath = null;
+        Long importId = null;
         try {
             long start = System.currentTimeMillis();
-            log.info("Start GTFS import");
+            log.info("Start GTFS import ({}, version {})", source, feedDate);
+            importId = this.gtfsImportRepository.start(source, feedDate);
+            this.checkFreeDisk();
 
             String gtfsLink = this.idfmMainService.getGTFSlink();
             if (gtfsLink == null) {
-                log.error("GTFS import aborted: no GTFS link found");
-                return;
+                throw new IllegalStateException("No GTFS link found in the dataset");
             }
 
             zipPath = this.download(gtfsLink);
-            this.load(zipPath);
+            Map<String, Long> rowsByTable = this.load(zipPath);
+            this.gtfsImportRepository.finish(importId, GtfsImport.SUCCESS, describe(rowsByTable), null);
+            this.eventPublisher.publishEvent(new GtfsImportedEvent());
 
             log.info("Finish GTFS import (took {}s)", (System.currentTimeMillis() - start) / 1000);
         } catch (Exception e) {
             log.error("GTFS import failed, current data kept", e);
+            if (importId != null) {
+                this.gtfsImportRepository.finish(importId, GtfsImport.FAILED, null, StringUtils.abbreviate(e.toString(), 2000));
+            }
         } finally {
             if (zipPath != null) {
                 try {
@@ -137,6 +179,22 @@ public class GtfsImportService {
             }
             this.lock.unlock();
         }
+    }
+
+    /** The new schema is built next to the current one, and the zip waits in the temporary directory (same disk) */
+    private void checkFreeDisk() throws IOException {
+        long free = Files.getFileStore(Path.of(System.getProperty("java.io.tmpdir"))).getUsableSpace();
+        if (free < this.minFreeDiskBytes) {
+            throw new IllegalStateException("Not enough free disk for a GTFS import: " + free / (1024 * 1024) + " MB, at least "
+                + this.minFreeDiskBytes / (1024 * 1024) + " MB needed");
+        }
+    }
+
+    private static String describe(Map<String, Long> rowsByTable) {
+        return rowsByTable.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + "=" + entry.getValue())
+            .collect(Collectors.joining(", "));
     }
 
     private Path download(String link) throws IOException {
@@ -152,7 +210,8 @@ public class GtfsImportService {
         return zipPath;
     }
 
-    private void load(Path zipPath) throws SQLException, IOException {
+    /** @return rows loaded per table */
+    private Map<String, Long> load(Path zipPath) throws SQLException, IOException {
         try (Connection connection = this.dataSource.getConnection()) {
             connection.setAutoCommit(false);
             try {
@@ -179,6 +238,7 @@ public class GtfsImportService {
                 }
 
                 connection.commit();
+                return rowsByTable;
             } catch (Exception e) {
                 connection.rollback();
                 throw e;
@@ -345,10 +405,7 @@ public class GtfsImportService {
             }
         }
 
-        log.info("GTFS rows by table: {}", rowsByTable.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .map(entry -> entry.getKey() + "=" + entry.getValue())
-            .collect(Collectors.joining(", ")));
+        log.info("GTFS rows by table: {}", describe(rowsByTable));
     }
 
     private long countCurrentRows(Connection connection, String table) throws SQLException {

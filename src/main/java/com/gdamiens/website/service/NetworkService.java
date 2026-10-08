@@ -18,6 +18,7 @@ import com.gdamiens.website.repository.NetworkRepository.StopAreaRow;
 import com.gdamiens.website.repository.NetworkRepository.TripPatternRow;
 import com.gdamiens.website.utils.GeoJson;
 import com.gdamiens.website.utils.TtlCache;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -60,6 +61,14 @@ public class NetworkService {
     private final TtlCache<String, Optional<LineDetail>> lineDetailCache = new TtlCache<>(Duration.ofHours(6), 2000);
 
     private final TtlCache<String, Optional<StopAreaDetail>> stopAreaCache = new TtlCache<>(Duration.ofHours(1), 5000);
+
+    /** A new GTFS replaced the previous one: lines, stop areas and branches are read again */
+    @EventListener(GtfsImportedEvent.class)
+    public void onGtfsImported() {
+        linesCache.invalidateAll();
+        lineDetailCache.invalidateAll();
+        stopAreaCache.invalidateAll();
+    }
 
     public NetworkService(NetworkRepository networkRepository) {
         this.networkRepository = networkRepository;

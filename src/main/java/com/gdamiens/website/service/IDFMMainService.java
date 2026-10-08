@@ -13,7 +13,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import tools.jackson.databind.JsonNode;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,6 +31,27 @@ public class IDFMMainService extends AbstractIDFMService {
     public IDFMMainService(ApplicationProperties applicationProperties, HttpClient httpClient) {
         super(applicationProperties);
         this.restTemplate = new RestTemplate(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.DEFAULT_READ_TIMEOUT));
+    }
+
+    /**
+     * Version of the GTFS dataset: when Opendatasoft last processed its file (changes with each IDFM publication: 8 h,
+     * 13 h on working days, 17 h on disruption days)
+     *
+     * @return empty when the metadata don't say
+     */
+    public Optional<Instant> getGtfsDataDate() {
+        JsonNode dataset = this.restTemplate.getForObject(Constants.IDFM_GTFS_DATASET_URL, JsonNode.class);
+        JsonNode metas = dataset == null ? null : dataset.path("metas").path("default");
+        if (metas == null) {
+            return Optional.empty();
+        }
+        String date = metas.path("data_processed").asString(metas.path("modified").asString(null));
+        try {
+            return Optional.ofNullable(date).map(Instant::parse);
+        } catch (DateTimeParseException e) {
+            log.warn("GTFS dataset date not understood: {}", date);
+            return Optional.empty();
+        }
     }
 
     public String getGTFSlink() {

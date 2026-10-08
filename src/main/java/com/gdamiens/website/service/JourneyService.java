@@ -21,6 +21,7 @@ import com.gdamiens.website.utils.TtlCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService;
 import org.springframework.stereotype.Service;
@@ -124,6 +125,12 @@ public class JourneyService {
     private final ExecutorService shapeExecutor = new DelegatingSecurityContextExecutorService(Executors.newVirtualThreadPerTaskExecutor());
 
     private final TtlCache<String, Optional<List<double[]>>> shapeCache = new TtlCache<>(Duration.ofHours(6), 20000);
+
+    /** A new GTFS replaced the previous one: its shapes have other ids */
+    @EventListener(GtfsImportedEvent.class)
+    public void onGtfsImported() {
+        shapeCache.invalidateAll();
+    }
 
     public JourneyService(IDFMNavitiaService idfmNavitiaService, NetworkService networkService, NetworkRepository networkRepository,
                           BikeService bikeService) {
