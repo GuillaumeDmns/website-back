@@ -51,6 +51,7 @@ public class WebSecurityConfig {
                     "/api/signup",
                     "/api/token/refresh",
                     "/api/logout",
+                    "/api/health",
                     "/error",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",

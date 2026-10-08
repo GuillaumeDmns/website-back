@@ -91,6 +91,17 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <!-- Local secrets stay out of the jar (spring-boot:run still reads them from target/classes);
+                         production reads its own from /etc/guillaumedamiens -->
+                    <excludes>
+                        <exclude>application-dev.yml</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

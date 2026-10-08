@@ -1,0 +1,28 @@
+# Backend service, installed in /etc/systemd/system by deploy/migrate-server.sh
+[Unit]
+Description=Guillaume Damiens website
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=guillaumedamiens
+Group=guillaumedamiens
+WorkingDirectory=/opt/guillaumedamiens
+# Secrets (datasource, JWT key, PRIM keys) in /etc/guillaumedamiens/application-prod.yml; logs go to journald
+ExecStart=/usr/bin/java -Xms512m -Xmx2g -XX:+ExitOnOutOfMemoryError -jar /opt/guillaumedamiens/current.jar --spring.profiles.active=prod --spring.config.additional-location=file:/etc/guillaumedamiens/
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# Hardening: the application only writes to /tmp (GTFS zip, Tomcat work directory)
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target
