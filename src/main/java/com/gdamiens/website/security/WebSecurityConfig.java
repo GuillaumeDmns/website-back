@@ -49,6 +49,7 @@ public class WebSecurityConfig {
                 .requestMatchers(
                     "/api/signin",
                     "/api/signup",
+                    "/api/auth/guest",
                     "/api/token/refresh",
                     "/api/logout",
                     "/api/health",
@@ -57,6 +58,8 @@ public class WebSecurityConfig {
                     "/swagger-ui/**",
                     "/webjars/**"
                 ).permitAll()
+                // Guest devices use the rest of the API, not what belongs to an account
+                .requestMatchers("/api/v2/me/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

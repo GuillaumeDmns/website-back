@@ -17,9 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
@@ -33,6 +35,12 @@ public class UserService {
 
     /** BCrypt ignores (and Spring rejects) anything beyond 72 bytes */
     private static final int PASSWORD_MAX_BYTES = 72;
+
+    /** A guest device keeps its token (and its budgets) this long, then gets a new one */
+    private static final Duration GUEST_TOKEN_VALIDITY = Duration.ofDays(30);
+
+    /** Guest subjects can't be logins, which have no ':' */
+    private static final String GUEST_SUBJECT_PREFIX = "guest:";
 
     private final JwtEncoder jwtEncoder;
 
@@ -96,6 +104,14 @@ public class UserService {
         return refreshTokenService.consume(refreshToken).map(this::createTokens);
     }
 
+    /**
+     * Access token of a device used without account: a random subject with {@link Role#ROLE_GUEST}, no refresh token
+     */
+    public JwtDTO createGuestToken() {
+        String token = createJwt(GUEST_SUBJECT_PREFIX + UUID.randomUUID(), Role.ROLE_GUEST, GUEST_TOKEN_VALIDITY);
+        return new JwtDTO(token, null, GUEST_TOKEN_VALIDITY.toSeconds());
+    }
+
     public void signOut(String refreshToken) {
         refreshTokenService.revoke(refreshToken);
     }
@@ -130,12 +146,16 @@ public class UserService {
     }
 
     private String createAccessToken(User user) {
+        return createJwt(user.getLogin(), user.getRole(), Duration.ofMillis(tokenValidityMs));
+    }
+
+    private String createJwt(String subject, Role role, Duration validity) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
-            .subject(user.getLogin())
+            .subject(subject)
             .issuedAt(now)
-            .expiresAt(now.plusMillis(tokenValidityMs))
-            .claim("auth", List.of(user.getRole().getAuthority()))
+            .expiresAt(now.plus(validity))
+            .claim("auth", List.of(role.getAuthority()))
             .build();
 
         return jwtEncoder.encode(JwtEncoderParameters.from(

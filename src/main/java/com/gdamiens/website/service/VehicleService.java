@@ -7,6 +7,7 @@ import com.gdamiens.website.controller.object.v2.StopRef;
 import com.gdamiens.website.controller.object.v2.Vehicle;
 import com.gdamiens.website.controller.object.v2.VehicleCall;
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.exceptions.QuotaExceededException;
 import com.gdamiens.website.idfm.ArrivalPlatformName;
 import com.gdamiens.website.idfm.DatedVehicleJourneyRef;
 import com.gdamiens.website.idfm.DestinationDisplay;
@@ -94,7 +95,12 @@ public class VehicleService {
      * @return vehicles of the line, empty when it is unknown or has no real time
      */
     public List<Vehicle> getVehicles(String lineId) {
-        return cache.get(lineId, this::load);
+        try {
+            return cache.get(lineId, this::load);
+        } catch (QuotaExceededException e) {
+            // The guests' share is used up: no vehicles for this caller, not cached so that accounts keep them
+            return List.of();
+        }
     }
 
     /** A call of a journey at a stop area */
@@ -118,6 +124,12 @@ public class VehicleService {
         List<EstimatedVehicleJourney> journeys;
         try {
             journeys = idfmRealtimeService.getEstimatedVehicleJourneys(lineId);
+        } catch (QuotaExceededException e) {
+            if (e.isGuestShare()) {
+                throw e;
+            }
+            log.info("No vehicles for line {}: {}", lineId, e.getMessage());
+            return List.of();
         } catch (CustomException e) {
             // No real time for this line
             log.info("No vehicles for line {}: {}", lineId, e.getMessage());

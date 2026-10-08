@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.JsonNode;
@@ -119,7 +120,8 @@ public class JourneyService {
 
     private final TtlCache<String, RidePath> rideCache = new TtlCache<>(Duration.ofHours(24), 5000);
 
-    private final ExecutorService shapeExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    /** With the caller's authentication: ApiQuota counts guests apart (the Vélib option calls Navitia) */
+    private final ExecutorService shapeExecutor = new DelegatingSecurityContextExecutorService(Executors.newVirtualThreadPerTaskExecutor());
 
     private final TtlCache<String, Optional<List<double[]>>> shapeCache = new TtlCache<>(Duration.ofHours(6), 20000);
 

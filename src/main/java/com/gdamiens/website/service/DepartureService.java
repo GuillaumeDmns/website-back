@@ -6,6 +6,7 @@ import com.gdamiens.website.controller.object.v2.LineDepartures;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
 import com.gdamiens.website.controller.object.v2.StopDepartures;
+import com.gdamiens.website.exceptions.QuotaExceededException;
 import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.repository.NetworkRepository.ScheduledDepartureRow;
@@ -13,6 +14,7 @@ import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -82,8 +84,14 @@ public class DepartureService {
      * @param limit  departures per line and destination (at most {@link #MAX_DEPARTURES})
      */
     public Optional<StopDepartures> getDepartures(String stopAreaId, String lineId, int limit) {
-        return cache.get(stopAreaId, this::loadDepartures)
-            .map(departures -> filter(departures, lineId, limit));
+        Optional<StopDepartures> departures;
+        try {
+            departures = cache.get(stopAreaId, id -> loadDepartures(id, true));
+        } catch (QuotaExceededException e) {
+            // The guests' share is used up: schedule only for this caller, not cached so that accounts keep real time
+            departures = loadDepartures(stopAreaId, false);
+        }
+        return departures.map(stopDepartures -> filter(stopDepartures, lineId, limit));
     }
 
     /**
@@ -92,7 +100,8 @@ public class DepartureService {
     public List<StopDepartures> getNearbyDepartures(double lat, double lon, int radius, int maxStops, int limit) {
         List<StopAreaSummary> stops = networkService.getNearbyStopAreas(lat, lon, radius, maxStops);
 
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        // The caller's authentication goes with the tasks: ApiQuota counts guests apart
+        try (ExecutorService executor = new DelegatingSecurityContextExecutorService(Executors.newVirtualThreadPerTaskExecutor())) {
             List<Future<Optional<StopDepartures>>> futures = stops.stream()
                 .map(stop -> executor.submit(() -> getDepartures(stop.id(), null, limit)))
                 .toList();
@@ -117,7 +126,13 @@ public class DepartureService {
      * without real time
      */
     public List<Arrival> getArrivals(String stopAreaId, String lineId) {
-        return calls(stopAreaId).orElse(List.of()).stream()
+        List<CallUnit> stopCalls;
+        try {
+            stopCalls = calls(stopAreaId).orElse(List.of());
+        } catch (QuotaExceededException e) {
+            stopCalls = List.of();
+        }
+        return stopCalls.stream()
             .filter(call -> call.getLineId() != null && lineId.equals(siriLineToLineId(call.getLineId())))
             .map(call -> {
                 Instant time = parse(firstNonBlank(call.getExpectedArrivalTime(), call.getExpectedDepartureTime(),
@@ -130,11 +145,21 @@ public class DepartureService {
             .toList();
     }
 
-    /** Stop-monitoring of a stop area, fetched at most every 30 s; empty when PRIM can't be reached */
+    /**
+     * Stop-monitoring of a stop area, fetched at most every 30 s; empty when PRIM can't be reached
+     *
+     * @throws QuotaExceededException when the guests' share is used up (not cached: accounts can still call)
+     */
     private Optional<List<CallUnit>> calls(String stopAreaId) {
         return callCache.get(stopAreaId, id -> {
             try {
                 return Optional.of(idfmRealtimeService.getStopCalls(id));
+            } catch (QuotaExceededException e) {
+                if (e.isGuestShare()) {
+                    throw e;
+                }
+                LOGGER.warn("Real-time departures unavailable for {}: {}", id, e.getMessage());
+                return Optional.empty();
             } catch (RuntimeException e) {
                 LOGGER.warn("Real-time departures unavailable for {}: {}", id, e.getMessage());
                 return Optional.empty();
@@ -142,12 +167,13 @@ public class DepartureService {
         });
     }
 
-    private Optional<StopDepartures> loadDepartures(String stopAreaId) {
+    /** @param realtime false to only read the schedule */
+    private Optional<StopDepartures> loadDepartures(String stopAreaId, boolean realtime) {
         return networkService.getStopAreaSummary(stopAreaId).map(stop -> {
             Instant now = Instant.now();
             Map<String, LineSummary> lines = networkService.getLines();
 
-            List<CallUnit> calls = calls(stopAreaId).orElse(null);
+            List<CallUnit> calls = realtime ? calls(stopAreaId).orElse(null) : null;
 
             Map<GroupKey, List<Departure>> groups = new LinkedHashMap<>();
 
