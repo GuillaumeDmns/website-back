@@ -62,6 +62,9 @@ application:
     user-journeys-per-day: 150
     user-journeys-per-hour: 60
     guest-tokens-per-ip-per-hour: 30
+  gtfs:
+    # The new schema (about the size of the current one, 3.6 GB in October 2026) is built next to it
+    min-free-disk-gb: 6
 
 ---
 spring:

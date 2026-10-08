@@ -24,6 +24,8 @@ public class ApplicationProperties {
 
     private final Budget budget = new Budget();
 
+    private final Gtfs gtfs = new Gtfs();
+
     public String getIdfmKey() {
         return idfmKey;
     }
@@ -58,6 +60,27 @@ public class ApplicationProperties {
 
     public Budget getBudget() {
         return budget;
+    }
+
+    public Gtfs getGtfs() {
+        return gtfs;
+    }
+
+    /**
+     * GTFS import
+     */
+    public static class Gtfs {
+
+        /** An import doesn't start below this much free disk: the new schema sits next to the current one until the swap */
+        private int minFreeDiskGb = 6;
+
+        public int getMinFreeDiskGb() {
+            return minFreeDiskGb;
+        }
+
+        public void setMinFreeDiskGb(int minFreeDiskGb) {
+            this.minFreeDiskGb = minFreeDiskGb;
+        }
     }
 
     /**

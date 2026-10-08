@@ -4,7 +4,9 @@ public final class Constants {
 
     // URLs
 
-    public static final String IDFM_GTFS_URL = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/offre-horaires-tc-gtfs-idfm/records?limit=100";
+    /** Opendatasoft dataset of the IDFM GTFS: its metadata (public) give the date of the current version */
+    public static final String IDFM_GTFS_DATASET_URL = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/offre-horaires-tc-gtfs-idfm";
+    public static final String IDFM_GTFS_URL = IDFM_GTFS_DATASET_URL + "/records?limit=100";
     public static final String IDFM_GTFS_FILENAME = "IDFM_gtfs";
     public static final String IDFM_ESTIMATED_TIMETABLE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/estimated-timetable";
     public static final String IDFM_STOP_MONITORING_URL = "https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring";

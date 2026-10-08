@@ -9,6 +9,7 @@ import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.repository.NetworkRepository.TimetableRow;
 import com.gdamiens.website.utils.TtlCache;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -37,6 +38,12 @@ public class TimetableService {
     private final NetworkRepository networkRepository;
 
     private final TtlCache<Key, Optional<Timetable>> cache = new TtlCache<>(Duration.ofHours(6), 2000);
+
+    /** A new GTFS replaced the previous one */
+    @EventListener(GtfsImportedEvent.class)
+    public void onGtfsImported() {
+        cache.invalidateAll();
+    }
 
     public TimetableService(NetworkService networkService, NetworkRepository networkRepository) {
         this.networkService = networkService;
