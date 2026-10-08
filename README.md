@@ -61,6 +61,8 @@ Secrets GitHub du dépôt (ou de l'environnement `production`) :
 
 ### Migration initiale du serveur (une seule fois)
 
+**Faite le 9 octobre 2026.** Le VPS est un conteneur LXC (ZAP-Hosting) : les directives systemd qui créent des namespaces (`PrivateTmp`, `ProtectSystem`…) y font échouer le service, l'unité ne les a plus. La configuration de prod vient de l'`application-dev.yml` du jar de mars (`/root/target/website-0.0.1-SNAPSHOT.jar.old`), le seul à contenir encore les secrets, plus le client Google.
+
 Avant : le service tournait en `root` depuis `/root/target`, sans profil, avec les secrets embarqués dans le jar. Ne plus déployer de jar buildé depuis ce code avant cette migration : il ne contient plus `application-dev.yml`.
 
 1. En local, builder le jar et créer la clé de déploiement :
