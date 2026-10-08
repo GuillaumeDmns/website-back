@@ -1,6 +1,7 @@
 spring:
   profiles:
-    # The production service still starts without a profile; it will pass --spring.profiles.active=prod (see PLAN.md §7.1)
+    # For local runs. The production service passes --spring.profiles.active=prod (deploy/guillaumedamiens.service);
+    # application-dev.yml is left out of the jar, so a run without profile fails instead of using the dev secrets
     active: dev
   threads:
     virtual:
