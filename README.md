@@ -2,12 +2,28 @@
 
 API Spring Boot (Java 25) de l'appli de mobilité Île-de-France. Voir `CLAUDE.md` pour l'architecture.
 
-## Lancer en local
+## Développement (tout reste sur ta machine)
 
-```bash
-./mvnw spring-boot:run                 # profil dev, secrets dans src/main/resources/application-dev.yml (non versionné)
-./mvnw clean package -DskipTests       # jar dans target/
-```
+Le profil `dev` (par défaut) tape une **base PostgreSQL locale** ; la prod a sa propre base sur le VPS. Rien de la configuration de dev ne part en production : `application-dev.yml` est hors du dépôt et hors du jar.
+
+1. Base locale (une fois) : PostgreSQL 18 + PostGIS installés, puis en superutilisateur (`sudo -u postgres psql`) :
+   ```sql
+   CREATE ROLE guillaumedamiens LOGIN PASSWORD 'guillaumedamiens';
+   CREATE DATABASE guillaumedamiens OWNER guillaumedamiens;
+   \c guillaumedamiens
+   CREATE EXTENSION IF NOT EXISTS postgis;
+   CREATE EXTENSION IF NOT EXISTS pg_trgm;
+   CREATE EXTENSION IF NOT EXISTS unaccent;
+   ```
+2. Configuration : copier `src/main/resources/application-dev-example.yml` en `application-dev.yml` et la remplir. Pour le moment, la dev garde les **mêmes clés PRIM et le même secret JWT que la prod** : les tests locaux consomment les quotas de la prod, et un jeton de dev est valable en prod.
+3. Lancer :
+   ```bash
+   ./mvnw spring-boot:run                 # http://localhost:8080
+   ./mvnw clean package -DskipTests       # jar dans target/
+   ```
+   Au premier démarrage, Liquibase crée les tables ; le GTFS s'importe quelques minutes après (environ 3 min, 3,5 Go), puis à chaque nouvelle publication IDFM.
+
+Les apps de dev (`website-app`, `website-react` en `npm run dev`) appellent ce backend sur `http://localhost:8080` ; un téléphone Android y accède par `adb reverse tcp:8080 tcp:8080`. Le CORS du profil `dev` n'accepte que `localhost` et `127.0.0.1` ; celui de la prod, seulement `guillaumedamiens.com` et `app.guillaumedamiens.com`. Bruno : environnement `Local`.
 
 ## Production
 

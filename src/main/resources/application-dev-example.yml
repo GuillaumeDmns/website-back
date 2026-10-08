@@ -1,14 +1,20 @@
+# Copy to application-dev.yml (gitignored) for local runs. Everything here stays on the development machine: never
+# point it at the production database, and keep secrets different from production
+# (/etc/guillaumedamiens/application-prod.yml on the VPS).
 spring:
   datasource:
-    username: root
-    password: root
-    url: jdbc:postgresql://hostname:5433/database
+    # Local PostgreSQL with PostGIS, pg_trgm and unaccent (README: Développement)
+    url: jdbc:postgresql://localhost:5432/guillaumedamiens
+    username: guillaumedamiens
+    password: guillaumedamiens
 
 security:
   jwt:
     token:
-      secret-key: abcdefghijklmnopqrstuvwxyz0123456789
+      # Same secret as production for now (decision of October 2026): a development token is valid in production
+      secret-key: change-me-dev-only-0123456789abcdef0123456789abcdef
 
 application:
+  # PRIM keys, the production's for now: local runs use the production's daily quotas
   idfm-key: aaAAbbBBccCCddDD
   idfm-static-key: eeEEffFFggGGhhHH

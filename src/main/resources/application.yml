@@ -49,7 +49,6 @@ application:
   cors-allowed-origins:
     - https://guillaumedamiens.com
     - https://app.guillaumedamiens.com
-    - http://localhost:3000
   rate-limit:
     auth-per-minute: 10
     user-per-minute: 120
@@ -78,11 +77,9 @@ logging:
   file:
     path: ./
 
-# Flutter web dev server runs on a random localhost port
+# Development only: the dev web servers on this machine (Flutter, React), never the production sites
 application:
   cors-allowed-origins:
-    - https://guillaumedamiens.com
-    - https://app.guillaumedamiens.com
     - http://localhost:[*]
     - http://127.0.0.1:[*]
 
