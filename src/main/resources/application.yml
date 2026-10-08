@@ -54,6 +54,14 @@ application:
     auth-per-minute: 10
     user-per-minute: 120
     anonymous-per-minute: 60
+  # Guest devices: 15 % of each PRIM quota (accounts keep the rest), capped journey searches
+  quota:
+    guest-share: 0.15
+  budget:
+    guest-journeys-per-day: 10
+    user-journeys-per-day: 150
+    user-journeys-per-hour: 60
+    guest-tokens-per-ip-per-hour: 30
 
 ---
 spring:

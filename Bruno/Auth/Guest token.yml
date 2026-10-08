@@ -1,0 +1,29 @@
+info:
+  name: "Guest token"
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/guest"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        if (body?.jwt) {
+          bru.setEnvVar("guestJwt", body.jwt);
+        }
+
+docs:
+  content: |-
+    Public. Jeton d'un appareil sans compte (`ROLE_GUEST`, 30 jours, pas de refresh token), rangé dans `guestJwt` (le `jwt` de la collection reste celui du compte). Usage plafonné : 15 % de chaque quota PRIM pour l'ensemble des invités, 10 itinéraires par jour et par appareil (429 `guest_journey_limit` au-delà), pas de `/api/v2/me`. Au plus 30 jetons par adresse IP et par heure.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

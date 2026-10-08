@@ -5,10 +5,12 @@ import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.controller.object.RefreshTokenRequest;
 import com.gdamiens.website.controller.object.SignUpRequest;
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.security.UsageBudgets;
 import com.gdamiens.website.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
     private final UserService userService;
 
-    public UserController(UserService userService) {
+    private final UsageBudgets usageBudgets;
+
+    public UserController(UserService userService, UsageBudgets usageBudgets) {
         this.userService = userService;
+        this.usageBudgets = usageBudgets;
     }
 
     @PostMapping("/signin")
@@ -55,6 +60,16 @@ public class UserController {
     public ResponseEntity<JwtDTO> signUp(@RequestBody SignUpRequest request) {
         JwtDTO tokens = userService.signUp(request.username(), request.email(), request.password());
         return new ResponseEntity<>(tokens, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/auth/guest")
+    @Operation(summary = "Get the access token of a device used without account (capped usage, 30 days, no refresh token)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Guest token returned"),
+        @ApiResponse(responseCode = "429", description = "Too many guest tokens from this address")})
+    public ResponseEntity<JwtDTO> guest(HttpServletRequest request) {
+        usageBudgets.consumeGuestToken(request.getRemoteAddr());
+        return ResponseEntity.ok(userService.createGuestToken());
     }
 
     @PostMapping("/token/refresh")
@@ -90,8 +105,7 @@ public class UserController {
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ProblemDetail> handleCustomException(CustomException e) {
-        return ResponseEntity.status(e.getHttpStatus())
-            .body(ProblemDetail.forStatusAndDetail(e.getHttpStatus(), e.getMessage()));
+        return ResponseEntity.status(e.getHttpStatus()).body(e.toProblemDetail());
     }
 
 }

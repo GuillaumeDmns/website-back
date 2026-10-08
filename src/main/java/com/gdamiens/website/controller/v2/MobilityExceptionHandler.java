@@ -20,9 +20,10 @@ public class MobilityExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MobilityExceptionHandler.class);
 
+    /** With the exception's {@code code} property when it has one (quota, journey budget...) */
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ProblemDetail> handleCustomException(CustomException e) {
-        return problem(e.getHttpStatus(), e.getMessage());
+        return ResponseEntity.status(e.getHttpStatus()).body(e.toProblemDetail());
     }
 
     @ExceptionHandler({MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class})

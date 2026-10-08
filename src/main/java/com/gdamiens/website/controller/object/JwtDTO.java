@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * Tokens returned on sign-in / sign-up / refresh. {@code jwt} is the short-lived access token sent as
- * {@code Bearer}; {@code refreshToken} (absent on the legacy {@code GET /api/refresh}) is used to get a new pair.
+ * {@code Bearer}; {@code refreshToken} (absent for a guest token) is used to get a new pair.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class JwtDTO {

@@ -14,6 +14,7 @@ import com.gdamiens.website.controller.object.v2.Timetable;
 import com.gdamiens.website.controller.object.v2.Vehicle;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.TransportMode;
+import com.gdamiens.website.security.UsageBudgets;
 import com.gdamiens.website.service.BikeService;
 import com.gdamiens.website.service.DepartureService;
 import com.gdamiens.website.service.JourneyService;
@@ -29,6 +30,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -69,10 +71,12 @@ public class MobilityController {
 
     private final BikeService bikeService;
 
+    private final UsageBudgets usageBudgets;
+
     public MobilityController(NetworkService networkService, DepartureService departureService, SearchService searchService,
                               JourneyService journeyService, TrafficService trafficService, VehicleService vehicleService,
                               RideService rideService, TimetableService timetableService,
-                              BikeService bikeService) {
+                              BikeService bikeService, UsageBudgets usageBudgets) {
         this.networkService = networkService;
         this.departureService = departureService;
         this.searchService = searchService;
@@ -82,11 +86,14 @@ public class MobilityController {
         this.rideService = rideService;
         this.timetableService = timetableService;
         this.bikeService = bikeService;
+        this.usageBudgets = usageBudgets;
     }
 
     @GetMapping("/journeys")
-    @Operation(summary = "Journey options between two places, real time when available", security = @SecurityRequirement(name = "Auth. Token"))
+    @Operation(summary = "Journey options between two places, real time when available (counted in the caller's daily journey searches: 429 journey_limit or guest_journey_limit beyond)",
+        security = @SecurityRequirement(name = "Auth. Token"))
     public JourneyPlan getJourneys(
+        @Parameter(hidden = true) Authentication authentication,
         @Parameter(description = "lat,lon or stop area id", example = "48.8443,2.3730") @RequestParam String from,
         @Parameter(description = "lat,lon or stop area id", example = "IDFM:71264") @RequestParam String to,
         @Parameter(description = "ISO-8601 instant (e.g. 2026-10-03T08:30:00Z), now when absent") @RequestParam(required = false) Instant datetime,
@@ -96,6 +103,7 @@ public class MobilityController {
         @RequestParam(defaultValue = "NORMAL") WalkingSpeed walkingSpeed,
         @Parameter(description = "At most this many transfers") @RequestParam(required = false) Integer maxTransfers,
         @Parameter(description = "Vélib allowed before and after public transport") @RequestParam(defaultValue = "false") boolean bikeShare) {
+        usageBudgets.consumeJourney(authentication);
         return journeyService.plan(new JourneyQuery(from, to, datetime, arriveBy, modes, wheelchair, walkingSpeed, maxTransfers, bikeShare));
     }
 
