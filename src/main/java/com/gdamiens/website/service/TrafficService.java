@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -134,6 +135,11 @@ public class TrafficService {
         return disruptions.stream()
             .filter(disruption -> seen.add(Arrays.asList(disruption.title(), disruption.message(), disruption.active())))
             .toList();
+    }
+
+    /** When the traffic snapshot was fetched, empty before the first request */
+    public Optional<Instant> snapshotTime() {
+        return Optional.ofNullable(snapshot).map(Snapshot::loadedAt);
     }
 
     private Snapshot current() {

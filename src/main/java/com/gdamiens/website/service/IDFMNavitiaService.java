@@ -115,11 +115,12 @@ public class IDFMNavitiaService extends AbstractIDFMService {
 
     // Values are percent-encoded (accents, &, = in q...); Navitia errors are rethrown with their status and body
     private JsonNode get(UriComponentsBuilder builder) {
-        consume(ApiQuota.Api.NAVITIA);
-        try {
-            return this.restTemplate.exchange(builder.encode().build().toUri(), HttpMethod.GET, this.prepareHttpRequest(), JsonNode.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw new NavitiaException(e.getStatusCode(), e.getResponseBodyAsString());
-        }
+        return call(ApiQuota.Api.NAVITIA, () -> {
+            try {
+                return this.restTemplate.exchange(builder.encode().build().toUri(), HttpMethod.GET, this.prepareHttpRequest(), JsonNode.class).getBody();
+            } catch (HttpStatusCodeException e) {
+                throw new NavitiaException(e.getStatusCode(), e.getResponseBodyAsString());
+            }
+        });
     }
 }
