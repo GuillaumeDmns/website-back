@@ -42,6 +42,11 @@ rollback() {
 
 install -d /etc/nginx/snippets
 for name in "${!targets[@]}"; do
+    # The app site is only installed the first time: certbot then adds its HTTPS block to it, which must stay
+    if [[ $name == app.guillaumedamiens.com && -f ${targets[$name]} ]]; then
+        echo "${targets[$name]} already exists (certbot's HTTPS block), kept"
+        continue
+    fi
     install -m 644 "$SCRIPT_DIR/$name" "${targets[$name]}"
 done
 

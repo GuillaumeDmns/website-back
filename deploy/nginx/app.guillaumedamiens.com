@@ -1,4 +1,5 @@
-# Flutter web app (installed in /etc/nginx/sites-available by deploy/nginx/apply.sh, not enabled).
+# Flutter web app (installed in /etc/nginx/sites-available by deploy/nginx/apply.sh the first time only, not enabled;
+# enabled with HTTPS on 9 October 2026).
 # Once the DNS record "app" points to the VPS:
 #   ln -s /etc/nginx/sites-available/app.guillaumedamiens.com /etc/nginx/sites-enabled/
 #   nginx -t && systemctl reload nginx
