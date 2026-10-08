@@ -1,5 +1,7 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.configuration.HttpClientConfig;
+import org.apache.hc.client5.http.classic.HttpClient;
 import org.postgresql.PGConnection;
 import org.postgresql.copy.CopyManager;
 import org.slf4j.Logger;
@@ -76,14 +78,16 @@ public class GtfsImportService {
 
     private final TaskExecutor taskExecutor;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     private final ReentrantLock lock = new ReentrantLock();
 
-    public GtfsImportService(DataSource dataSource, IDFMMainService idfmMainService, @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor) {
+    public GtfsImportService(DataSource dataSource, IDFMMainService idfmMainService, @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
+                             HttpClient httpClient) {
         this.dataSource = dataSource;
         this.idfmMainService = idfmMainService;
         this.taskExecutor = taskExecutor;
+        this.restTemplate = new RestTemplate(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.BULK_READ_TIMEOUT));
     }
 
     /**

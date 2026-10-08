@@ -1,13 +1,16 @@
 spring:
   profiles:
+    # The production service still starts without a profile; it will pass --spring.profiles.active=prod (see PLAN.md §7.1)
     active: dev
+  threads:
+    virtual:
+      enabled: true
   datasource:
     username: root
     password: root
     url: jdbc:postgresql://localhost:5432/guillaumedamiens
     driver-class-name: org.postgresql.Driver
   jpa:
-    show-sql: true
     hibernate:
       ddl-auto: validate
     properties:
@@ -17,8 +20,6 @@ spring:
     open-in-view: false
 
 logging:
-  file:
-    path: ./
   level:
     org.hibernate.persister.entity: ERROR
 
@@ -39,6 +40,9 @@ security:
 server:
   # Behind the reverse proxy: take the client IP from X-Forwarded-For (only trusted from internal proxy addresses)
   forward-headers-strategy: native
+  # JSON responses (line paths, timetables, traffic) are large
+  compression:
+    enabled: true
 
 application:
   cors-allowed-origins:
@@ -55,6 +59,12 @@ spring:
   config:
     activate:
       on-profile: dev
+  jpa:
+    show-sql: true
+
+logging:
+  file:
+    path: ./
 
 # Flutter web dev server runs on a random localhost port
 application:
@@ -63,3 +73,17 @@ application:
     - https://app.guillaumedamiens.com
     - http://localhost:[*]
     - http://127.0.0.1:[*]
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+# Secrets (datasource, security.jwt.token.secret-key, application.idfm-key, application.idfm-static-key) come from
+# environment variables. Logs go to the standard output (journald). No API docs in production.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

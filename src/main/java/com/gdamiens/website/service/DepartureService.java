@@ -9,7 +9,6 @@ import com.gdamiens.website.controller.object.v2.StopDepartures;
 import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.repository.NetworkRepository.ScheduledDepartureRow;
-import com.gdamiens.website.utils.Constants;
 import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -66,16 +65,16 @@ public class DepartureService {
 
     private final NetworkRepository networkRepository;
 
-    private final IDFMStopGtfsService idfmStopGtfsService;
+    private final IDFMRealtimeService idfmRealtimeService;
 
     private final TtlCache<String, Optional<StopDepartures>> cache = new TtlCache<>(Duration.ofSeconds(30), 10000);
 
     private final TtlCache<String, Optional<List<CallUnit>>> callCache = new TtlCache<>(Duration.ofSeconds(30), 10000);
 
-    public DepartureService(NetworkService networkService, NetworkRepository networkRepository, IDFMStopGtfsService idfmStopGtfsService) {
+    public DepartureService(NetworkService networkService, NetworkRepository networkRepository, IDFMRealtimeService idfmRealtimeService) {
         this.networkService = networkService;
         this.networkRepository = networkRepository;
-        this.idfmStopGtfsService = idfmStopGtfsService;
+        this.idfmRealtimeService = idfmRealtimeService;
     }
 
     /**
@@ -135,7 +134,7 @@ public class DepartureService {
     private Optional<List<CallUnit>> calls(String stopAreaId) {
         return callCache.get(stopAreaId, id -> {
             try {
-                return Optional.of(idfmStopGtfsService.getStopNextPassage(id, null, Constants.IDFM_STOP_MONITORING_URL));
+                return Optional.of(idfmRealtimeService.getStopCalls(id));
             } catch (RuntimeException e) {
                 LOGGER.warn("Real-time departures unavailable for {}: {}", id, e.getMessage());
                 return Optional.empty();
