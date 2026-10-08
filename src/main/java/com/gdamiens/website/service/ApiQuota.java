@@ -32,8 +32,6 @@ public class ApiQuota {
         STOP_MONITORING(1_000_000),
         /** Prochains passages, requête globale (estimated-timetable, also with a LineRef) */
         ESTIMATED_TIMETABLE(1_500),
-        /** Messages Info Trafic, requête globale (general-message) */
-        GENERAL_MESSAGE(18_000),
         /** Calculateur Île-de-France Mobilités, accès générique v2 (Navitia: journeys, places, traffic reports…) */
         NAVITIA(20_000);
 

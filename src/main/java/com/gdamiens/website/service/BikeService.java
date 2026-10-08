@@ -1,11 +1,11 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.configuration.HttpClientConfig;
 import com.gdamiens.website.controller.object.v2.BikeStation;
 import com.gdamiens.website.utils.Constants;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.classic.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -49,9 +49,9 @@ public class BikeService {
     private volatile Map<String, Status> status = Map.of();
     private volatile Instant statusAt = Instant.EPOCH;
 
-    public BikeService() {
+    public BikeService(HttpClient httpClient) {
         this.restTemplate = new RestTemplate(List.of(new JacksonJsonHttpMessageConverter()));
-        this.restTemplate.setRequestFactory(new HttpComponentsClientHttpRequestFactory(HttpClients.custom().build()));
+        this.restTemplate.setRequestFactory(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.DEFAULT_READ_TIMEOUT));
     }
 
     /**

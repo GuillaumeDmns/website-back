@@ -21,43 +21,14 @@ request:
   variables:
     - name: lineId
       value: C01742
-      description: Id IDFM de ligne pour le GTFS et le temps réel (C01742 = RER A, C01371 = métro 1)
-    - name: gtfsStopId
-      value: IDFM:monomodalStopPlace:45102
-      description: Id GTFS d'arrêt (Châtelet - Les Halles, RER A)
+      description: Id IDFM de ligne (C01742 = RER A, C01371 = métro 1)
     - name: stopAreaId
       value: IDFM:71264
       description: Id de zone d'arrêt (station parente GTFS) pour les endpoints v2 (Châtelet)
-    - name: zdeId
-      value: "22087"
-      description: Id numérique de zone d'embarquement (Châtelet, métro 1)
     - name: lon
       value: "2.3470"
     - name: lat
       value: "48.8584"
-    - name: navitiaLineId
-      value: line:IDFM:C01742
-    - name: navitiaStopAreaId
-      value: stop_area:IDFM:71264
-    - name: navitiaStopPointId
-      value: stop_point:IDFM:22087
-    - name: navitiaRouteId
-      value: ""
-      description: Renseigné par Navitia / Referential / Get routes
-    - name: navitiaNetworkId
-      value: ""
-      description: Renseigné par Navitia / Referential / Get networks
-    - name: navitiaCommercialModeId
-      value: ""
-      description: Renseigné par Navitia / Referential / Get commercial modes
-    - name: navitiaPhysicalModeId
-      value: physical_mode:Metro
-    - name: navitiaCompanyId
-      value: ""
-      description: Renseigné par Navitia / Referential / Get companies
-    - name: navitiaDisruptionId
-      value: ""
-      description: Renseigné par Navitia / Disruptions / Get disruptions
   scripts:
     - type: before-request
       code: |-
@@ -105,13 +76,11 @@ docs:
 
     L'authentification est automatique : le script de la collection se connecte via `/api/signin` quand le JWT manque ou va expirer, et le stocke dans `jwt`. Toutes les requêtes héritent du bearer `{{jwt}}` (sauf Login).
 
-    - **Auth** : login, refresh, création d'utilisateur
+    - **Auth** : login, inscription, refresh token, logout
     - **Admin** : import GTFS
-    - **Network (GTFS)** : lignes et arrêts lus dans le schéma `gtfs`
-    - **Real-time** : temps réel IDFM PRIM (SIRI)
-    - **Navitia** : proxy Navitia IDFM PRIM (recherche, itinéraires, référentiel, horaires, perturbations)
+    - **Mobility (v2)** : API des applis (arrêts, lignes, départs, itinéraires, trafic, Vélib, favoris)
 
-    Les variables de collection donnent des exemples réels (Châtelet, RER A). Les requêtes « list » de Navitia remplissent les ids utilisés par les requêtes « by ID ».
+    Les variables de collection donnent des exemples réels (Châtelet, RER A).
   type: text/markdown
 bundled: false
 extensions:

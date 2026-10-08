@@ -96,14 +96,6 @@ public class UserService {
         return refreshTokenService.consume(refreshToken).map(this::createTokens);
     }
 
-    /**
-     * Legacy refresh from a still valid access token (used by the React site).
-     */
-    public Optional<String> refreshAccessToken(String username) {
-        return userRepository.getByLoginIgnoreCase(username)
-            .map(this::createAccessToken);
-    }
-
     public void signOut(String refreshToken) {
         refreshTokenService.revoke(refreshToken);
     }
@@ -112,8 +104,7 @@ public class UserService {
      * Creates a new user with a BCrypt-hashed password.
      * @return the created User, or empty if the login already exists
      */
-    @Transactional
-    public Optional<User> createUser(String login, String password, Role role) {
+    private Optional<User> createUser(String login, String password, Role role) {
         if (userRepository.getByLoginIgnoreCase(login).isPresent()) {
             return Optional.empty();
         }

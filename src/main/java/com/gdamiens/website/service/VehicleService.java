@@ -19,7 +19,6 @@ import com.gdamiens.website.idfm.JourneyNote;
 import com.gdamiens.website.idfm.StopPointRef;
 import com.gdamiens.website.idfm.VehicleJourneyName;
 import com.gdamiens.website.repository.NetworkRepository;
-import com.gdamiens.website.utils.Constants;
 import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -42,7 +41,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Vehicles of a line on its map, estimated from the PRIM estimated-timetable. Cached 30 s per line.
+ * Vehicles of a line on its map, estimated from the PRIM estimated-timetable. Cached 60 s per line.
  * <p>
  * Two shapes of data come out of it:
  * <ul>
@@ -76,7 +75,7 @@ public class VehicleService {
     /** Share of journeys whose calls don't follow a branch above which journeys are taken as passages per stop */
     private static final double MIXED_JOURNEYS = 0.2;
 
-    private final IDFMLineService idfmLineService;
+    private final IDFMRealtimeService idfmRealtimeService;
 
     private final NetworkService networkService;
 
@@ -85,8 +84,8 @@ public class VehicleService {
     /** A minute: the estimated-timetable has a small daily quota (see {@link ApiQuota}) */
     private final TtlCache<String, List<Vehicle>> cache = new TtlCache<>(Duration.ofSeconds(60), 500);
 
-    public VehicleService(IDFMLineService idfmLineService, NetworkService networkService, NetworkRepository networkRepository) {
-        this.idfmLineService = idfmLineService;
+    public VehicleService(IDFMRealtimeService idfmRealtimeService, NetworkService networkService, NetworkRepository networkRepository) {
+        this.idfmRealtimeService = idfmRealtimeService;
         this.networkService = networkService;
         this.networkRepository = networkRepository;
     }
@@ -118,7 +117,7 @@ public class VehicleService {
         }
         List<EstimatedVehicleJourney> journeys;
         try {
-            journeys = idfmLineService.getEstimatedVehicleJourneys(lineId, Constants.IDFM_ESTIMATED_TIMETABLE_URL);
+            journeys = idfmRealtimeService.getEstimatedVehicleJourneys(lineId);
         } catch (CustomException e) {
             // No real time for this line
             log.info("No vehicles for line {}: {}", lineId, e.getMessage());

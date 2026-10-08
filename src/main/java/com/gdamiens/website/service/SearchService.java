@@ -3,10 +3,6 @@ package com.gdamiens.website.service;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.PlaceResult;
 import com.gdamiens.website.controller.object.v2.SearchResult;
-import com.gdamiens.website.idfm.navitia.Coord;
-import com.gdamiens.website.idfm.navitia.EmbeddedTypeEnum;
-import com.gdamiens.website.idfm.navitia.Place;
-import com.gdamiens.website.idfm.navitia.Places;
 import com.gdamiens.website.model.TransportMode;
 import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.repository.NetworkRepository.StopAreaRow;
@@ -15,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -37,7 +34,13 @@ public class SearchService {
 
     private static final String NAVITIA_STOP_AREA_PREFIX = "stop_area:";
 
-    private static final List<String> PLACE_TYPES = List.of("stop_area", "address", "poi");
+    private static final String STOP_AREA = "stop_area";
+
+    private static final String ADDRESS = "address";
+
+    private static final String POI = "poi";
+
+    private static final List<String> PLACE_TYPES = List.of(STOP_AREA, ADDRESS, POI);
 
     /** Optional mode word then the line name: {@code rer b}, {@code métro 13}, {@code m13}, {@code bus 38}, {@code 7bis} */
     private static final Pattern LINE_QUERY = Pattern.compile("^(ligne|metro|m|rer|bus|tram|tramway|noctilien|train|transilien)?\\s*([a-z]?\\d*[a-z]*)$");
@@ -59,7 +62,16 @@ public class SearchService {
 
     private final IDFMNavitiaService idfmNavitiaService;
 
-    private final TtlCache<String, List<Place>> navitiaCache = new TtlCache<>(Duration.ofMinutes(10), 5000);
+    private final TtlCache<String, List<NavitiaPlace>> navitiaCache = new TtlCache<>(Duration.ofMinutes(10), 5000);
+
+    /**
+     * A place found by Navitia
+     *
+     * @param type     Navitia {@code embedded_type}: {@code stop_area}, {@code address} or {@code poi}
+     * @param lat      null when Navitia gives no coordinates (stop areas are read from the GTFS)
+     */
+    private record NavitiaPlace(String type, String id, String name, Double lat, Double lon) {
+    }
 
     public SearchService(NetworkService networkService, NetworkRepository networkRepository, IDFMNavitiaService idfmNavitiaService) {
         this.networkService = networkService;
@@ -99,33 +111,31 @@ public class SearchService {
     }
 
     private List<PlaceResult> searchPlaces(String normalized, int limit) {
-        List<Place> places;
+        List<NavitiaPlace> places;
         try {
-            places = navitiaCache.get(normalized + "|" + limit, k -> Optional.ofNullable(idfmNavitiaService.getPlaces(normalized, PLACE_TYPES, limit))
-                .map(Places::getPlaces)
-                .orElse(List.of()));
+            places = navitiaCache.get(normalized + "|" + limit, k -> toPlaces(idfmNavitiaService.getPlaces(normalized, PLACE_TYPES, limit)));
         } catch (RuntimeException e) {
             LOGGER.warn("Navitia places search failed for '{}': {}", normalized, e.getMessage());
             return List.of();
         }
 
         List<String> stopAreaIds = places.stream()
-            .filter(place -> place.getEmbeddedType() == EmbeddedTypeEnum.STOP_AREA && place.getId() != null)
-            .map(place -> StringUtils.removeStart(place.getId(), NAVITIA_STOP_AREA_PREFIX))
+            .filter(place -> STOP_AREA.equals(place.type()) && place.id() != null)
+            .map(place -> StringUtils.removeStart(place.id(), NAVITIA_STOP_AREA_PREFIX))
             .toList();
         Map<String, StopAreaRow> stopAreas = networkRepository.findStopAreas(stopAreaIds);
         Map<String, List<String>> routeIds = networkRepository.findRouteIdsByStopAreas(stopAreas.keySet());
 
         List<PlaceResult> results = new ArrayList<>();
-        for (Place place : places) {
-            PlaceResult result = switch (place.getEmbeddedType()) {
-                case STOP_AREA -> Optional.ofNullable(stopAreas.get(StringUtils.removeStart(place.getId(), NAVITIA_STOP_AREA_PREFIX)))
-                    .map(stop -> new PlaceResult(PlaceResult.Type.STOP_AREA, stop.id(), place.getName(), stop.lat(), stop.lon(),
+        for (NavitiaPlace place : places) {
+            PlaceResult result = switch (place.type()) {
+                case STOP_AREA -> Optional.ofNullable(stopAreas.get(StringUtils.removeStart(place.id(), NAVITIA_STOP_AREA_PREFIX)))
+                    .map(stop -> new PlaceResult(PlaceResult.Type.STOP_AREA, stop.id(), place.name(), stop.lat(), stop.lon(),
                         networkService.toLineSummaries(routeIds.getOrDefault(stop.id(), List.of()))))
                     .orElse(null);
-                case ADDRESS -> toPlace(PlaceResult.Type.ADDRESS, place, place.getAddress() == null ? null : place.getAddress().getCoord());
-                case POI -> toPlace(PlaceResult.Type.POI, place, place.getPoi() == null ? null : place.getPoi().getCoord());
-                case null, default -> null;
+                case ADDRESS -> toPlace(PlaceResult.Type.ADDRESS, place);
+                case POI -> toPlace(PlaceResult.Type.POI, place);
+                default -> null;
             };
             if (result != null) {
                 results.add(result);
@@ -134,15 +144,31 @@ public class SearchService {
         return results;
     }
 
-    private static PlaceResult toPlace(PlaceResult.Type type, Place place, Coord coord) {
-        if (coord == null || place.getId() == null) {
+    /** Navitia {@code places} response: coordinates are strings, under the object of the place's type */
+    private static List<NavitiaPlace> toPlaces(JsonNode response) {
+        if (response == null) {
+            return List.of();
+        }
+        return response.path("places").values().stream()
+            .map(place -> {
+                String type = place.path("embedded_type").asString("");
+                JsonNode coord = place.path(type).path("coord");
+                return new NavitiaPlace(type, place.path("id").asString(null), place.path("name").asString(null),
+                    coordinate(coord.path("lat")), coordinate(coord.path("lon")));
+            })
+            .toList();
+    }
+
+    private static Double coordinate(JsonNode value) {
+        double coordinate = value.asDouble(Double.NaN);
+        return Double.isNaN(coordinate) ? null : coordinate;
+    }
+
+    private static PlaceResult toPlace(PlaceResult.Type type, NavitiaPlace place) {
+        if (place.id() == null || place.lat() == null || place.lon() == null) {
             return null;
         }
-        try {
-            return new PlaceResult(type, place.getId(), place.getName(), Double.parseDouble(coord.getLat()), Double.parseDouble(coord.getLon()), null);
-        } catch (NumberFormatException | NullPointerException e) {
-            return null;
-        }
+        return new PlaceResult(type, place.id(), place.name(), place.lat(), place.lon(), null);
     }
 
     /** Lower case, no accents, single spaces */

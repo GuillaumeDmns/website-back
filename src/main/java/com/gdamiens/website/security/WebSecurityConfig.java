@@ -54,9 +54,7 @@ public class WebSecurityConfig {
                     "/error",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
-                    "/configuration/**",
-                    "/webjars/**",
-                    "/public"
+                    "/webjars/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
