@@ -88,6 +88,20 @@ Avant : le service tournait en `root` depuis `/root/target`, sans profil, avec l
    ```
 5. Après quelques jours sans souci : supprimer `/root/target` (anciens jars avec les secrets, logs depuis 2025) et la copie de l'ancienne unité. Changer alors le secret JWT dans `/etc/guillaumedamiens/application-prod.yml` (tout le monde est déconnecté) et, si possible, les clés PRIM.
 
+### Connexion avec Google
+
+Dans `/etc/guillaumedamiens/application-prod.yml`, sous `application:` :
+
+```yaml
+  google:
+    client-ids:                 # clients OAuth dont les ID tokens sont acceptés (web, iOS, desktop)
+      - 1234-web.apps.googleusercontent.com
+  admin-emails:                 # emails Google vérifiés qui reçoivent ROLE_ADMIN à la connexion
+      - ton.adresse@gmail.com
+```
+
+Sans client id, `POST /api/auth/google` répond 503. Aucun secret Google n'est nécessaire sur le serveur.
+
 ### App web (plus tard)
 
 Le site `app.guillaumedamiens.com` est prêt dans `/etc/nginx/sites-available/` ; ses premières lignes expliquent comment l'activer une fois l'entrée DNS créée (lien dans `sites-enabled`, puis `certbot --nginx -d app.guillaumedamiens.com`). Les builds vont dans `/var/www/guillaumedamiens-app/releases/<version>/`, avec un lien `current`.

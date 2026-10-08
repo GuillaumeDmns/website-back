@@ -11,4 +11,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> getByLoginIgnoreCase(String login);
 
     Optional<User> getByEmailIgnoreCase(String email);
+
+    Optional<User> getByGoogleSub(String googleSub);
 }

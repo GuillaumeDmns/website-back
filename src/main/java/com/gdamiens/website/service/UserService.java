@@ -1,6 +1,9 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.JwtDTO;
+import com.gdamiens.website.controller.object.v2.Account;
+import com.gdamiens.website.controller.object.v2.AccountExport;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.User;
 import com.gdamiens.website.repository.UserRepository;
@@ -19,10 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -42,6 +50,9 @@ public class UserService {
     /** Guest subjects can't be logins, which have no ':' */
     private static final String GUEST_SUBJECT_PREFIX = "guest:";
 
+    /** Login (and JWT subject) of a Google account: Google's subject, which no username can be */
+    private static final String GOOGLE_LOGIN_PREFIX = "google:";
+
     private final JwtEncoder jwtEncoder;
 
     private final UserRepository userRepository;
@@ -50,15 +61,87 @@ public class UserService {
 
     private final RefreshTokenService refreshTokenService;
 
+    private final GoogleIdTokenVerifier googleIdTokenVerifier;
+
+    private final FavoriteService favoriteService;
+
+    private final Set<String> adminEmails;
+
     @Value("${security.jwt.token.expire-length:300000}")
     private long tokenValidityMs;
 
     public UserService(JwtEncoder jwtEncoder, UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       RefreshTokenService refreshTokenService) {
+                       RefreshTokenService refreshTokenService, GoogleIdTokenVerifier googleIdTokenVerifier,
+                       FavoriteService favoriteService, ApplicationProperties applicationProperties) {
         this.jwtEncoder = jwtEncoder;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
+        this.googleIdTokenVerifier = googleIdTokenVerifier;
+        this.favoriteService = favoriteService;
+        this.adminEmails = applicationProperties.getAdminEmails().stream()
+            .map(email -> email.trim().toLowerCase(Locale.ROOT))
+            .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Signs in with a Google ID token: the account of this Google user, created at the first sign-in. Its email and
+     * first name follow Google's; an email listed in {@code application.admin-emails} gets {@link Role#ROLE_ADMIN}.
+     *
+     * @throws CustomException 401 if the token is invalid, 503 if Google sign-in is not configured
+     */
+    @Transactional
+    public JwtDTO signInWithGoogle(String idToken) {
+        GoogleIdTokenVerifier.GoogleAccount google = googleIdTokenVerifier.verify(idToken);
+        User user = userRepository.getByGoogleSub(google.sub()).orElseGet(() -> {
+            User created = new User();
+            created.setLogin(GOOGLE_LOGIN_PREFIX + google.sub());
+            created.setGoogleSub(google.sub());
+            created.setRole(Role.ROLE_USER);
+            return created;
+        });
+        // A password account may already hold the email: the Google account then keeps none (no merge: that address
+        // was never verified for the password account)
+        if (google.email() != null && !google.email().equalsIgnoreCase(user.getEmail())) {
+            boolean taken = userRepository.getByEmailIgnoreCase(google.email())
+                .filter(other -> !Objects.equals(other.getId(), user.getId()))
+                .isPresent();
+            if (!taken) {
+                user.setEmail(google.email());
+            }
+        }
+        user.setDisplayName(google.firstName());
+        user.setLastLoginAt(OffsetDateTime.now());
+        if (google.email() != null && adminEmails.contains(google.email().toLowerCase(Locale.ROOT))) {
+            user.setRole(Role.ROLE_ADMIN);
+        }
+        return createTokens(userRepository.save(user));
+    }
+
+    public Account getAccount(String login) {
+        return toAccount(user(login));
+    }
+
+    /** The account and its favorites, as kept on the server */
+    public AccountExport exportAccount(String login) {
+        return new AccountExport(Instant.now(), getAccount(login), favoriteService.list(login));
+    }
+
+    /** Deletes the account for good, with its favorites and refresh tokens (database cascades) */
+    @Transactional
+    public void deleteAccount(String login) {
+        userRepository.delete(user(login));
+    }
+
+    private User user(String login) {
+        return Optional.ofNullable(login)
+            .flatMap(userRepository::getByLoginIgnoreCase)
+            .orElseThrow(() -> new CustomException("Unknown user", HttpStatus.UNAUTHORIZED));
+    }
+
+    private static Account toAccount(User user) {
+        return new Account(user.getEmail(), user.getDisplayName(), user.getRole().name(), user.getGoogleSub() != null,
+            user.getCreatedAt());
     }
 
     /**

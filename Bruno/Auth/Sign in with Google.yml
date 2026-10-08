@@ -1,0 +1,26 @@
+info:
+  name: "Sign in with Google"
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/google"
+  body:
+    type: json
+    data: |-
+      {
+        "idToken": "{{googleIdToken}}"
+      }
+
+docs:
+  content: |-
+    Public. Échange un ID token Google (obtenu par l'app) contre le JWT d'accès et le refresh token habituels ; le compte est créé à la première connexion (login interne `google:<sub>`). Le backend vérifie la signature (clés publiques de Google), l'émetteur, l'audience (`application.google.client-ids`), l'expiration et `email_verified`. Un email listé dans `application.admin-emails` reçoit `ROLE_ADMIN`. 503 tant qu'aucun client id n'est configuré.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

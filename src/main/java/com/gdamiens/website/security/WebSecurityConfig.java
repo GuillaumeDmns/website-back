@@ -50,6 +50,7 @@ public class WebSecurityConfig {
                     "/api/signin",
                     "/api/signup",
                     "/api/auth/guest",
+                    "/api/auth/google",
                     "/api/token/refresh",
                     "/api/logout",
                     "/api/health",
