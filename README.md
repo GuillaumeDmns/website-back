@@ -43,7 +43,7 @@ Pousser un tag sur un commit de `master` :
 git tag v1.2.3 && git push origin v1.2.3
 ```
 
-Le workflow `Deploy` builde le jar, l'envoie dans `/opt/guillaumedamiens/releases/` avec l'utilisateur `deploy`, puis lance `deploy/activate-release.sh` : bascule de `current.jar`, redémarrage, attente de `/api/health` (3 min au plus), retour automatique à la version précédente sinon. Les 5 dernières versions restent sur le disque.
+Le workflow `Deploy` builde le jar et le publie dans la release GitHub du tag ; le VPS le télécharge (un envoi depuis les machines de GitHub vers le VPS plafonne à environ 20 Ko/s, le téléchargement depuis GitHub est rapide) dans `/opt/guillaumedamiens/releases/` avec l'utilisateur `deploy`, vérifie sa somme SHA-256, puis `deploy/activate-release.sh` fait : bascule de `current.jar`, redémarrage, attente de `/api/health` (3 min au plus), retour automatique à la version précédente sinon. Les 5 dernières versions restent sur le disque.
 
 Revenir à une version encore présente dans `releases/`, depuis ton poste :
 
