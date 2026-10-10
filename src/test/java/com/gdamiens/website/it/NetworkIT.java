@@ -30,7 +30,9 @@ class NetworkIT extends IntegrationTest {
         assertThat(nearby.path(0).path("distance").asInt()).isZero();
         assertThat(nearby.path(0).path("lines").values().stream().map(line -> line.path("name").asString()))
             .containsExactly("1", "A", "38", "N11");
-        assertThat(user.get("/api/v2/nearby?lat=48.8584&lon=2.3470&radius=5000&limit=3").json()).hasSize(3);
+        // At most 2 km: Gare de Lyon (2.4 km) stays out
+        assertThat(names(user.get("/api/v2/nearby?lat=48.8584&lon=2.3470&radius=5000").json())).containsExactly("Châtelet", "Les Halles");
+        assertThat(user.get("/api/v2/nearby?lat=48.8584&lon=2.3470&radius=500&limit=1").json()).hasSize(1);
     }
 
     @Test
