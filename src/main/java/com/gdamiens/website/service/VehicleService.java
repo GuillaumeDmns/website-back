@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.client.PrimRealtimeClient;
 import com.gdamiens.website.controller.object.v2.LineBranch;
 import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.LineDirection;
@@ -8,17 +9,17 @@ import com.gdamiens.website.controller.object.v2.Vehicle;
 import com.gdamiens.website.controller.object.v2.VehicleCall;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.exceptions.QuotaExceededException;
-import com.gdamiens.website.idfm.ArrivalPlatformName;
-import com.gdamiens.website.idfm.DatedVehicleJourneyRef;
-import com.gdamiens.website.idfm.DestinationDisplay;
-import com.gdamiens.website.idfm.DestinationName;
-import com.gdamiens.website.idfm.DestinationRef;
-import com.gdamiens.website.idfm.EstimatedCall;
-import com.gdamiens.website.idfm.EstimatedCalls;
-import com.gdamiens.website.idfm.EstimatedVehicleJourney;
-import com.gdamiens.website.idfm.JourneyNote;
-import com.gdamiens.website.idfm.StopPointRef;
-import com.gdamiens.website.idfm.VehicleJourneyName;
+import com.gdamiens.website.client.siri.ArrivalPlatformName;
+import com.gdamiens.website.client.siri.DatedVehicleJourneyRef;
+import com.gdamiens.website.client.siri.DestinationDisplay;
+import com.gdamiens.website.client.siri.DestinationName;
+import com.gdamiens.website.client.siri.DestinationRef;
+import com.gdamiens.website.client.siri.EstimatedCall;
+import com.gdamiens.website.client.siri.EstimatedCalls;
+import com.gdamiens.website.client.siri.EstimatedVehicleJourney;
+import com.gdamiens.website.client.siri.JourneyNote;
+import com.gdamiens.website.client.siri.StopPointRef;
+import com.gdamiens.website.client.siri.VehicleJourneyName;
 import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
@@ -76,7 +77,7 @@ public class VehicleService {
     /** Share of journeys whose calls don't follow a branch above which journeys are taken as passages per stop */
     private static final double MIXED_JOURNEYS = 0.2;
 
-    private final IDFMRealtimeService idfmRealtimeService;
+    private final PrimRealtimeClient primRealtimeClient;
 
     private final NetworkService networkService;
 
@@ -85,8 +86,8 @@ public class VehicleService {
     /** A minute: the estimated-timetable has a small daily quota (see {@link ApiQuota}) */
     private final TtlCache<String, List<Vehicle>> cache = new TtlCache<>(Duration.ofSeconds(60), 500);
 
-    public VehicleService(IDFMRealtimeService idfmRealtimeService, NetworkService networkService, NetworkRepository networkRepository) {
-        this.idfmRealtimeService = idfmRealtimeService;
+    public VehicleService(PrimRealtimeClient primRealtimeClient, NetworkService networkService, NetworkRepository networkRepository) {
+        this.primRealtimeClient = primRealtimeClient;
         this.networkService = networkService;
         this.networkRepository = networkRepository;
     }
@@ -123,7 +124,7 @@ public class VehicleService {
         }
         List<EstimatedVehicleJourney> journeys;
         try {
-            journeys = idfmRealtimeService.getEstimatedVehicleJourneys(lineId);
+            journeys = primRealtimeClient.getEstimatedVehicleJourneys(lineId);
         } catch (QuotaExceededException e) {
             if (e.isGuestShare()) {
                 throw e;

@@ -5,7 +5,6 @@ import com.gdamiens.website.controller.object.GoogleSignInRequest;
 import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.controller.object.RefreshTokenRequest;
 import com.gdamiens.website.controller.object.SignUpRequest;
-import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.security.UsageBudgets;
 import com.gdamiens.website.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,9 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -114,10 +111,4 @@ public class UserController {
         userService.signOut(request.refreshToken());
         return ResponseEntity.noContent().build();
     }
-
-    @ExceptionHandler(CustomException.class)
-    public ResponseEntity<ProblemDetail> handleCustomException(CustomException e) {
-        return ResponseEntity.status(e.getHttpStatus()).body(e.toProblemDetail());
-    }
-
 }

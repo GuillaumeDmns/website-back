@@ -1,6 +1,8 @@
 package com.gdamiens.website.service;
 
-import com.gdamiens.website.controller.object.CallUnit;
+import com.gdamiens.website.utils.ParisTime;
+import com.gdamiens.website.client.PrimRealtimeClient;
+import com.gdamiens.website.client.StopCall;
 import com.gdamiens.website.controller.object.v2.Departure;
 import com.gdamiens.website.controller.object.v2.LineDepartures;
 import com.gdamiens.website.controller.object.v2.LineSummary;
@@ -19,11 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -49,8 +47,6 @@ public class DepartureService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DepartureService.class);
 
-    private static final ZoneId PARIS = ZoneId.of("Europe/Paris");
-
     /** Departures kept per line and destination */
     public static final int MAX_DEPARTURES = 5;
 
@@ -67,16 +63,16 @@ public class DepartureService {
 
     private final NetworkRepository networkRepository;
 
-    private final IDFMRealtimeService idfmRealtimeService;
+    private final PrimRealtimeClient primRealtimeClient;
 
     private final TtlCache<String, Optional<StopDepartures>> cache = new TtlCache<>(Duration.ofSeconds(30), 10000);
 
-    private final TtlCache<String, Optional<List<CallUnit>>> callCache = new TtlCache<>(Duration.ofSeconds(30), 10000);
+    private final TtlCache<String, Optional<List<StopCall>>> callCache = new TtlCache<>(Duration.ofSeconds(30), 10000);
 
-    public DepartureService(NetworkService networkService, NetworkRepository networkRepository, IDFMRealtimeService idfmRealtimeService) {
+    public DepartureService(NetworkService networkService, NetworkRepository networkRepository, PrimRealtimeClient primRealtimeClient) {
         this.networkService = networkService;
         this.networkRepository = networkRepository;
-        this.idfmRealtimeService = idfmRealtimeService;
+        this.primRealtimeClient = primRealtimeClient;
     }
 
     /**
@@ -126,22 +122,17 @@ public class DepartureService {
      * without real time
      */
     public List<Arrival> getArrivals(String stopAreaId, String lineId) {
-        List<CallUnit> stopCalls;
+        List<StopCall> stopCalls;
         try {
             stopCalls = calls(stopAreaId).orElse(List.of());
         } catch (QuotaExceededException e) {
             stopCalls = List.of();
         }
         return stopCalls.stream()
-            .filter(call -> call.getLineId() != null && lineId.equals(siriLineToLineId(call.getLineId())))
-            .map(call -> {
-                Instant time = parse(firstNonBlank(call.getExpectedArrivalTime(), call.getExpectedDepartureTime(),
-                    call.getAimedArrivalTime(), call.getAimedDepartureTime()));
-                String number = Optional.ofNullable(call.getVehicleJourneyName()).filter(TRAIN_NUMBER.asMatchPredicate()).orElse(null);
-                return time == null ? null : new Arrival(time, lineId, number,
-                    firstNonBlank(call.getDestinationName(), call.getDestinationDisplay(), call.getDirectionName()));
-            })
-            .filter(Objects::nonNull)
+            .filter(call -> lineId.equals(call.lineId()) && call.arrivalTime() != null)
+            .map(call -> new Arrival(call.arrivalTime(), lineId,
+                Optional.ofNullable(call.vehicleJourneyName()).filter(DepartureService::isTrainNumber).orElse(null),
+                call.destination()))
             .toList();
     }
 
@@ -150,10 +141,10 @@ public class DepartureService {
      *
      * @throws QuotaExceededException when the guests' share is used up (not cached: accounts can still call)
      */
-    private Optional<List<CallUnit>> calls(String stopAreaId) {
+    private Optional<List<StopCall>> calls(String stopAreaId) {
         return callCache.get(stopAreaId, id -> {
             try {
-                return Optional.of(idfmRealtimeService.getStopCalls(id));
+                return Optional.of(primRealtimeClient.getStopCalls(id));
             } catch (QuotaExceededException e) {
                 if (e.isGuestShare()) {
                     throw e;
@@ -173,14 +164,14 @@ public class DepartureService {
             Instant now = Instant.now();
             Map<String, LineSummary> lines = networkService.getLines();
 
-            List<CallUnit> calls = realtime ? calls(stopAreaId).orElse(null) : null;
+            List<StopCall> calls = realtime ? calls(stopAreaId).orElse(null) : null;
 
             Map<GroupKey, List<Departure>> groups = new LinkedHashMap<>();
 
             if (calls != null) {
-                for (CallUnit call : calls) {
-                    LineSummary line = Optional.ofNullable(call.getLineId()).map(DepartureService::siriLineToLineId).map(lines::get).orElse(null);
-                    String destination = firstNonBlank(call.getDestinationName(), call.getDestinationDisplay(), call.getDirectionName());
+                for (StopCall call : calls) {
+                    LineSummary line = lines.get(call.lineId());
+                    String destination = call.destination();
                     Departure departure = toDeparture(call);
 
                     if (line != null && destination != null && departure != null && !isTerminating(destination, stop)
@@ -215,7 +206,7 @@ public class DepartureService {
 
     private void addScheduledDepartures(StopAreaSummary stop, Instant now, Set<String> lineIds, Map<String, LineSummary> lines,
                                         Map<GroupKey, List<Departure>> groups) {
-        ZonedDateTime localNow = now.atZone(PARIS);
+        ZonedDateTime localNow = now.atZone(ParisTime.ZONE);
         int nowSeconds = localNow.toLocalTime().toSecondOfDay();
 
         List<ScheduledDepartureRow> rows = networkRepository.findScheduledDepartures(stop.id(), localNow.toLocalDate(),
@@ -228,7 +219,7 @@ public class DepartureService {
                 continue;
             }
 
-            Instant time = toInstant(row.serviceDate(), row.departureSeconds());
+            Instant time = ParisTime.ofServiceDay(row.serviceDate(), row.departureSeconds());
             groups.computeIfAbsent(new GroupKey(line, row.headsign()), k -> new ArrayList<>())
                 .add(new Departure(time, time, false, null, null, null, null, null));
         }
@@ -242,20 +233,18 @@ public class DepartureService {
             .toList());
     }
 
-    private static Departure toDeparture(CallUnit call) {
-        Instant aimed = parse(firstNonBlank(call.getAimedDepartureTime(), call.getAimedArrivalTime()));
-        Instant expected = parse(firstNonBlank(call.getExpectedDepartureTime(), call.getExpectedArrivalTime()));
-        Instant time = expected != null ? expected : aimed;
+    private static Departure toDeparture(StopCall call) {
+        Instant time = call.departureTime();
         if (time == null) {
             return null;
         }
 
-        return new Departure(time, aimed, true,
-            firstNonBlank(call.getDepartureStatus(), call.getArrivalStatus()),
-            platform(call.getArrivalPlatformName()),
-            call.getVehicleAtStop(),
-            Stream.of(call.getVehicleJourneyName(), call.getJourneyNote()).filter(DepartureService::isMission).findFirst().orElse(null),
-            Optional.ofNullable(call.getVehicleJourneyName()).filter(name -> TRAIN_NUMBER.matcher(name).matches()).orElse(null));
+        return new Departure(time, call.aimedTime(), true,
+            StringUtils.firstNonBlank(call.departureStatus(), call.arrivalStatus()),
+            call.platform(),
+            call.vehicleAtStop(),
+            Stream.of(call.vehicleJourneyName(), call.journeyNote()).filter(DepartureService::isMission).findFirst().orElse(null),
+            Optional.ofNullable(call.vehicleJourneyName()).filter(DepartureService::isTrainNumber).orElse(null));
     }
 
     /** SNCF mission code: four letters, sometimes followed by digits ({@code POPI}, {@code TETE31}) */
@@ -266,12 +255,6 @@ public class DepartureService {
     /** SNCF train number: digits only */
     public static boolean isTrainNumber(String value) {
         return value != null && TRAIN_NUMBER.matcher(value).matches();
-    }
-
-    /** "unknown" is sometimes given for no platform */
-    private static String platform(String value) {
-        String platform = StringUtils.trimToNull(value);
-        return platform == null || platform.equalsIgnoreCase("unknown") ? null : platform;
     }
 
     /**
@@ -288,32 +271,6 @@ public class DepartureService {
     private static String normalize(String name) {
         return StringUtils.stripAccents(StringUtils.defaultString(name)).toLowerCase(java.util.Locale.ROOT)
             .replaceAll("[^a-z0-9]+", " ").trim();
-    }
-
-    /** {@code STIF:Line::C01371:} → {@code C01371} */
-    static String siriLineToLineId(String siriLineRef) {
-        String[] parts = siriLineRef.split(":");
-        return Stream.of(parts).filter(StringUtils::isNotBlank).reduce((first, second) -> second).orElse(null);
-    }
-
-    /** GTFS times are counted from noon minus 12 h of the service day, which matters on DST change days */
-    static Instant toInstant(LocalDate serviceDate, int seconds) {
-        return ZonedDateTime.of(serviceDate, LocalTime.NOON, PARIS).minusHours(12).plusSeconds(seconds).toInstant();
-    }
-
-    private static Instant parse(String value) {
-        if (value == null) {
-            return null;
-        }
-        try {
-            return Instant.parse(value);
-        } catch (DateTimeParseException e) {
-            return null;
-        }
-    }
-
-    private static String firstNonBlank(String... values) {
-        return Stream.of(values).filter(StringUtils::isNotBlank).findFirst().orElse(null);
     }
 
     private static <T> Optional<T> getQuietly(Future<Optional<T>> future) {

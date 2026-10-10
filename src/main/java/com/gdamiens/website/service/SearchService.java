@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.client.NavitiaClient;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.PlaceResult;
 import com.gdamiens.website.controller.object.v2.SearchResult;
@@ -60,7 +61,7 @@ public class SearchService {
 
     private final NetworkRepository networkRepository;
 
-    private final IDFMNavitiaService idfmNavitiaService;
+    private final NavitiaClient navitiaClient;
 
     private final TtlCache<String, List<NavitiaPlace>> navitiaCache = new TtlCache<>(Duration.ofMinutes(10), 5000);
 
@@ -73,10 +74,10 @@ public class SearchService {
     private record NavitiaPlace(String type, String id, String name, Double lat, Double lon) {
     }
 
-    public SearchService(NetworkService networkService, NetworkRepository networkRepository, IDFMNavitiaService idfmNavitiaService) {
+    public SearchService(NetworkService networkService, NetworkRepository networkRepository, NavitiaClient navitiaClient) {
         this.networkService = networkService;
         this.networkRepository = networkRepository;
-        this.idfmNavitiaService = idfmNavitiaService;
+        this.navitiaClient = navitiaClient;
     }
 
     public SearchResult search(String query, int limit) {
@@ -89,21 +90,18 @@ public class SearchService {
     }
 
     List<LineSummary> searchLines(String normalized) {
+        // "m13" is the metro 13 but "m" alone could be a line name, so the whole query is also tried as a name
         Matcher matcher = LINE_QUERY.matcher(normalized);
-        if (!matcher.matches() || matcher.group(2).isEmpty()) {
-            return List.of();
-        }
+        String name = matcher.matches() ? matcher.group(2) : "";
+        List<TransportMode> modes = name.isEmpty() ? null : Optional.ofNullable(matcher.group(1)).map(MODE_WORDS::get).orElse(null);
+        String wholeName = normalized.replace(" ", "");
 
-        String name = matcher.group(2);
-        List<TransportMode> modes = Optional.ofNullable(matcher.group(1)).map(MODE_WORDS::get).orElse(null);
-
-        // "m13" is the metro 13 but "m" alone could be a line name, so also try the whole query as a name
         return networkService.getLines().values().stream()
             .filter(line -> line.name() != null)
             .filter(line -> {
                 String lineName = normalize(line.name());
-                return (lineName.equals(name) && (modes == null || modes.contains(line.mode())))
-                    || lineName.equals(normalized.replace(" ", ""));
+                return (!name.isEmpty() && lineName.equals(name) && (modes == null || modes.contains(line.mode())))
+                    || lineName.equals(wholeName);
             })
             .sorted(NetworkService.LINE_ORDER)
             .limit(10)
@@ -113,7 +111,7 @@ public class SearchService {
     private List<PlaceResult> searchPlaces(String normalized, int limit) {
         List<NavitiaPlace> places;
         try {
-            places = navitiaCache.get(normalized + "|" + limit, k -> toPlaces(idfmNavitiaService.getPlaces(normalized, PLACE_TYPES, limit)));
+            places = navitiaCache.get(normalized + "|" + limit, k -> toPlaces(navitiaClient.getPlaces(normalized, PLACE_TYPES, limit)));
         } catch (RuntimeException e) {
             LOGGER.warn("Navitia places search failed for '{}': {}", normalized, e.getMessage());
             return List.of();

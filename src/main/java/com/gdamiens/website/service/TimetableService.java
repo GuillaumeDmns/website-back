@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.utils.ParisTime;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
 import com.gdamiens.website.controller.object.v2.Timetable;
@@ -84,7 +85,7 @@ public class TimetableService {
 
         List<TimetableDirection> directions = byDirection.values().stream()
             .map(rows -> new TimetableDirection(name(rows), rows.stream()
-                .map(row -> new TimetableEntry(DepartureService.toInstant(key.date(), row.departureSeconds()), row.terminus(),
+                .map(row -> new TimetableEntry(ParisTime.ofServiceDay(key.date(), row.departureSeconds()), row.terminus(),
                     DepartureService.isMission(row.headsign()) ? row.headsign() : null))
                 .toList()))
             .toList();

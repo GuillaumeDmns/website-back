@@ -1,11 +1,10 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.client.GtfsDatasetClient;
 import com.gdamiens.website.configuration.ApplicationProperties;
-import com.gdamiens.website.configuration.HttpClientConfig;
 import com.gdamiens.website.model.GtfsImport;
 import com.gdamiens.website.repository.GtfsImportRepository;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hc.client5.http.classic.HttpClient;
 import org.postgresql.PGConnection;
 import org.postgresql.copy.CopyManager;
 import org.slf4j.Logger;
@@ -14,10 +13,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.http.HttpMethod;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
 import java.io.BufferedReader;
@@ -26,7 +23,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -80,11 +76,9 @@ public class GtfsImportService {
 
     private final DataSource dataSource;
 
-    private final IDFMMainService idfmMainService;
+    private final GtfsDatasetClient gtfsDatasetClient;
 
     private final TaskExecutor taskExecutor;
-
-    private final RestTemplate restTemplate;
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -94,13 +88,12 @@ public class GtfsImportService {
 
     private final long minFreeDiskBytes;
 
-    public GtfsImportService(DataSource dataSource, IDFMMainService idfmMainService, @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
-                             HttpClient httpClient, GtfsImportRepository gtfsImportRepository, ApplicationEventPublisher eventPublisher,
+    public GtfsImportService(DataSource dataSource, GtfsDatasetClient gtfsDatasetClient, @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
+                             GtfsImportRepository gtfsImportRepository, ApplicationEventPublisher eventPublisher,
                              ApplicationProperties applicationProperties) {
         this.dataSource = dataSource;
-        this.idfmMainService = idfmMainService;
+        this.gtfsDatasetClient = gtfsDatasetClient;
         this.taskExecutor = taskExecutor;
-        this.restTemplate = new RestTemplate(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.BULK_READ_TIMEOUT));
         this.gtfsImportRepository = gtfsImportRepository;
         this.eventPublisher = eventPublisher;
         this.minFreeDiskBytes = applicationProperties.getGtfs().getMinFreeDiskGb() * 1024L * 1024 * 1024;
@@ -125,7 +118,7 @@ public class GtfsImportService {
      */
     public Optional<Instant> publishedVersion() {
         try {
-            return this.idfmMainService.getGtfsDataDate();
+            return this.gtfsDatasetClient.getDataDate();
         } catch (RuntimeException e) {
             log.warn("GTFS dataset version unavailable: {}", e.getMessage());
             return Optional.empty();
@@ -153,10 +146,8 @@ public class GtfsImportService {
             importId = this.gtfsImportRepository.start(source, feedDate);
             this.checkFreeDisk();
 
-            String gtfsLink = this.idfmMainService.getGTFSlink();
-            if (gtfsLink == null) {
-                throw new IllegalStateException("No GTFS link found in the dataset");
-            }
+            String gtfsLink = this.gtfsDatasetClient.getFileUrl()
+                .orElseThrow(() -> new IllegalStateException("No GTFS link found in the dataset"));
 
             zipPath = this.download(gtfsLink);
             Map<String, Long> rowsByTable = this.load(zipPath);
@@ -200,12 +191,7 @@ public class GtfsImportService {
     private Path download(String link) throws IOException {
         Path zipPath = Files.createTempFile("gtfs-", ".zip");
         long start = System.currentTimeMillis();
-
-        this.restTemplate.execute(link, HttpMethod.GET, request -> request.getHeaders().set("Authorization", "apikey " + this.idfmMainService.getIdfmStaticKey()), response -> {
-            Files.copy(response.getBody(), zipPath, StandardCopyOption.REPLACE_EXISTING);
-            return null;
-        });
-
+        this.gtfsDatasetClient.download(link, zipPath);
         log.info("GTFS downloaded: {} MB (took {}ms)", Files.size(zipPath) / (1024 * 1024), System.currentTimeMillis() - start);
         return zipPath;
     }

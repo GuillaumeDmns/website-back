@@ -28,6 +28,10 @@ public class ApplicationProperties {
 
     private final Google google = new Google();
 
+    private final Urls urls = new Urls();
+
+    private final Scheduling scheduling = new Scheduling();
+
     /** Verified emails (Google) given {@code ROLE_ADMIN} when they sign in */
     private List<String> adminEmails = new ArrayList<>();
 
@@ -75,6 +79,14 @@ public class ApplicationProperties {
         return google;
     }
 
+    public Urls getUrls() {
+        return urls;
+    }
+
+    public Scheduling getScheduling() {
+        return scheduling;
+    }
+
     public List<String> getAdminEmails() {
         return adminEmails;
     }
@@ -107,6 +119,61 @@ public class ApplicationProperties {
 
         public void setJwkSetUri(String jwkSetUri) {
             this.jwkSetUri = jwkSetUri;
+        }
+    }
+
+    /**
+     * External APIs, overridden by the integration tests (local fake servers)
+     */
+    public static class Urls {
+
+        /** PRIM marketplace: real time ({@code /stop-monitoring}, {@code /estimated-timetable}) and Navitia ({@code /v2/navitia}) */
+        private String prim = "https://prim.iledefrance-mobilites.fr/marketplace";
+
+        /** Opendatasoft dataset of the IDFM GTFS: its metadata give the current version, its records the file */
+        private String gtfsDataset = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/offre-horaires-tc-gtfs-idfm";
+
+        /** Vélib GBFS open data (no key) */
+        private String velibGbfs = "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole";
+
+        public String getPrim() {
+            return prim;
+        }
+
+        public void setPrim(String prim) {
+            this.prim = prim;
+        }
+
+        public String getGtfsDataset() {
+            return gtfsDataset;
+        }
+
+        public void setGtfsDataset(String gtfsDataset) {
+            this.gtfsDataset = gtfsDataset;
+        }
+
+        public String getVelibGbfs() {
+            return velibGbfs;
+        }
+
+        public void setVelibGbfs(String velibGbfs) {
+            this.velibGbfs = velibGbfs;
+        }
+    }
+
+    /**
+     * Background tasks (GTFS watch, cleanups); off in the integration tests, which trigger what they test
+     */
+    public static class Scheduling {
+
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 

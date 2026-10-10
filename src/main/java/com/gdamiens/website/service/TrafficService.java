@@ -1,5 +1,7 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.utils.ParisTime;
+import com.gdamiens.website.client.NavitiaClient;
 import com.gdamiens.website.controller.object.v2.Disruption;
 import com.gdamiens.website.controller.object.v2.Disruption.Category;
 import com.gdamiens.website.controller.object.v2.Disruption.Severity;
@@ -15,10 +17,6 @@ import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -51,17 +49,14 @@ public class TrafficService {
     /** Upcoming disruptions shown this long before they start */
     private static final Duration UPCOMING = Duration.ofDays(7);
 
-    private static final ZoneId PARIS = ZoneId.of("Europe/Paris");
-
-    private static final DateTimeFormatter NAVITIA_DATETIME = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
-
     /** Lines always listed in the traffic overview, even without disruption */
     private static final Set<TransportMode> MAIN_MODES = EnumSet.of(TransportMode.METRO, TransportMode.RER, TransportMode.TRANSILIEN, TransportMode.TRAM);
 
-    private static final Pattern LINE_BREAK = Pattern.compile("(?i)<br\\b[^>]*>|</li>");
+    private static final Pattern LINE_BREAK = Pattern.compile("(?i)<br\\b[^>]*>");
 
     private static final Pattern PARAGRAPH_END = Pattern.compile("(?i)</p>|</div>|</ul>");
 
+    /** Starts a line of its own: the end of the previous item adds nothing */
     private static final Pattern LIST_ITEM = Pattern.compile("(?i)<li\\b[^>]*>");
 
     private static final Pattern TAG = Pattern.compile("<[^>]+>");
@@ -73,7 +68,7 @@ public class TrafficService {
         .thenComparing(Disruption::severity, Comparator.reverseOrder())
         .thenComparing(Disruption::start, Comparator.nullsLast(Comparator.naturalOrder()));
 
-    private final IDFMNavitiaService navitiaService;
+    private final NavitiaClient navitiaClient;
 
     private final NetworkService networkService;
 
@@ -83,8 +78,8 @@ public class TrafficService {
 
     private volatile Snapshot snapshot;
 
-    public TrafficService(IDFMNavitiaService navitiaService, NetworkService networkService) {
-        this.navitiaService = navitiaService;
+    public TrafficService(NavitiaClient navitiaClient, NetworkService networkService) {
+        this.navitiaClient = navitiaClient;
         this.networkService = networkService;
     }
 
@@ -168,9 +163,14 @@ public class TrafficService {
 
     private Snapshot load() {
         long startedAt = System.nanoTime();
-        JsonNode response = navitiaService.getAllTrafficReports();
-        Instant now = Instant.now();
+        Snapshot loaded = parse(navitiaClient.getAllTrafficReports(), Instant.now());
+        log.info("Loaded {} disruptions on {} lines in {} ms", loaded.disruptionCount(), loaded.lineDisruptions().size(),
+            Duration.ofNanos(System.nanoTime() - startedAt).toMillis());
+        return loaded;
+    }
 
+    /** Disruptions of a {@code traffic_reports} response, per line and per stop area */
+    static Snapshot parse(JsonNode response, Instant now) {
         // Lines and stop areas linked to each disruption
         Map<String, Set<String>> linesByDisruption = new HashMap<>();
         Map<String, List<String>> disruptionsByStopArea = new HashMap<>();
@@ -203,9 +203,7 @@ public class TrafficService {
             .distinct()
             .forEach(disruption -> stopDisruptions.computeIfAbsent(stopAreaId, k -> new ArrayList<>()).add(disruption)));
 
-        log.info("Loaded {} disruptions on {} lines in {} ms", disruptions.size(), lineDisruptions.size(),
-            Duration.ofNanos(System.nanoTime() - startedAt).toMillis());
-        return new Snapshot(now, lineDisruptions, stopDisruptions);
+        return new Snapshot(now, lineDisruptions, stopDisruptions, disruptions.size());
     }
 
     private static List<String> disruptionIds(JsonNode object) {
@@ -232,8 +230,8 @@ public class TrafficService {
         Instant start = null;
         Instant end = null;
         for (JsonNode period : node.path("application_periods").values()) {
-            Instant periodStart = parseTime(period.path("begin").asString(null));
-            Instant periodEnd = parseTime(period.path("end").asString(null));
+            Instant periodStart = ParisTime.parseNavitia(period.path("begin").asString(null));
+            Instant periodEnd = ParisTime.parseNavitia(period.path("end").asString(null));
             if ((periodEnd == null || periodEnd.isAfter(now)) && (start == null || periodStart != null && periodStart.isBefore(start))) {
                 start = periodStart;
                 end = periodEnd;
@@ -264,7 +262,7 @@ public class TrafficService {
         }
 
         return new Disruption(node.path("id").asString(""), severity, category, title, message, cause, start, end, active,
-            parseTime(node.path("updated_at").asString(null)), lineIds);
+            ParisTime.parseNavitia(node.path("updated_at").asString(null)), lineIds);
     }
 
     /** IDFM web messages are small HTML fragments */
@@ -313,18 +311,8 @@ public class TrafficService {
         };
     }
 
-    private static Instant parseTime(String value) {
-        if (value == null) {
-            return null;
-        }
-        try {
-            return LocalDateTime.parse(value, NAVITIA_DATETIME).atZone(PARIS).toInstant();
-        } catch (DateTimeParseException e) {
-            return null;
-        }
-    }
-
-    private record Snapshot(Instant loadedAt, Map<String, List<Disruption>> lineDisruptions, Map<String, List<Disruption>> stopDisruptions) {
+    record Snapshot(Instant loadedAt, Map<String, List<Disruption>> lineDisruptions, Map<String, List<Disruption>> stopDisruptions,
+                    int disruptionCount) {
 
         List<Disruption> forLine(String lineId) {
             return lineDisruptions.getOrDefault(lineId, List.of());

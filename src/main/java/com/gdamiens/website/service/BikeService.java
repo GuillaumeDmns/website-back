@@ -1,8 +1,9 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.utils.Geo;
+import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.configuration.HttpClientConfig;
 import com.gdamiens.website.controller.object.v2.BikeStation;
-import com.gdamiens.website.utils.Constants;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,8 @@ public class BikeService {
 
     private final RestTemplate restTemplate;
 
+    private final String gbfsUrl;
+
     private record Information(String id, String code, String name, double lat, double lon, int capacity) {
     }
 
@@ -49,7 +52,8 @@ public class BikeService {
     private volatile Map<String, Status> status = Map.of();
     private volatile Instant statusAt = Instant.EPOCH;
 
-    public BikeService(HttpClient httpClient) {
+    public BikeService(HttpClient httpClient, ApplicationProperties applicationProperties) {
+        this.gbfsUrl = applicationProperties.getUrls().getVelibGbfs();
         this.restTemplate = new RestTemplate(List.of(new JacksonJsonHttpMessageConverter()));
         this.restTemplate.setRequestFactory(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.DEFAULT_READ_TIMEOUT));
     }
@@ -62,7 +66,7 @@ public class BikeService {
         double lon = (minLon + maxLon) / 2;
         return stations().stream()
             .filter(station -> station.lat() >= minLat && station.lat() <= maxLat && station.lon() >= minLon && station.lon() <= maxLon)
-            .sorted(Comparator.comparingDouble(station -> meters(lat, lon, station.lat(), station.lon())))
+            .sorted(Comparator.comparingDouble(station -> Geo.meters(lat, lon, station.lat(), station.lon())))
             .limit(MAX_STATIONS)
             .toList();
     }
@@ -72,7 +76,7 @@ public class BikeService {
      */
     public List<BikeStation> getNearby(double lat, double lon, int radius, int limit) {
         return stations().stream()
-            .map(station -> withDistance(station, (int) Math.round(meters(lat, lon, station.lat(), station.lon()))))
+            .map(station -> withDistance(station, (int) Math.round(Geo.meters(lat, lon, station.lat(), station.lon()))))
             .filter(station -> station.distance() <= radius)
             .sorted(Comparator.comparingInt(BikeStation::distance))
             .limit(limit)
@@ -137,18 +141,11 @@ public class BikeService {
     }
 
     private JsonNode fetch(String feed) {
-        return restTemplate.getForObject(Constants.VELIB_GBFS_BASE + "/" + feed + ".json", JsonNode.class);
+        return restTemplate.getForObject(gbfsUrl + "/" + feed + ".json", JsonNode.class);
     }
 
     private static BikeStation withDistance(BikeStation s, int distance) {
         return new BikeStation(s.id(), s.code(), s.name(), s.lat(), s.lon(), s.capacity(), s.mechanical(), s.electric(), s.docks(),
             s.renting(), s.returning(), distance, s.reportedAt());
-    }
-
-    /** Equirectangular approximation, enough at city scale */
-    private static double meters(double lat1, double lon1, double lat2, double lon2) {
-        double x = Math.toRadians(lon2 - lon1) * Math.cos(Math.toRadians((lat1 + lat2) / 2));
-        double y = Math.toRadians(lat2 - lat1);
-        return Math.sqrt(x * x + y * y) * 6_371_000;
     }
 }

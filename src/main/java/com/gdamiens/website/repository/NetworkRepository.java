@@ -40,6 +40,28 @@ public class NetworkRepository {
 
     private static final String STOP_AREA_COLUMNS = "p.stop_id, p.stop_name, p.stop_lat, p.stop_lon";
 
+    /**
+     * CTEs {@code days} (service days {@code :today} and the day before, whose trips may still run after midnight, with
+     * the window {@code :from}..{@code :to} seconds after midnight of today expressed on each) and {@code active}
+     * (services running on each of them, calendar and exceptions), for the queries of upcoming trips
+     */
+    private static final String SERVICE_DAYS = """
+                WITH days AS (
+                  SELECT CAST(:today AS date) AS service_date, make_interval(secs => :from) AS lo, make_interval(secs => :to) AS hi
+                  UNION ALL
+                  SELECT CAST(:today AS date) - 1, make_interval(secs => :from + 86400), make_interval(secs => :to + 86400)
+                ),
+                active AS (
+                  SELECT d.service_date, c.service_id
+                  FROM days d JOIN gtfs.calendar c ON d.service_date BETWEEN c.start_date AND c.end_date
+                   AND (ARRAY[c.monday, c.tuesday, c.wednesday, c.thursday, c.friday, c.saturday, c.sunday])[extract(isodow FROM d.service_date)::int]
+                  UNION
+                  SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 1
+                  EXCEPT
+                  SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 2
+                ),
+        """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public NetworkRepository(NamedParameterJdbcTemplate jdbc) {
@@ -251,21 +273,7 @@ public class NetworkRepository {
             .addValue("id", stopAreaId).addValue("today", today)
             .addValue("from", fromSeconds).addValue("to", toSeconds);
 
-        return jdbc.query("""
-                WITH days AS (
-                  SELECT CAST(:today AS date) AS service_date, make_interval(secs => :from) AS lo, make_interval(secs => :to) AS hi
-                  UNION ALL
-                  SELECT CAST(:today AS date) - 1, make_interval(secs => :from + 86400), make_interval(secs => :to + 86400)
-                ),
-                active AS (
-                  SELECT d.service_date, c.service_id
-                  FROM days d JOIN gtfs.calendar c ON d.service_date BETWEEN c.start_date AND c.end_date
-                   AND (ARRAY[c.monday, c.tuesday, c.wednesday, c.thursday, c.friday, c.saturday, c.sunday])[extract(isodow FROM d.service_date)::int]
-                  UNION
-                  SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 1
-                  EXCEPT
-                  SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 2
-                ),
+        return jdbc.query(SERVICE_DAYS + """
                 quays AS MATERIALIZED (
                   SELECT stop_id FROM gtfs.stops WHERE parent_station = :id
                 ),
@@ -296,21 +304,7 @@ public class NetworkRepository {
             .addValue("routeId", routeId).addValue("fromId", fromId).addValue("toId", toId).addValue("today", today)
             .addValue("from", fromSeconds).addValue("to", toSeconds);
 
-        return jdbc.query("""
-                WITH days AS (
-                  SELECT CAST(:today AS date) AS service_date, make_interval(secs => :from) AS lo, make_interval(secs => :to) AS hi
-                  UNION ALL
-                  SELECT CAST(:today AS date) - 1, make_interval(secs => :from + 86400), make_interval(secs => :to + 86400)
-                ),
-                active AS (
-                  SELECT d.service_date, c.service_id
-                  FROM days d JOIN gtfs.calendar c ON d.service_date BETWEEN c.start_date AND c.end_date
-                   AND (ARRAY[c.monday, c.tuesday, c.wednesday, c.thursday, c.friday, c.saturday, c.sunday])[extract(isodow FROM d.service_date)::int]
-                  UNION
-                  SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 1
-                  EXCEPT
-                  SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 2
-                ),
+        return jdbc.query(SERVICE_DAYS + """
                 from_quays AS MATERIALIZED (
                   SELECT stop_id FROM gtfs.stops WHERE parent_station = :fromId
                 ),

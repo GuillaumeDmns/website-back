@@ -2,8 +2,8 @@ package com.gdamiens.website.controller;
 
 import com.gdamiens.website.model.GtfsImport;
 import com.gdamiens.website.repository.GtfsImportRepository;
-import com.gdamiens.website.service.ApiQuota;
-import com.gdamiens.website.service.PrimCircuitBreaker;
+import com.gdamiens.website.client.ApiQuota;
+import com.gdamiens.website.client.PrimCircuitBreaker;
 import com.gdamiens.website.service.TrafficService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
