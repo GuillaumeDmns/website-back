@@ -11,9 +11,11 @@ import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /** Departures, vehicles and rides from PRIM real time merged with the GTFS */
 class RealtimeIT extends IntegrationTest {
@@ -109,6 +111,39 @@ class RealtimeIT extends IntegrationTest {
         // Cached a minute: the estimated-timetable quota is small
         user.get("/api/v2/lines/C01742/vehicles");
         assertThat(EXTERNAL.requests("/prim/estimated-timetable")).hasSize(1);
+    }
+
+    @Test
+    void followsVehiclesStopByStopWhenJourneysMixThem() {
+        // RATP lines only give the next passages per stop, under made-up journeys mixing vehicles: one train is at
+        // Châtelet (its first stop) leaving in 2 min, then Gare de Lyon +4, Nation +6; another left Châtelet and
+        // reaches Gare de Lyon in 1 min, Nation in 3
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        EXTERNAL.on("/prim/estimated-timetable", Response.json(SiriJson.estimatedTimetable(List.of(
+            new SiriJson.Journey("made-up-A", "C01371", "Nation", "IDFM:3001", null, List.of(
+                new SiriJson.Call("IDFM:3001", now.plus(Duration.ofMinutes(3)), now.plus(Duration.ofMinutes(3))),
+                new SiriJson.Call("IDFM:2001", now.plus(Duration.ofMinutes(4)), now.plus(Duration.ofMinutes(4))),
+                new SiriJson.Call("IDFM:1001", now.plus(Duration.ofMinutes(2)), now.plus(Duration.ofMinutes(2))))),
+            new SiriJson.Journey("made-up-B", "C01371", "Nation", "IDFM:3001", null, List.of(
+                new SiriJson.Call("IDFM:2001", now.plus(Duration.ofMinutes(1)), now.plus(Duration.ofMinutes(1))),
+                new SiriJson.Call("IDFM:3001", now.plus(Duration.ofMinutes(6)), now.plus(Duration.ofMinutes(6)))))))));
+
+        JsonNode vehicles = user.get("/api/v2/lines/C01371/vehicles").json();
+
+        assertThat(vehicles).hasSize(2);
+        assertThat(vehicles.values().stream().map(vehicle -> vehicle.path("id").asString())).noneMatch(id -> id.startsWith("made-up"));
+        JsonNode waiting = vehicles.values().stream().filter(vehicle -> vehicle.path("fromStopId").isNull()).findFirst().orElseThrow();
+        assertThat(waiting.path("toStopId").asString()).isEqualTo("IDFM:70001");
+        assertThat(waiting.path("calls").values().stream().map(call -> call.path("stopName").asString()))
+            .containsExactly("Châtelet", "Gare de Lyon", "Nation");
+        JsonNode running = vehicles.values().stream().filter(vehicle -> !vehicle.path("fromStopId").isNull()).findFirst().orElseThrow();
+        assertThat(running.path("fromStopId").asString()).isEqualTo("IDFM:70001");
+        assertThat(running.path("toStopId").asString()).isEqualTo("IDFM:70002");
+        assertThat(running.path("destination").asString()).isEqualTo("Nation");
+        // Halfway: a minute left on a two-minute segment
+        assertThat(running.path("progress").asDouble()).isCloseTo(0.5, within(0.05));
+        assertThat(running.path("calls").values().stream().map(call -> call.path("stopName").asString()))
+            .containsExactly("Gare de Lyon", "Nation");
     }
 
     @Test
