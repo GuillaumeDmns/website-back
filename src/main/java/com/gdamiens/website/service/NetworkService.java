@@ -193,7 +193,9 @@ public class NetworkService {
     static List<TripPatternRow> orientPatterns(List<TripPatternRow> patterns) {
         Optional<TripPatternRow> reference = patterns.stream()
             .filter(p -> p.directionId() == 0)
-            .max(Comparator.comparingInt((TripPatternRow p) -> p.stopAreaIds().size()).thenComparingInt(TripPatternRow::tripCount));
+            .max(Comparator.comparingInt((TripPatternRow p) -> p.stopAreaIds().size()).thenComparingInt(TripPatternRow::tripCount)
+                // Same whatever the order of the rows
+                .thenComparing(p -> String.join(",", p.stopAreaIds())));
         if (reference.isEmpty()) {
             return patterns;
         }
