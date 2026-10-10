@@ -5,6 +5,7 @@ import com.gdamiens.website.controller.object.GoogleSignInRequest;
 import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.controller.object.RefreshTokenRequest;
 import com.gdamiens.website.controller.object.SignUpRequest;
+import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.security.UsageBudgets;
 import com.gdamiens.website.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,15 +38,13 @@ public class UserController {
             @ApiResponse(responseCode = "400", description = "Username / password not provided"),
             @ApiResponse(responseCode = "401", description = "Invalid credentials"),
             @ApiResponse(responseCode = "500", description = "Server error")})
-    public ResponseEntity<JwtDTO> login(@RequestBody Credentials credentials) {
-
-        if (credentials.getUsername() == null || credentials.getPassword() == null) {
-            return new ResponseEntity<>(new JwtDTO(null), HttpStatus.BAD_REQUEST);
+    public JwtDTO login(@RequestBody Credentials credentials) {
+        if (credentials.username() == null || credentials.password() == null) {
+            throw new CustomException("Username and password are required", HttpStatus.BAD_REQUEST);
         }
 
-        return userService.signIn(credentials.getUsername(), credentials.getPassword())
-            .map(ResponseEntity::ok)
-            .orElse(new ResponseEntity<>(new JwtDTO(null), HttpStatus.UNAUTHORIZED));
+        return userService.signIn(credentials.username(), credentials.password())
+            .orElseThrow(() -> new CustomException("Invalid credentials", HttpStatus.UNAUTHORIZED));
     }
 
     @PostMapping("/signup")
@@ -88,14 +87,9 @@ public class UserController {
         @ApiResponse(responseCode = "400", description = "Refresh token not provided"),
         @ApiResponse(responseCode = "401", description = "Invalid, expired or revoked refresh token"),
         @ApiResponse(responseCode = "500", description = "Server error")})
-    public ResponseEntity<JwtDTO> refreshToken(@RequestBody RefreshTokenRequest request) {
-        if (request.refreshToken() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        return userService.refresh(request.refreshToken())
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    public JwtDTO refreshToken(@RequestBody RefreshTokenRequest request) {
+        return userService.refresh(requireRefreshToken(request))
+            .orElseThrow(() -> new CustomException("Invalid, expired or revoked refresh token", HttpStatus.UNAUTHORIZED));
     }
 
     @PostMapping("/logout")
@@ -104,11 +98,14 @@ public class UserController {
         @ApiResponse(responseCode = "204", description = "Refresh token revoked (or already invalid)"),
         @ApiResponse(responseCode = "400", description = "Refresh token not provided")})
     public ResponseEntity<Void> logout(@RequestBody RefreshTokenRequest request) {
-        if (request.refreshToken() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        userService.signOut(request.refreshToken());
+        userService.signOut(requireRefreshToken(request));
         return ResponseEntity.noContent().build();
+    }
+
+    private static String requireRefreshToken(RefreshTokenRequest request) {
+        if (request.refreshToken() == null) {
+            throw new CustomException("Refresh token is required", HttpStatus.BAD_REQUEST);
+        }
+        return request.refreshToken();
     }
 }

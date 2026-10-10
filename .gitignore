@@ -36,3 +36,6 @@ build/
 
 .m2/
 src/main/resources/application-dev.yml
+
+# Exported API description (Swagger UI of a local run)
+swagger.json

@@ -43,7 +43,10 @@ class AuthIT extends IntegrationTest {
         assertThat(signUp.json().path("refreshToken").asString()).isNotBlank();
         assertThat(api.as(signUp.json().path("jwt").asString()).get("/api/v2/me").json().path("role").asString()).isEqualTo("ROLE_USER");
 
-        assertThat(api.post("/api/signin", Map.of("username", username, "password", "wrong password")).status()).isEqualTo(401);
+        Api.Response wrong = api.post("/api/signin", Map.of("username", username, "password", "wrong password"));
+        assertThat(wrong.status()).isEqualTo(401);
+        assertThat(wrong.json().path("detail").asString()).isEqualTo("Invalid credentials");
+        assertThat(api.post("/api/signin", Map.of("username", username)).status()).isEqualTo(400);
         assertThat(api.post("/api/signin", Map.of("username", username.toUpperCase(), "password", "correct horse")).status()).isEqualTo(200);
     }
 
