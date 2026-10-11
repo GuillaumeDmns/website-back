@@ -1,0 +1,60 @@
+package com.gdamiens.website.client;
+
+import com.gdamiens.website.client.siri.IDFMResponse;
+import com.gdamiens.website.client.siri.MonitoredStopVisit;
+import com.gdamiens.website.support.SiriJson;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
+
+import java.time.Instant;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class StopCallTest {
+
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
+    @Test
+    void readsAStopMonitoringVisit() {
+        Instant aimed = Instant.parse("2026-10-10T08:00:00Z");
+        Instant expected = Instant.parse("2026-10-10T08:02:00Z");
+        StopCall call = StopCall.from(visits(new SiriJson.Visit("C01742", "Marne-la-Vallée", aimed, expected, "2", "UPAC", "154023"))
+            .getFirst());
+
+        assertThat(call.lineId()).isEqualTo("C01742");
+        assertThat(call.destination()).isEqualTo("Marne-la-Vallée");
+        assertThat(call.aimedTime()).isEqualTo(aimed);
+        assertThat(call.departureTime()).isEqualTo(expected);
+        assertThat(call.arrivalTime()).isEqualTo(expected);
+        assertThat(call.platform()).isEqualTo("2");
+        assertThat(call.journeyNote()).isEqualTo("UPAC");
+        assertThat(call.vehicleJourneyName()).isEqualTo("154023");
+    }
+
+    @Test
+    void fallsBackToTheAimedTimeAndIgnoresUnknownPlatforms() {
+        Instant aimed = Instant.parse("2026-10-10T08:00:00Z");
+        StopCall call = StopCall.from(visits(new SiriJson.Visit("C01371", "La Défense", aimed, null, "unknown", null, null)).getFirst());
+
+        assertThat(call.departureTime()).isEqualTo(aimed);
+        assertThat(call.platform()).isNull();
+    }
+
+    @Test
+    void skipsVisitsWithoutLine() {
+        assertThat(StopCall.from(new MonitoredStopVisit())).isNull();
+        assertThat(StopCall.from(null)).isNull();
+    }
+
+    @Test
+    void readsSiriLineRefs() {
+        assertThat(StopCall.lineId("STIF:Line::C01371:")).isEqualTo("C01371");
+        assertThat(StopCall.lineId("C01371")).isEqualTo("C01371");
+    }
+
+    private static List<MonitoredStopVisit> visits(SiriJson.Visit visit) {
+        return JSON.readValue(SiriJson.stopMonitoring(List.of(visit)), IDFMResponse.class)
+            .getSiri().getServiceDelivery().getStopMonitoringDelivery().getFirst().getMonitoredStopVisit();
+    }
+}

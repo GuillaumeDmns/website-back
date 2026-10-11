@@ -1,5 +1,6 @@
 package com.gdamiens.website.controller.v2;
 
+import com.gdamiens.website.utils.ParisTime;
 import com.gdamiens.website.controller.object.v2.BikeStation;
 import com.gdamiens.website.controller.object.v2.Disruption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan;
@@ -40,7 +41,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -153,7 +153,7 @@ public class MobilityController {
                                   @Parameter(example = "C01742") @RequestParam String lineId,
                                   @Parameter(description = "Service day, today by default (departures after midnight belong to the day before)")
                                   @RequestParam(required = false) LocalDate date) {
-        LocalDate day = date == null ? LocalDate.now(ZoneId.of("Europe/Paris")) : date;
+        LocalDate day = date == null ? LocalDate.now(ParisTime.ZONE) : date;
         return timetableService.getTimetable(stopAreaId, lineId, day)
             .orElseThrow(() -> notFound("Stop area " + stopAreaId + " or line " + lineId));
     }

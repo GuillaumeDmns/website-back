@@ -1,0 +1,110 @@
+{
+  "journeys": [
+    {
+      "type": "best",
+      "tags": ["walking", "ecologic"],
+      "departure_date_time": "20261010T100000",
+      "arrival_date_time": "20261010T101500",
+      "duration": 900,
+      "nb_transfers": 0,
+      "durations": {"walking": 300},
+      "distances": {"walking": 350},
+      "co2_emission": {"value": 12.5, "unit": "gEC"},
+      "fare": {"found": true, "total": {"value": "215.0", "currency": "centime"}},
+      "sections": [
+        {
+          "type": "street_network",
+          "mode": "walking",
+          "departure_date_time": "20261010T100000",
+          "arrival_date_time": "20261010T100500",
+          "duration": 300,
+          "from": {"embedded_type": "address", "name": "10 Rue de Rivoli (Paris)", "address": {"coord": {"lat": "48.86", "lon": "2.34"}}},
+          "to": {"embedded_type": "stop_point", "name": "Châtelet", "stop_point": {"coord": {"lat": "48.8584", "lon": "2.347"}, "stop_area": {"id": "stop_area:IDFM:70001"}}},
+          "path": [
+            {"instruction": "Marchez vers l'est sur Rue de Rivoli", "length": 300, "duration": 250},
+            {"instruction": "", "length": 50, "duration": 50}
+          ],
+          "geojson": {"type": "LineString", "coordinates": [[2.34, 48.86], [2.347, 48.8584]], "properties": [{"length": 350}]}
+        },
+        {
+          "type": "crow_fly",
+          "mode": "walking",
+          "duration": 0,
+          "from": {"embedded_type": "stop_point", "name": "Châtelet", "stop_point": {"coord": {"lat": "48.8584", "lon": "2.347"}}},
+          "to": {"embedded_type": "stop_point", "name": "Châtelet", "stop_point": {"coord": {"lat": "48.8584", "lon": "2.347"}}},
+          "geojson": {"type": "LineString", "coordinates": []}
+        },
+        {
+          "type": "public_transport",
+          "departure_date_time": "20261010T100700",
+          "base_departure_date_time": "20261010T100500",
+          "arrival_date_time": "20261010T101500",
+          "duration": 480,
+          "data_freshness": "realtime",
+          "display_informations": {"physical_mode": "Métro", "code": "1", "name": "Château de Vincennes - La Défense", "direction": "Gare de Lyon (Paris)", "color": "FFCD00", "text_color": "000000"},
+          "links": [{"type": "line", "id": "line:IDFM:C01371"}, {"type": "route", "id": "route:IDFM:C01371"}],
+          "best_boarding_positions": ["FRONT"],
+          "from": {"embedded_type": "stop_point", "name": "Châtelet", "stop_point": {"coord": {"lat": "48.8584", "lon": "2.347"}, "stop_area": {"id": "stop_area:IDFM:70001"}}},
+          "to": {"embedded_type": "stop_point", "name": "Gare de Lyon", "stop_point": {"coord": {"lat": "48.8443", "lon": "2.373"}, "stop_area": {"id": "stop_area:IDFM:70002"}}},
+          "stop_date_times": [
+            {"departure_date_time": "20261010T100700", "stop_point": {"name": "Châtelet", "coord": {"lat": "48.8584", "lon": "2.347"}}},
+            {"arrival_date_time": "20261010T101500", "stop_point": {"name": "Gare de Lyon", "coord": {"lat": "48.8443", "lon": "2.373"}}}
+          ],
+          "geojson": {"type": "LineString", "coordinates": [[2.347, 48.8584], [2.373, 48.8443]], "properties": [{"length": 2400}]}
+        }
+      ]
+    },
+    {
+      "type": "fastest",
+      "tags": [],
+      "departure_date_time": "20261010T100200",
+      "arrival_date_time": "20261010T101200",
+      "duration": 600,
+      "nb_transfers": 0,
+      "sections": [
+        {
+          "type": "public_transport",
+          "departure_date_time": "20261010T100200",
+          "arrival_date_time": "20261010T101200",
+          "duration": 600,
+          "data_freshness": "base_schedule",
+          "display_informations": {"physical_mode": "RER", "code": "A", "name": "RER A", "direction": "Boissy-Saint-Léger (Boissy-Saint-Léger)", "headsign": "ZEUS", "color": "EB2132"},
+          "links": [{"type": "line", "id": "line:IDFM:C01742"}],
+          "from": {"embedded_type": "stop_area", "name": "Châtelet", "stop_area": {"id": "stop_area:IDFM:70001", "coord": {"lat": "48.8584", "lon": "2.347"}}},
+          "to": {"embedded_type": "stop_area", "name": "Vincennes", "stop_area": {"id": "stop_area:IDFM:70004", "coord": {"lat": "48.8474", "lon": "2.4334"}}},
+          "stop_date_times": [
+            {"departure_date_time": "20261010T100200", "stop_point": {"name": "Châtelet", "coord": {"lat": "48.8584", "lon": "2.347"}}},
+            {"arrival_date_time": "20261010T101200", "stop_point": {"name": "Vincennes", "coord": {"lat": "48.8474", "lon": "2.4334"}}}
+          ],
+          "geojson": {"type": "LineString", "coordinates": [[2.347, 48.8584], [2.36, 48.85], [2.373, 48.8443], [2.3959, 48.8484], [2.4334, 48.8474]]}
+        }
+      ]
+    },
+    {
+      "type": "comfort",
+      "departure_date_time": "20261010T100100",
+      "arrival_date_time": "20261010T103000",
+      "duration": 1740,
+      "nb_transfers": 0,
+      "sections": [
+        {
+          "type": "public_transport",
+          "departure_date_time": "20261010T100100",
+          "arrival_date_time": "20261010T103000",
+          "duration": 1740,
+          "display_informations": {"physical_mode": "Bus", "code": "999", "name": "Bus 999", "direction": "Ailleurs", "color": "AAAAAA"},
+          "links": [{"type": "line", "id": "line:IDFM:C09999"}],
+          "from": {"embedded_type": "stop_area", "name": "Châtelet", "stop_area": {"id": "stop_area:IDFM:70001", "coord": {"lat": "48.8584", "lon": "2.347"}}},
+          "to": {"embedded_type": "stop_area", "name": "Ailleurs", "stop_area": {"id": "stop_area:IDFM:79999", "coord": {"lat": "48.9", "lon": "2.4"}}},
+          "stop_date_times": [],
+          "geojson": {"type": "LineString", "coordinates": [[2.347, 48.8584], [2.38, 48.87], [2.39, 48.88], [2.4, 48.9]]}
+        }
+      ]
+    }
+  ],
+  "links": [
+    {"type": "prev", "rel": "prev", "href": "https://prim.example/marketplace/v2/navitia/journeys?from=2.34%3B48.86&datetime=20261010T095900&datetime_represents=arrival"},
+    {"type": "next", "rel": "next", "href": "https://prim.example/marketplace/v2/navitia/journeys?from=2.34%3B48.86&datetime=20261010T100100&datetime_represents=departure"},
+    {"type": "first", "rel": "first", "href": "https://prim.example/marketplace/v2/navitia/journeys?datetime=20261010T000000"}
+  ]
+}

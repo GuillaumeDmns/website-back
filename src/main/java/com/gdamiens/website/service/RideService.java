@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.utils.ParisTime;
 import com.gdamiens.website.controller.object.v2.Departure;
 import com.gdamiens.website.controller.object.v2.LineBranch;
 import com.gdamiens.website.controller.object.v2.LineDepartures;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -41,8 +41,6 @@ import java.util.stream.Stream;
  */
 @Service
 public class RideService {
-
-    private static final ZoneId PARIS = ZoneId.of("Europe/Paris");
 
     public static final int MAX_RIDES = 10;
 
@@ -105,12 +103,12 @@ public class RideService {
             .map(StopDepartures::lines).orElse(List.of());
 
         Instant now = Instant.now();
-        ZonedDateTime base = Optional.ofNullable(key.after()).orElse(now).atZone(PARIS);
+        ZonedDateTime base = Optional.ofNullable(key.after()).orElse(now).atZone(ParisTime.ZONE);
         int baseSeconds = base.toLocalTime().toSecondOfDay();
         List<Scheduled> scheduled = networkRepository.findScheduledRides(IDFMRoute.toRouteId(key.lineId()), key.fromId(), key.toId(),
                 base.toLocalDate(), baseSeconds - 3600, baseSeconds + 3 * 3600).stream()
-            .map(row -> new Scheduled(row.headsign(), DepartureService.isTrainNumber(row.tripShortName()) ? row.tripShortName() : null, row.terminus(), DepartureService.toInstant(row.serviceDate(), row.departureSeconds()),
-                DepartureService.toInstant(row.serviceDate(), row.arrivalSeconds())))
+            .map(row -> new Scheduled(row.headsign(), DepartureService.isTrainNumber(row.tripShortName()) ? row.tripShortName() : null, row.terminus(), ParisTime.ofServiceDay(row.serviceDate(), row.departureSeconds()),
+                ParisTime.ofServiceDay(row.serviceDate(), row.arrivalSeconds())))
             .toList();
         boolean realtime = groups.stream().anyMatch(group -> group.departures().stream().anyMatch(Departure::realtime));
         List<Arrival> arrivals = realtime ? departureService.getArrivals(key.toId(), key.lineId()) : List.of();

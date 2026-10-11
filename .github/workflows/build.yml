@@ -1,9 +1,19 @@
 name: Build
-on: ["push"]
+# Every pull request and every push to master: unit tests, integration tests (Testcontainers: PostGIS in Docker,
+# available on GitHub's runners), then the production jar started against an empty database. The "Build and test"
+# check is required to merge into master (branch protection).
+on:
+  pull_request:
+  push:
+    branches: [master]
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
-    name: Build and start
+    name: Build and test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgis/postgis:18-3.6
@@ -21,9 +31,18 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
-      - name: Build
-        run: ./mvnw -B clean package -DskipTests
-      # Liquibase migrations on an empty database and Hibernate validation of the entities
+      - name: Unit and integration tests, jar
+        run: ./mvnw -B verify
+      - name: Test reports
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports
+            target/failsafe-reports
+          retention-days: 7
+      # Liquibase migrations on an empty database and Hibernate validation of the entities, production profile
       - name: Start against an empty database
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/website

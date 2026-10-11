@@ -1,0 +1,88 @@
+package com.gdamiens.website.client;
+
+import com.gdamiens.website.client.siri.EstimatedJourneyVersionFrame;
+import com.gdamiens.website.client.siri.EstimatedTimetableDelivery;
+import com.gdamiens.website.client.siri.EstimatedVehicleJourney;
+import com.gdamiens.website.client.siri.IDFMResponse;
+import com.gdamiens.website.client.siri.ServiceDelivery;
+import com.gdamiens.website.client.siri.Siri;
+import com.gdamiens.website.client.siri.StopMonitoringDelivery;
+import com.gdamiens.website.configuration.ApplicationProperties;
+import com.gdamiens.website.configuration.HttpClientConfig;
+import com.gdamiens.website.exceptions.CustomException;
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+/**
+ * Client of the PRIM real-time APIs (SIRI Lite): stop-monitoring ("Prochains passages, requête unitaire") and
+ * estimated-timetable ("requête globale"). Callers cache the results: see {@link ApiQuota} for the daily quotas.
+ */
+@Component
+public class PrimRealtimeClient extends PrimClient {
+
+    private final RestTemplate restTemplate;
+
+    public PrimRealtimeClient(ApplicationProperties applicationProperties, ApiQuota apiQuota, PrimCircuitBreaker circuitBreaker,
+                              HttpClient httpClient) {
+        super(applicationProperties, apiQuota, circuitBreaker);
+        this.restTemplate = new RestTemplate(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.DEFAULT_READ_TIMEOUT));
+    }
+
+    /**
+     * Next passages at a stop area, every line
+     *
+     * @param stopAreaId GTFS stop area ({@code IDFM:71264}), i.e. SIRI {@code STIF:StopArea:SP:71264:}
+     */
+    public List<StopCall> getStopCalls(String stopAreaId) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(primUrl()).path("/stop-monitoring")
+            .queryParam("MonitoringRef", "STIF:StopArea:SP:" + stopAreaId.substring(stopAreaId.lastIndexOf(':') + 1) + ":");
+
+        return get(ApiQuota.Api.STOP_MONITORING, builder)
+            .map(ServiceDelivery::getStopMonitoringDelivery)
+            .filter(deliveries -> !deliveries.isEmpty())
+            .map(deliveries -> deliveries.getFirst())
+            .map(StopMonitoringDelivery::getMonitoredStopVisit)
+            .orElseThrow(() -> new CustomException("IDFM response body does not contain any stop visit", HttpStatus.INTERNAL_SERVER_ERROR))
+            .stream()
+            .map(StopCall::from)
+            .filter(Objects::nonNull)
+            .toList();
+    }
+
+    /**
+     * Vehicle journeys of a line with their next calls
+     *
+     * @param lineId IDFM line id ({@code C01371})
+     */
+    public List<EstimatedVehicleJourney> getEstimatedVehicleJourneys(String lineId) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(primUrl()).path("/estimated-timetable")
+            .queryParam("LineRef", "STIF:Line::" + lineId + ":");
+
+        return get(ApiQuota.Api.ESTIMATED_TIMETABLE, builder)
+            .map(ServiceDelivery::getEstimatedTimetableDelivery)
+            .filter(deliveries -> !deliveries.isEmpty())
+            .map(deliveries -> deliveries.getFirst())
+            .map(EstimatedTimetableDelivery::getEstimatedJourneyVersionFrame)
+            .filter(frames -> !frames.isEmpty())
+            .map(frames -> frames.getFirst())
+            .map(EstimatedJourneyVersionFrame::getEstimatedVehicleJourney)
+            .orElseThrow(() -> new CustomException("IDFM response body does not contain any journey", HttpStatus.INTERNAL_SERVER_ERROR));
+    }
+
+    private Optional<ServiceDelivery> get(ApiQuota.Api api, UriComponentsBuilder builder) {
+        IDFMResponse response = call(api,
+            () -> restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request(), IDFMResponse.class).getBody());
+
+        return Optional.ofNullable(response)
+            .map(IDFMResponse::getSiri)
+            .map(Siri::getServiceDelivery);
+    }
+}

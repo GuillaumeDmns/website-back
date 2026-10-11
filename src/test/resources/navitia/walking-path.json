@@ -1,0 +1,20 @@
+{
+  "journeys": [
+    {
+      "type": "best",
+      "departure_date_time": "20261010T100000",
+      "arrival_date_time": "20261010T102000",
+      "duration": 1200,
+      "sections": [
+        {
+          "type": "street_network",
+          "mode": "walking",
+          "duration": 1200,
+          "from": {"embedded_type": "address", "name": "Station", "address": {"coord": {"lat": "48.86", "lon": "2.34"}}},
+          "to": {"embedded_type": "address", "name": "Station", "address": {"coord": {"lat": "48.845", "lon": "2.372"}}},
+          "geojson": {"type": "LineString", "coordinates": [[2.34, 48.86], [2.35, 48.855], [2.372, 48.845]], "properties": [{"length": 2600}]}
+        }
+      ]
+    }
+  ]
+}

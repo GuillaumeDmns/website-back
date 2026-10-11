@@ -23,7 +23,23 @@ Le profil `dev` (par défaut) tape une **base PostgreSQL locale** ; la prod a sa
    ```
    Au premier démarrage, Liquibase crée les tables ; le GTFS s'importe quelques minutes après (environ 3 min, 3,5 Go), puis à chaque nouvelle publication IDFM.
 
+### Tests
+
+```bash
+./mvnw test     # tests unitaires, quelques secondes
+./mvnw verify   # + tests d'intégration (environ 20 s), puis le jar
+```
+
+Les tests d'intégration démarrent l'application entière contre un PostGIS jetable (Testcontainers) : Docker doit être utilisable par ton utilisateur (`sudo usermod -aG docker $USER`, puis rouvrir la session). Ils n'appellent jamais PRIM ni Google : un faux serveur local répond à leur place, avec un petit réseau GTFS de test. Ils tournent aussi sur GitHub à chaque pull request ; le check « Build and test » doit passer pour fusionner dans `master` (règle de protection de branche, voir plus bas).
+
 Les apps de dev (`website-app`, `website-react` en `npm run dev`) appellent ce backend sur `http://localhost:8080` ; un téléphone Android y accède par `adb reverse tcp:8080 tcp:8080`. Le CORS du profil `dev` n'accepte que `localhost` et `127.0.0.1` ; celui de la prod, seulement `guillaumedamiens.com` et `app.guillaumedamiens.com`. Bruno : environnement `Local`.
+
+### Protéger `master`
+
+Une fois, sur GitHub : *Settings → Rules → Rulesets → New branch ruleset*, cible *Default branch* (`master`), état *Active*, puis cocher :
+- *Require a pull request before merging* ;
+- *Require status checks to pass* : ajouter le check « Build and test » (il apparaît après un premier passage de la CI) ;
+- *Block force pushes*.
 
 ## Production
 
