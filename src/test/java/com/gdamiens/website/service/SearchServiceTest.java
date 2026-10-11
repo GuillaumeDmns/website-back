@@ -101,7 +101,7 @@ class SearchServiceTest {
 
         // Not Lyon nor the Oise (next to Île-de-France), not the station (the GTFS has it), the town once
         assertThat(places).extracting(PlaceResult::name)
-            .containsExactly("8 Rue de Rivoli 75004 Paris", "Tour Eiffel (Paris)", "Orly", "Aéroport de Paris-Orly");
+            .containsExactly("8 Rue de Rivoli 75004 Paris", "Tour Eiffel (Paris 7e)", "Orly", "Aéroport de Paris-Orly");
         assertThat(places.getFirst()).isEqualTo(new PlaceResult(PlaceResult.Type.ADDRESS, "address:75104_8249_00008", "8 Rue de Rivoli 75004 Paris",
             48.855372, 2.360909, null));
         assertThat(places.get(1).type()).isEqualTo(PlaceResult.Type.POI);

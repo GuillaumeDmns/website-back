@@ -210,7 +210,8 @@ public class SearchService {
                 if (name == null || stop) {
                     continue;
                 }
-                String city = strings(properties.path("city")).stream().findFirst().orElse(null);
+                // "Paris 12e", like the stop areas' towns
+                String city = strings(properties.path("city")).stream().findFirst().map(town -> town.replace(" Arrondissement", "")).orElse(null);
                 place = new PlaceResult(PlaceResult.Type.POI, "poi:" + properties.path("extrafields").path("cleabs").asString(name),
                     city == null || city.equalsIgnoreCase(name) ? name : name + " (" + city + ")", lat, lon, null);
             } else {
