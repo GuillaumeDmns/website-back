@@ -1,0 +1,26 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.34731,
+          48.858411
+        ]
+      },
+      "properties": {
+        "label": "2 Rue Jean Lantier 75001 Paris",
+        "score": 0.99,
+        "id": "75101_4974_00002",
+        "name": "2 Rue Jean Lantier",
+        "postcode": "75001",
+        "city": "Paris",
+        "type": "housenumber",
+        "distance": 900,
+        "_type": "address"
+      }
+    }
+  ]
+}

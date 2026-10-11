@@ -26,6 +26,8 @@ public class NetworkRepository {
 
     public record StopAreaRow(String id, String name, double lat, double lon, Integer distance) {}
 
+    public record ServedStopAreaRow(String id, String name, double lat, double lon, List<String> routeIds) {}
+
     public record QuayRow(String id, String name, double lat, double lon, String platformCode, Short wheelchairBoarding, List<String> routeIds) {}
 
     public record ConnectionRow(String id, String name, Integer minTransferSeconds) {}
@@ -105,6 +107,21 @@ public class NetworkRepository {
                 Map.of("id", id),
                 (rs, i) -> new StopAreaRow(rs.getString(1), rs.getString(2), rs.getDouble(3), rs.getDouble(4), null))
             .stream().findFirst();
+    }
+
+    /**
+     * @return every stop area served by at least one line, with its lines (the search index)
+     */
+    public List<ServedStopAreaRow> findServedStopAreas() {
+        return jdbc.query("""
+                SELECT p.stop_id, p.stop_name, p.stop_lat, p.stop_lon, array_agg(DISTINCT rs.route_id)
+                FROM gtfs.stops p
+                JOIN gtfs.stops q ON q.parent_station = p.stop_id
+                JOIN gtfs.route_stops rs ON rs.stop_id = q.stop_id
+                WHERE p.location_type = 1
+                GROUP BY p.stop_id, p.stop_name, p.stop_lat, p.stop_lon""",
+            Map.of(),
+            (rs, i) -> new ServedStopAreaRow(rs.getString(1), rs.getString(2), rs.getDouble(3), rs.getDouble(4), toList(rs.getArray(5))));
     }
 
     /**

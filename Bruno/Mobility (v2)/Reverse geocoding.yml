@@ -1,0 +1,28 @@
+info:
+  name: "Reverse geocoding"
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/places/reverse?lat=48.8584&lon=2.3470"
+  params:
+    - name: "lat"
+      value: "48.8584"
+      type: query
+    - name: "lon"
+      value: "2.3470"
+      type: query
+  auth: inherit
+
+docs:
+  content: |-
+    La position (arrondie à environ 10 m), nommée d'après l'adresse la plus proche à moins de 250 m (Géoplateforme IGN, cache 1 h) : appui long sur la carte. 404 s'il n'y en a pas.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

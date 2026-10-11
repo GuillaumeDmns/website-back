@@ -113,20 +113,27 @@ class NetworkIT extends IntegrationTest {
     }
 
     @Test
-    void searchesLinesAndPlaces() {
-        JsonNode result = user.get("/api/v2/search?q=Chatelet").json();
+    void searchesLinesStopsAndAddressesWithoutNavitia() {
+        JsonNode result = user.get("/api/v2/search?q=Chatelet&lat=48.8512&lon=2.3456").json();
 
         assertThat(result.path("lines")).isEmpty();
         JsonNode places = result.path("places");
-        assertThat(places.values().stream().map(place -> place.path("type").asString())).containsExactly("STOP_AREA", "ADDRESS", "POI");
+        // The stop area from the GTFS (with its town), then the Géoplateforme's addresses and places
+        assertThat(places.values().stream().map(place -> place.path("type").asString()))
+            .containsExactly("STOP_AREA", "ADDRESS", "POI", "ADDRESS", "POI");
         assertThat(places.path(0).path("id").asString()).isEqualTo("IDFM:70001");
+        assertThat(places.path(0).path("name").asString()).isEqualTo("Châtelet (Paris 1er)");
         assertThat(places.path(0).path("lines")).hasSize(4);
-        assertThat(places.path(1).path("lat").asDouble()).isEqualTo(48.8598);
-        assertThat(EXTERNAL.requests("/prim/v2/navitia/places")).singleElement().satisfies(request -> {
+        assertThat(places.path(1).path("name").asString()).isEqualTo("8 Rue de Rivoli 75004 Paris");
+        assertThat(EXTERNAL.requests("/geoplateforme/search")).singleElement().satisfies(request -> {
             assertThat(request.param("q")).isEqualTo("chatelet");
-            assertThat(request.params("type[]")).containsExactly("stop_area", "address", "poi");
-            assertThat(request.header("apiKey")).isEqualTo("test-prim-key");
+            assertThat(request.param("index")).isEqualTo("address,poi");
+            assertThat(request.param("autocomplete")).isEqualTo("1");
+            // The area only
+            assertThat(request.param("lat")).isEqualTo("48.85");
+            assertThat(request.param("lon")).isEqualTo("2.35");
         });
+        assertThat(EXTERNAL.requests("/prim/v2/navitia/places")).isEmpty();
 
         assertThat(user.get("/api/v2/search?q=rer%20a").json().path("lines").values().stream().map(line -> line.path("id").asString()))
             .containsExactly("C01742");
@@ -134,13 +141,46 @@ class NetworkIT extends IntegrationTest {
     }
 
     @Test
-    void searchesLinesWhenNavitiaIsDown() {
+    void findsStopsWithTyposAndTowns() {
+        assertThat(user.get("/api/v2/search?q=fontenai").json().path("places").path(0).path("name").asString())
+            // The town is already in the name
+            .isEqualTo("Fontenay-sous-Bois");
+        assertThat(user.get("/api/v2/search?q=gare%20lyon").json().path("places").path(0).path("id").asString()).isEqualTo("IDFM:70002");
+    }
+
+    @Test
+    void asksNavitiaWhenTheGeoplateformeIsDown() {
+        EXTERNAL.on("/geoplateforme/search", Response.status(503));
+
+        JsonNode places = user.get("/api/v2/search?q=nation").json().path("places");
+
+        assertThat(places.path(0).path("id").asString()).isEqualTo("IDFM:70003");
+        assertThat(places.values().stream().map(place -> place.path("name").asString())).contains("10 Rue de Rivoli (Paris)");
+        assertThat(EXTERNAL.requests("/prim/v2/navitia/places")).singleElement()
+            .satisfies(request -> assertThat(request.params("type[]")).containsExactly("address", "poi"));
+    }
+
+    @Test
+    void searchesLinesAndStopsWhenEverythingElseIsDown() {
+        EXTERNAL.on("/geoplateforme/search", Response.status(503));
         EXTERNAL.on("/prim/v2/navitia/places", Response.status(503));
 
         JsonNode result = user.get("/api/v2/search?q=n11").json();
 
         assertThat(result.path("lines").values().stream().map(line -> line.path("mode").asString())).containsExactly("NOCTILIEN");
         assertThat(result.path("places")).isEmpty();
+    }
+
+    @Test
+    void namesAPositionAfterItsAddress() {
+        JsonNode place = user.get("/api/v2/places/reverse?lat=48.85841&lon=2.34702").json();
+
+        assertThat(place.path("type").asString()).isEqualTo("ADDRESS");
+        assertThat(place.path("name").asString()).isEqualTo("2 Rue Jean Lantier 75001 Paris");
+        assertThat(place.path("lat").asDouble()).isEqualTo(48.8584);
+
+        EXTERNAL.on("/geoplateforme/reverse", Response.json("{\"type\": \"FeatureCollection\", \"features\": []}"));
+        assertThat(user.get("/api/v2/places/reverse?lat=48.9&lon=2.5").status()).isEqualTo(404);
     }
 
     @Test
