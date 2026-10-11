@@ -32,7 +32,7 @@ Le profil `dev` (par défaut) tape une **base PostgreSQL locale** ; la prod a sa
 
 Les tests d'intégration démarrent l'application entière contre un PostGIS jetable (Testcontainers) : Docker doit être utilisable par ton utilisateur (`sudo usermod -aG docker $USER`, puis rouvrir la session). Ils n'appellent jamais PRIM ni Google : un faux serveur local répond à leur place, avec un petit réseau GTFS de test. Ils tournent aussi sur GitHub à chaque pull request ; le check « Build and test » doit passer pour fusionner dans `master` (règle de protection de branche, voir plus bas).
 
-Les apps de dev (`website-app`, `website-react` en `npm run dev`) appellent ce backend sur `http://localhost:8080` ; un téléphone Android y accède par `adb reverse tcp:8080 tcp:8080`. Le CORS du profil `dev` n'accepte que `localhost` et `127.0.0.1` ; celui de la prod, seulement `guillaumedamiens.com` et `app.guillaumedamiens.com`. Bruno : environnement `Local`.
+L'app de dev (`website-app`) appelle ce backend sur `http://localhost:8080` ; un téléphone Android y accède par `adb reverse tcp:8080 tcp:8080`. Le CORS du profil `dev` n'accepte que `localhost` et `127.0.0.1` ; celui de la prod, seulement `app.guillaumedamiens.com` (le site `guillaumedamiens.com` n'appelle plus l'API). Bruno : environnement `Local`.
 
 ### Protéger `master`
 

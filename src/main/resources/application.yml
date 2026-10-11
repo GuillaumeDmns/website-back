@@ -46,8 +46,8 @@ server:
     enabled: true
 
 application:
+  # Browsers calling the API from another origin: only the web app (the site of guillaumedamiens.com doesn't call it)
   cors-allowed-origins:
-    - https://guillaumedamiens.com
     - https://app.guillaumedamiens.com
   rate-limit:
     auth-per-minute: 10
