@@ -1,17 +1,16 @@
 info:
-  name: "Login"
+  name: "API token"
   type: http
   seq: 1
 
 http:
   method: POST
-  url: "{{baseUrl}}/api/signin"
+  url: "{{baseUrl}}/api/auth/api-token"
   body:
     type: json
     data: |-
       {
-        "username": "{{username}}",
-        "password": "{{password}}"
+        "token": "{{apiToken}}"
       }
 
 runtime:
@@ -22,13 +21,10 @@ runtime:
         if (body?.jwt) {
           bru.setEnvVar("jwt", body.jwt);
         }
-        if (body?.refreshToken) {
-          bru.setEnvVar("refreshToken", body.refreshToken);
-        }
 
 docs:
   content: |-
-    Public. Stocke le JWT et le refresh token renvoyés dans les variables d'environnement `jwt` et `refreshToken`.
+    Public. Échange le jeton d'API personnel `apiToken` (`gdpat_…`, créé par un admin dans « Mon compte » de l'app ou par `Admin / API tokens - create`) contre un JWT d'une heure, sans refresh token. Le script de la collection le fait tout seul quand `jwt` manque ou expire. 401 si le jeton est inconnu, révoqué ou expiré.
   type: text/markdown
 
 settings:

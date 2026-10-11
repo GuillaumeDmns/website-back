@@ -25,6 +25,9 @@ request:
     - name: stopAreaId
       value: IDFM:71264
       description: Id de zone d'arrêt (station parente GTFS) pour les endpoints v2 (Châtelet)
+    - name: apiTokenId
+      value: "1"
+      description: Id d'un jeton d'API (liste des jetons), pour le révoquer
     - name: lon
       value: "2.3470"
     - name: lat
@@ -43,16 +46,16 @@ request:
           }
         };
 
-        const isSignin = req.getUrl().includes("/api/signin");
+        const isTokenExchange = req.getUrl().includes("/api/auth/");
         const currentJwt = bru.getEnvVar("jwt");
 
-        if (!isSignin && (!currentJwt || expiresAt(currentJwt) - 60000 < Date.now())) {
+        if (!isTokenExchange && (!currentJwt || expiresAt(currentJwt) - 60000 < Date.now())) {
           try {
             const response = await bru.sendRequest({
               method: "POST",
-              url: bru.getEnvVar("baseUrl") + "/api/signin",
+              url: bru.getEnvVar("baseUrl") + "/api/auth/api-token",
               headers: { "Content-Type": "application/json" },
-              data: { username: bru.getEnvVar("username"), password: bru.getEnvVar("password") }
+              data: { token: bru.getEnvVar("apiToken") }
             });
             const jwt = response.data && response.data.jwt;
             if (jwt) {
@@ -60,24 +63,24 @@ request:
               req.setHeader("Authorization", "Bearer " + jwt);
             }
           } catch (e) {
-            console.warn("Connexion automatique impossible, vérifier username et password de l'environnement :", e.message);
+            console.warn("Connexion automatique impossible, vérifier apiToken de l'environnement :", e.message);
           }
         }
     - type: after-response
       code: |-
         // JWT refusé (expiré, secret changé...) : on l'oublie pour que la prochaine requête se reconnecte
-        if (res.getStatus() === 401 && !req.getUrl().includes("/api/signin")) {
+        if (res.getStatus() === 401 && !req.getUrl().includes("/api/auth/")) {
           bru.setEnvVar("jwt", "");
         }
 
 docs:
   content: |-
-    Collection du backend (API `/api`). Choisir un environnement (Local ou Production) qui définit `baseUrl`, `username` et `password`.
+    Collection du backend (API `/api`). Choisir un environnement (Local ou Production) qui définit `baseUrl` et `apiToken`.
 
-    L'authentification est automatique : le script de la collection se connecte via `/api/signin` quand le JWT manque ou va expirer, et le stocke dans `jwt`. Toutes les requêtes héritent du bearer `{{jwt}}` (sauf Login).
+    L'authentification est automatique : le script de la collection échange le jeton d'API personnel `apiToken` contre un JWT (`/api/auth/api-token`) quand le JWT manque ou va expirer, et le stocke dans `jwt`. Toutes les requêtes héritent du bearer `{{jwt}}`. Le jeton d'API se crée une fois, connecté avec Google en admin : requête `Admin / API tokens - create` avec un JWT de l'app, ou depuis une autre session Bruno (la connexion par mot de passe n'existe plus).
 
-    - **Auth** : login, inscription, refresh token, logout
-    - **Admin** : import GTFS
+    - **Auth** : jeton d'API, compte Google, invité, refresh token, logout
+    - **Admin** : statut, import GTFS, jetons d'API
     - **Mobility (v2)** : API des applis (arrêts, lignes, départs, itinéraires, trafic, Vélib, favoris)
 
     Les variables de collection donnent des exemples réels (Châtelet, RER A).

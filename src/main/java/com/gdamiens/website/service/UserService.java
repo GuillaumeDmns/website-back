@@ -10,7 +10,6 @@ import com.gdamiens.website.repository.UserRepository;
 import com.gdamiens.website.security.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -19,7 +18,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -29,20 +27,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class UserService {
-
-    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{3,50}$");
-
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
-
-    private static final int PASSWORD_MIN_LENGTH = 8;
-
-    /** BCrypt ignores (and Spring rejects) anything beyond 72 bytes */
-    private static final int PASSWORD_MAX_BYTES = 72;
 
     /** A guest device keeps its token (and its budgets) this long, then gets a new one */
     private static final Duration GUEST_TOKEN_VALIDITY = Duration.ofDays(30);
@@ -57,8 +45,6 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    private final PasswordEncoder passwordEncoder;
-
     private final RefreshTokenService refreshTokenService;
 
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
@@ -70,12 +56,14 @@ public class UserService {
     @Value("${security.jwt.token.expire-length:300000}")
     private long tokenValidityMs;
 
-    public UserService(JwtEncoder jwtEncoder, UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       RefreshTokenService refreshTokenService, GoogleIdTokenVerifier googleIdTokenVerifier,
-                       FavoriteService favoriteService, ApplicationProperties applicationProperties) {
+    private final ApiTokenService apiTokenService;
+
+    public UserService(JwtEncoder jwtEncoder, UserRepository userRepository, RefreshTokenService refreshTokenService,
+                       GoogleIdTokenVerifier googleIdTokenVerifier, FavoriteService favoriteService, ApiTokenService apiTokenService,
+                       ApplicationProperties applicationProperties) {
         this.jwtEncoder = jwtEncoder;
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.apiTokenService = apiTokenService;
         this.refreshTokenService = refreshTokenService;
         this.googleIdTokenVerifier = googleIdTokenVerifier;
         this.favoriteService = favoriteService;
@@ -100,8 +88,7 @@ public class UserService {
             created.setRole(Role.ROLE_USER);
             return created;
         });
-        // A password account may already hold the email: the Google account then keeps none (no merge: that address
-        // was never verified for the password account)
+        // Another account may already hold the email (Google accounts sharing an address): this one then keeps none
         if (google.email() != null && !google.email().equalsIgnoreCase(user.getEmail())) {
             boolean taken = userRepository.getByEmailIgnoreCase(google.email())
                 .filter(other -> !Objects.equals(other.getId(), user.getId()))
@@ -133,49 +120,9 @@ public class UserService {
         userRepository.delete(user(login));
     }
 
-    private User user(String login) {
-        return Optional.ofNullable(login)
-            .flatMap(userRepository::getByLoginIgnoreCase)
-            .orElseThrow(() -> new CustomException("Unknown user", HttpStatus.UNAUTHORIZED));
-    }
-
     private static Account toAccount(User user) {
         return new Account(user.getEmail(), user.getDisplayName(), user.getRole().name(), user.getGoogleSub() != null,
             user.getCreatedAt());
-    }
-
-    /**
-     * @return an access token and a refresh token, or empty if the credentials are invalid
-     */
-    @Transactional
-    public Optional<JwtDTO> signIn(String username, String password) {
-        return userRepository.getByLoginIgnoreCase(username)
-            .filter(user -> passwordEncoder.matches(password, user.getPassword()))
-            .map(this::createTokens);
-    }
-
-    /**
-     * Creates a {@link Role#ROLE_USER} account and signs it in.
-     * @throws CustomException 400 if a field is invalid, 409 if the username or email is already used
-     */
-    @Transactional
-    public JwtDTO signUp(String username, String email, String password) {
-        if (username == null || !USERNAME_PATTERN.matcher(username).matches()) {
-            throw new CustomException("Username must be 3 to 50 letters, digits, '.', '_' or '-'", HttpStatus.BAD_REQUEST);
-        }
-        if (email == null || email.length() > 255 || !EMAIL_PATTERN.matcher(email).matches()) {
-            throw new CustomException("Invalid email", HttpStatus.BAD_REQUEST);
-        }
-        validatePassword(password);
-        if (userRepository.getByEmailIgnoreCase(email).isPresent()) {
-            throw new CustomException("Email already used", HttpStatus.CONFLICT);
-        }
-
-        User user = createUser(username, password, Role.ROLE_USER)
-            .orElseThrow(() -> new CustomException("Username already used", HttpStatus.CONFLICT));
-        user.setEmail(email);
-
-        return createTokens(user);
     }
 
     /**
@@ -200,28 +147,25 @@ public class UserService {
     }
 
     /**
-     * Creates a new user with a BCrypt-hashed password.
-     * @return the created User, or empty if the login already exists
+     * Access token of the account of a personal API token (Bruno, scripts): no refresh token, the API token is used
+     * again when it expires
+     *
+     * @return empty if the API token is unknown or expired
      */
-    private Optional<User> createUser(String login, String password, Role role) {
-        if (userRepository.getByLoginIgnoreCase(login).isPresent()) {
-            return Optional.empty();
-        }
-
-        User user = new User();
-        user.setLogin(login);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRole(role);
-        return Optional.of(userRepository.save(user));
+    @Transactional
+    public Optional<JwtDTO> signInWithApiToken(String apiToken) {
+        return apiTokenService.use(apiToken)
+            .flatMap(userRepository::findById)
+            .map(user -> new JwtDTO(createAccessToken(user), null, tokenValidityMs / 1000));
     }
 
-    private void validatePassword(String password) {
-        if (password == null || password.length() < PASSWORD_MIN_LENGTH) {
-            throw new CustomException("Password must be at least " + PASSWORD_MIN_LENGTH + " characters", HttpStatus.BAD_REQUEST);
-        }
-        if (password.getBytes(StandardCharsets.UTF_8).length > PASSWORD_MAX_BYTES) {
-            throw new CustomException("Password is too long", HttpStatus.BAD_REQUEST);
-        }
+    /**
+     * @throws CustomException 401 when the account no longer exists
+     */
+    public User user(String login) {
+        return Optional.ofNullable(login)
+            .flatMap(userRepository::getByLoginIgnoreCase)
+            .orElseThrow(() -> new CustomException("Unknown user", HttpStatus.UNAUTHORIZED));
     }
 
     private JwtDTO createTokens(User user) {

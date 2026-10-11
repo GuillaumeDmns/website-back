@@ -120,6 +120,8 @@ Dans `/etc/guillaumedamiens/application-prod.yml`, sous `application:` :
 
 Sans client id, `POST /api/auth/google` répond 503. Aucun secret Google n'est nécessaire sur le serveur.
 
+La connexion se fait **uniquement avec Google** : il n'y a plus de comptes à mot de passe. Pour Bruno et les scripts, un admin crée un **jeton d'API personnel** (`gdpat_…`, 365 jours au plus) dans « Mon compte » de l'app, puis le met dans la variable secrète `apiToken` de l'environnement Bruno : la collection l'échange toute seule contre un JWT (`POST /api/auth/api-token`). On le révoque au même endroit.
+
 ### App web
 
 En ligne depuis le 9 octobre 2026 sur `https://app.guillaumedamiens.com` : site nginx activé (`/etc/nginx/sites-enabled/app.guillaumedamiens.com`), certificat Let's Encrypt posé par certbot (renouvelé par `certbot.timer`). Les builds arrivent par la CI de website-app (tag `v*`) dans `/var/www/guillaumedamiens-app/releases/<version>/`, avec un lien `current`. `deploy/nginx/apply.sh` n'installe ce site que la première fois : certbot y a ajouté son bloc HTTPS, qu'il ne faut pas écraser.

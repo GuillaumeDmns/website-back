@@ -1,0 +1,29 @@
+info:
+  name: "API tokens - create"
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/v2/me/api-tokens"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Bruno",
+        "validDays": 365
+      }
+
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. Crée un jeton d'API (au plus 10, 365 jours au plus) : sa valeur `token` n'est donnée que dans cette réponse, à copier dans `apiToken` de l'environnement.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

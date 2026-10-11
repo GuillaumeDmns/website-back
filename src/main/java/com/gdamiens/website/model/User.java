@@ -23,9 +23,6 @@ public class User implements Serializable {
     @Column(name = "login")
     private String login;
 
-    @Column(name = "password")
-    private String password;
-
     @Column(name = "email")
     private String email;
 
@@ -36,7 +33,7 @@ public class User implements Serializable {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    /** Google account ({@code sub} of its ID tokens), null for a password account */
+    /** Google account ({@code sub} of its ID tokens) */
     @Column(name = "google_sub")
     private String googleSub;
 
@@ -63,14 +60,6 @@ public class User implements Serializable {
 
     public void setLogin(String login) {
         this.login = login;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getEmail() {
