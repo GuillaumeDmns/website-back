@@ -52,15 +52,14 @@ class GoogleSignInIT extends IntegrationTest {
     }
 
     @Test
-    void anEmailOfAPasswordAccountIsNotTaken() {
-        String username = "pw" + UUID.randomUUID().toString().substring(0, 8);
-        String email = username + "@example.com";
-        assertThat(api.post("/api/signup", Map.of("username", username, "email", email, "password", "correct horse")).status()).isEqualTo(201);
+    void anEmailAlreadyTakenStaysWithItsAccount() {
+        String email = "shared-" + UUID.randomUUID() + "@example.com";
+        SignedIn first = signInWithGoogle(email, "Ada");
 
-        SignedIn google = signInWithGoogle(email, "Ada");
+        SignedIn second = signInWithGoogle(email, "Augusta");
 
-        // Two accounts, never merged: the Google one keeps no email
-        assertThat(google.api().get("/api/v2/me").json().path("email").isNull()).isTrue();
+        assertThat(first.api().get("/api/v2/me").json().path("email").asString()).isEqualTo(email);
+        assertThat(second.api().get("/api/v2/me").json().path("email").isNull()).isTrue();
     }
 
     @Test

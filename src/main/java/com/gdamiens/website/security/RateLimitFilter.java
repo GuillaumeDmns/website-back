@@ -19,13 +19,13 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Limits {@code /api/**} requests per minute: per IP on the auth endpoints (brute force), per account or guest device
+ * Limits {@code /api/**} requests per minute: per IP on the auth endpoints (brute force on tokens), per account or guest device
  * once authenticated, per IP otherwise. Runs after the JWT authentication so the caller is known. Answers 429 with
  * {@code Retry-After}.
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final Set<String> AUTH_PATHS = Set.of("/api/signin", "/api/signup", "/api/auth/guest", "/api/auth/google", "/api/token/refresh", "/api/logout");
+    private static final Set<String> AUTH_PATHS = Set.of("/api/auth/guest", "/api/auth/google", "/api/auth/api-token", "/api/token/refresh", "/api/logout");
 
     private final RateLimiter rateLimiter;
 

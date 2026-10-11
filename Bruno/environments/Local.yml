@@ -2,11 +2,7 @@ name: Local
 variables:
   - name: baseUrl
     value: http://localhost:8080
-  - name: username
-    value: guillaume
   - secret: true
-    name: password
+    name: apiToken
   - secret: true
     name: jwt
-  - secret: true
-    name: refreshToken

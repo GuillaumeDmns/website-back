@@ -2,11 +2,7 @@ name: Production
 variables:
   - name: baseUrl
     value: https://guillaumedamiens.com
-  - name: username
-    value: guillaume
   - secret: true
-    name: password
+    name: apiToken
   - secret: true
     name: jwt
-  - secret: true
-    name: refreshToken

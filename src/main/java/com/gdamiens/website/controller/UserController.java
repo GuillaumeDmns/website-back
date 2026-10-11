@@ -1,10 +1,9 @@
 package com.gdamiens.website.controller;
 
-import com.gdamiens.website.controller.object.Credentials;
+import com.gdamiens.website.controller.object.ApiTokenRequest;
 import com.gdamiens.website.controller.object.GoogleSignInRequest;
 import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.controller.object.RefreshTokenRequest;
-import com.gdamiens.website.controller.object.SignUpRequest;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.security.UsageBudgets;
 import com.gdamiens.website.service.UserService;
@@ -31,32 +30,14 @@ public class UserController {
         this.usageBudgets = usageBudgets;
     }
 
-    @PostMapping("/signin")
-    @Operation(summary = "Get an access JWT and a refresh token")
+    @PostMapping("/auth/api-token")
+    @Operation(summary = "Exchange a personal API token (Bruno, scripts; created by an admin at /api/v2/me/api-tokens) for an access JWT, without refresh token")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Credentials are valid"),
-            @ApiResponse(responseCode = "400", description = "Username / password not provided"),
-            @ApiResponse(responseCode = "401", description = "Invalid credentials"),
-            @ApiResponse(responseCode = "500", description = "Server error")})
-    public JwtDTO login(@RequestBody Credentials credentials) {
-        if (credentials.username() == null || credentials.password() == null) {
-            throw new CustomException("Username and password are required", HttpStatus.BAD_REQUEST);
-        }
-
-        return userService.signIn(credentials.username(), credentials.password())
-            .orElseThrow(() -> new CustomException("Invalid credentials", HttpStatus.UNAUTHORIZED));
-    }
-
-    @PostMapping("/signup")
-    @Operation(summary = "Create a user account and sign it in")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Account created, tokens returned"),
-        @ApiResponse(responseCode = "400", description = "Invalid username, email or password"),
-        @ApiResponse(responseCode = "409", description = "Username or email already used"),
-        @ApiResponse(responseCode = "500", description = "Server error")})
-    public ResponseEntity<JwtDTO> signUp(@RequestBody SignUpRequest request) {
-        JwtDTO tokens = userService.signUp(request.username(), request.email(), request.password());
-        return new ResponseEntity<>(tokens, HttpStatus.CREATED);
+        @ApiResponse(responseCode = "200", description = "Access JWT of the token's account"),
+        @ApiResponse(responseCode = "401", description = "Unknown or expired API token")})
+    public JwtDTO signInWithApiToken(@RequestBody ApiTokenRequest request) {
+        return userService.signInWithApiToken(request.token())
+            .orElseThrow(() -> new CustomException("Unknown or expired API token", HttpStatus.UNAUTHORIZED));
     }
 
     @PostMapping("/auth/google")

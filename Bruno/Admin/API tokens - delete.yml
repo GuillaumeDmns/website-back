@@ -1,0 +1,22 @@
+info:
+  name: "API tokens - delete"
+  type: http
+  seq: 7
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/v2/me/api-tokens/{{apiTokenId}}"
+
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. Révoque un jeton d'API (`apiTokenId` : son `id`, voir la liste).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
