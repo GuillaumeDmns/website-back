@@ -1,0 +1,182 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.360909,
+          48.855372
+        ]
+      },
+      "properties": {
+        "label": "8 Rue de Rivoli 75004 Paris",
+        "score": 0.97,
+        "housenumber": "8",
+        "id": "75104_8249_00008",
+        "name": "8 Rue de Rivoli",
+        "postcode": "75004",
+        "citycode": "75104",
+        "city": "Paris",
+        "type": "housenumber",
+        "_type": "address"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8357,
+          45.764
+        ]
+      },
+      "properties": {
+        "label": "8 Rue de Rivoli 69002 Lyon",
+        "score": 0.95,
+        "id": "69382_1234_00008",
+        "type": "housenumber",
+        "_type": "address"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.6297,
+          49.1283
+        ]
+      },
+      "properties": {
+        "label": "Mairie 60950 Ver-sur-Launette",
+        "score": 0.9,
+        "id": "60667_0001",
+        "postcode": "60950",
+        "type": "street",
+        "_type": "address"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.29424,
+          48.858264
+        ]
+      },
+      "properties": {
+        "name": [
+          "Tour Eiffel"
+        ],
+        "toponym": "Tour Eiffel",
+        "category": [
+          "monument",
+          "zone d'activité ou d'intérêt"
+        ],
+        "postcode": [
+          "75007"
+        ],
+        "city": [
+          "Paris",
+          "Paris 7e Arrondissement"
+        ],
+        "extrafields": {
+          "cleabs": "SURFACTI0000000000142427"
+        },
+        "score": 0.86,
+        "_type": "poi"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.289578,
+          48.856292
+        ]
+      },
+      "properties": {
+        "toponym": "Champ de Mars - Tour Eiffel",
+        "category": [
+          "gare voyageurs uniquement",
+          "transport",
+          "équipement de transport"
+        ],
+        "city": [
+          "Paris 15e Arrondissement",
+          "Paris"
+        ],
+        "extrafields": {
+          "cleabs": "EQ_RESEA0000000000140277"
+        },
+        "score": 0.77,
+        "_type": "poi"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.3889,
+          48.7457
+        ]
+      },
+      "properties": {
+        "label": "Orly",
+        "score": 0.94,
+        "id": "94054",
+        "type": "municipality",
+        "_type": "address"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.3889,
+          48.7457
+        ]
+      },
+      "properties": {
+        "toponym": "Orly",
+        "category": [
+          "administratif",
+          "commune"
+        ],
+        "extrafields": {
+          "cleabs": "COMMUNE_94054"
+        },
+        "score": 0.87,
+        "_type": "poi"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.3652,
+          48.7262
+        ]
+      },
+      "properties": {
+        "toponym": "Aéroport de Paris-Orly",
+        "category": [
+          "aérodrome",
+          "transport"
+        ],
+        "extrafields": {
+          "cleabs": "AERODROM0000000000000001"
+        },
+        "score": 0.66,
+        "_type": "poi"
+      }
+    }
+  ]
+}

@@ -37,6 +37,12 @@ public final class ExternalApis {
         server.on("/prim/v2/navitia/places", Response.json(Fixtures.read("navitia/places.json")));
         server.on("/prim/disruptions_bulk/disruptions/v2", Response.json(Fixtures.read("prim/disruptions_bulk.json")));
         server.on("/elevators", Response.json(Fixtures.read("opendata/etat-des-ascenseurs.json")));
+        server.on("/stop-zones", Response.json("""
+            [{"zdcid": "70001", "zdctown": "Paris 1er"}, {"zdcid": "70002", "zdctown": "Paris 12e"}, {"zdcid": "70003", "zdctown": "Paris 11e"},
+             {"zdcid": "70004", "zdctown": "Vincennes"}, {"zdcid": "70005", "zdctown": "Fontenay-sous-Bois"},
+             {"zdcid": "70006", "zdctown": "Joinville-le-Pont"}, {"zdcid": "70007", "zdctown": "Paris 1er"}]"""));
+        server.on("/geoplateforme/search", Response.json(Fixtures.read("geoplateforme/search.json")));
+        server.on("/geoplateforme/reverse", Response.json(Fixtures.read("geoplateforme/reverse.json")));
 
         server.on("/velib/station_information.json", Response.json("""
             {"data": {"stations": [

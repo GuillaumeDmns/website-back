@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/v2/search?q=chatelet&limit=10"
+  url: "{{baseUrl}}/api/v2/search?q=chatelet&limit=10&lat=48.8566&lon=2.3522"
   params:
     - name: "q"
       value: "chatelet"
@@ -15,11 +15,18 @@ http:
       value: "10"
       type: query
       description: "Lieux, 20 max"
+    - name: "lat"
+      value: "48.8566"
+      type: query
+      description: "Position de l'appelant (facultative) : ce qui est proche d'abord"
+    - name: "lon"
+      value: "2.3522"
+      type: query
   auth: inherit
 
 docs:
   content: |-
-    Recherche unifiée. `lines` : lignes du GTFS dont le nom correspond (mot de mode optionnel). `places` : zones d'arrêt (avec leurs lignes, id `IDFM:…`), adresses et lieux via Navitia `places`, avec la commune dans le nom. Résultats Navitia mis en cache 10 min.
+    Recherche unifiée, sans Navitia sauf en dernier recours. `lines` : lignes du GTFS dont le nom correspond (mot de mode optionnel). `places` : zones d'arrêt du GTFS (avec leurs lignes, id `IDFM:…`, la commune dans le nom ; tolère accents, fautes de frappe, « st »), puis adresses et lieux de la Géoplateforme IGN (`address:…`, `poi:…`, cache 10 min ; les adresses d'abord si le texte commence par un numéro). Navitia `places` seulement si la Géoplateforme échoue ou si rien n'est trouvé.
   type: text/markdown
 
 settings:

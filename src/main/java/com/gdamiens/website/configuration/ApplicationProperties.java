@@ -136,6 +136,12 @@ public class ApplicationProperties {
         /** Opendatasoft export of the elevator status of the stations (open data "État des ascenseurs", static key) */
         private String elevators = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/etat-des-ascenseurs/exports/json";
 
+        /** IGN Géoplateforme geocoder (addresses, places, reverse geocoding; no key, 50 requests/s per IP) */
+        private String geoplateforme = "https://data.geopf.fr/geocodage";
+
+        /** Opendatasoft export of the IDFM stop zones (zones de correspondance = GTFS stop areas), for their town */
+        private String stopZones = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/zones-de-correspondance/exports/json";
+
         /** Vélib GBFS open data (no key) */
         private String velibGbfs = "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole";
 
@@ -161,6 +167,22 @@ public class ApplicationProperties {
 
         public void setElevators(String elevators) {
             this.elevators = elevators;
+        }
+
+        public String getGeoplateforme() {
+            return geoplateforme;
+        }
+
+        public void setGeoplateforme(String geoplateforme) {
+            this.geoplateforme = geoplateforme;
+        }
+
+        public String getStopZones() {
+            return stopZones;
+        }
+
+        public void setStopZones(String stopZones) {
+            this.stopZones = stopZones;
         }
 
         public String getVelibGbfs() {

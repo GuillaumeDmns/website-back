@@ -8,6 +8,7 @@ import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.LineTraffic;
 import com.gdamiens.website.controller.object.v2.Ride;
 import com.gdamiens.website.controller.object.v2.SearchResult;
+import com.gdamiens.website.controller.object.v2.PlaceResult;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
 import com.gdamiens.website.controller.object.v2.StopDepartures;
@@ -31,6 +32,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -108,10 +110,20 @@ public class MobilityController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Search lines, stop areas, addresses and points of interest", security = @SecurityRequirement(name = "Auth. Token"))
+    @Operation(summary = "Search lines, stop areas (GTFS), addresses and points of interest (IGN Géoplateforme)",
+        security = @SecurityRequirement(name = "Auth. Token"))
     public SearchResult search(@Parameter(example = "chatelet") @RequestParam String q,
-                               @Parameter(description = "Places, at most 20") @RequestParam(defaultValue = "10") int limit) {
-        return searchService.search(q, Math.clamp(limit, 1, 20));
+                               @Parameter(description = "Places, at most 20") @RequestParam(defaultValue = "10") int limit,
+                               @Parameter(description = "The caller's position: what is close comes first") @RequestParam(required = false) Double lat,
+                               @RequestParam(required = false) Double lon) {
+        return searchService.search(q, Math.clamp(limit, 1, 20), lat == null || lon == null ? null : lat, lat == null || lon == null ? null : lon);
+    }
+
+    @GetMapping("/places/reverse")
+    @Operation(summary = "The position named after its closest address (within 250 m), 404 when there is none",
+        security = @SecurityRequirement(name = "Auth. Token"))
+    public ResponseEntity<PlaceResult> reverse(@RequestParam double lat, @RequestParam double lon) {
+        return ResponseEntity.of(searchService.reverse(lat, lon));
     }
 
     @GetMapping("/nearby")
