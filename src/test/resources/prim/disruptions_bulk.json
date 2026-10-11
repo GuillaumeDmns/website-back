@@ -1,0 +1,98 @@
+{
+  "lastUpdatedDate": "2026-10-10T06:00:00.000Z",
+  "disruptions": [
+    {
+      "id": "metro-1-stopped",
+      "applicationPeriods": [{"begin": "20200101T000000", "end": "20991231T235959"}],
+      "lastUpdate": "20261010T080000",
+      "cause": "PERTURBATION",
+      "severity": "BLOQUANTE",
+      "title": "Métro 1 : trafic interrompu",
+      "message": "<p>Trafic interrompu entre <b>Châtelet</b> et Nation.</p><p>Reprise estimée&nbsp;: 18h.</p>",
+      "shortMessage": "Trafic interrompu",
+      "impactedSections": [
+        {"lineId": "line:IDFM:C01371", "from": {"type": "stop_area", "id": "stop_area:IDFM:70001", "name": "Châtelet (Paris)"},
+         "to": {"type": "stop_area", "id": "stop_area:IDFM:70003", "name": "Nation (Paris)"}},
+        {"lineId": "line:IDFM:C01371", "from": {"type": "stop_area", "id": "stop_area:IDFM:70003", "name": "Nation (Paris)"},
+         "to": {"type": "stop_area", "id": "stop_area:IDFM:70001", "name": "Châtelet (Paris)"}}
+      ]
+    },
+    {
+      "id": "metro-1-stopped-again",
+      "applicationPeriods": [{"begin": "20200101T000000", "end": "20991231T235959"}],
+      "lastUpdate": "20261010T080000",
+      "cause": "PERTURBATION",
+      "severity": "BLOQUANTE",
+      "title": "Métro 1 : trafic interrompu",
+      "message": "<p>Trafic interrompu entre <b>Châtelet</b> et Nation.</p><p>Reprise estimée&nbsp;: 18h.</p>"
+    },
+    {
+      "id": "metro-1-past",
+      "applicationPeriods": [{"begin": "20200101T000000", "end": "20200102T000000"}],
+      "lastUpdate": "20200101T000000",
+      "cause": "PERTURBATION",
+      "severity": "BLOQUANTE",
+      "title": "Métro 1 : c'est fini",
+      "message": "<p>Fini.</p>"
+    },
+    {
+      "id": "rer-a-works",
+      "applicationPeriods": [{"begin": "20261019T220000", "end": "20261020T050000"}, {"begin": "20261012T220000", "end": "20261013T050000"}],
+      "lastUpdate": "20261001T120000",
+      "cause": "TRAVAUX",
+      "severity": "PERTURBEE",
+      "title": "RER A : travaux de nuit",
+      "message": "Pas de train entre Vincennes et Fontenay.<br>Bus de remplacement."
+    },
+    {
+      "id": "rer-a-much-later",
+      "applicationPeriods": [{"begin": "20991201T000000", "end": "20991202T000000"}],
+      "lastUpdate": "20261001T120000",
+      "cause": "TRAVAUX",
+      "severity": "BLOQUANTE",
+      "title": "RER A : travaux bien plus tard",
+      "message": "<p>Plus tard.</p>"
+    },
+    {
+      "id": "bus-38-delays",
+      "applicationPeriods": [{"begin": "20200101T000000", "end": "20991231T235959"}],
+      "lastUpdate": "20261010T070000",
+      "cause": "PERTURBATION",
+      "severity": "PERTURBEE",
+      "title": "Bus 38 : manifestation, retards",
+      "message": "<p>Retards.</p>"
+    },
+    {
+      "id": "bus-network-info",
+      "applicationPeriods": [{"begin": "20200101T000000", "end": "20991231T235959"}],
+      "lastUpdate": "20261010T070000",
+      "cause": "INFORMATION",
+      "severity": "INFORMATION",
+      "tags": ["Actualité"],
+      "title": "Bus : nouveaux horaires",
+      "message": "<p>Nouveaux horaires sur le réseau.</p>"
+    },
+    {
+      "id": "chatelet-bus-stop-closed",
+      "applicationPeriods": [{"begin": "20200101T000000", "end": "20991231T235959"}],
+      "lastUpdate": "20261010T070000",
+      "cause": "PERTURBATION",
+      "severity": "BLOQUANTE",
+      "title": "Bus 38 : arrêt Châtelet non desservi",
+      "message": "<p>Arrêt reporté rue de Rivoli.</p>"
+    }
+  ],
+  "lines": [
+    {"id": "line:IDFM:C01371", "name": "1", "shortName": "1", "mode": "Metro", "networkId": "network:IDFM:1046", "impactedObjects": [
+      {"type": "line", "id": "line:IDFM:C01371", "name": "1", "disruptionIds": ["metro-1-stopped", "metro-1-stopped-again", "metro-1-past"]}
+    ]},
+    {"id": "line:IDFM:C01742", "name": "A", "shortName": "A", "mode": "RapidTransit", "networkId": "network:IDFM:1046", "impactedObjects": [
+      {"type": "line", "id": "line:IDFM:C01742", "name": "A", "disruptionIds": ["rer-a-works", "rer-a-much-later"]}
+    ]},
+    {"id": "line:IDFM:C02000", "name": "38", "shortName": "38", "mode": "Bus", "networkId": "network:IDFM:1047", "impactedObjects": [
+      {"type": "line", "id": "line:IDFM:C02000", "name": "38", "disruptionIds": ["bus-38-delays"]},
+      {"type": "network", "id": "network:IDFM:1047", "name": "Bus", "disruptionIds": ["bus-network-info"]},
+      {"type": "stop_point", "id": "stop_point:IDFM:1003", "name": "Châtelet", "disruptionIds": ["chatelet-bus-stop-closed"]}
+    ]}
+  ]
+}

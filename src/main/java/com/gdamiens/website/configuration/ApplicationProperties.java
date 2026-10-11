@@ -127,11 +127,14 @@ public class ApplicationProperties {
      */
     public static class Urls {
 
-        /** PRIM marketplace: real time ({@code /stop-monitoring}, {@code /estimated-timetable}) and Navitia ({@code /v2/navitia}) */
+        /** PRIM marketplace: real time ({@code /stop-monitoring}, {@code /estimated-timetable}), traffic info ({@code /disruptions_bulk}) and Navitia ({@code /v2/navitia}) */
         private String prim = "https://prim.iledefrance-mobilites.fr/marketplace";
 
         /** Opendatasoft dataset of the IDFM GTFS: its metadata give the current version, its records the file */
         private String gtfsDataset = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/offre-horaires-tc-gtfs-idfm";
+
+        /** Opendatasoft export of the elevator status of the stations (open data "État des ascenseurs", static key) */
+        private String elevators = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/etat-des-ascenseurs/exports/json";
 
         /** Vélib GBFS open data (no key) */
         private String velibGbfs = "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole";
@@ -150,6 +153,14 @@ public class ApplicationProperties {
 
         public void setGtfsDataset(String gtfsDataset) {
             this.gtfsDataset = gtfsDataset;
+        }
+
+        public String getElevators() {
+            return elevators;
+        }
+
+        public void setElevators(String elevators) {
+            this.elevators = elevators;
         }
 
         public String getVelibGbfs() {

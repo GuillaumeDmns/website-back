@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Base of the integration tests: the whole application on a random port, against a throwaway PostGIS (the image of
  * the CI, migrated by Liquibase) holding the {@link MiniGtfs} network, and a {@link FakeServer} standing for PRIM,
- * Navitia, Opendatasoft, Vélib and Google. Every test class shares one application and one database: tests use their
+ * Navitia, Opendatasoft (GTFS, elevators), Vélib and Google. Every test class shares one application and one database: tests use their
  * own users, client addresses ({@link Api}) and stop areas where state is kept (rate limits, caches).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -57,6 +57,7 @@ public abstract class IntegrationTest {
         registry.add("application.urls.prim", () -> EXTERNAL.url() + "/prim");
         registry.add("application.urls.gtfs-dataset", () -> EXTERNAL.url() + "/gtfs");
         registry.add("application.urls.velib-gbfs", () -> EXTERNAL.url() + "/velib");
+        registry.add("application.urls.elevators", () -> EXTERNAL.url() + "/elevators");
         registry.add("application.google.jwk-set-uri", () -> EXTERNAL.url() + "/google/certs");
     }
 

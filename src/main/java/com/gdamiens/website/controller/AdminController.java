@@ -45,17 +45,20 @@ public class AdminController {
      * @param lastGtfsSuccess   last successful GTFS import, null if none
      * @param lastGtfsImport    last GTFS import, whatever its outcome
      * @param gtfsStale         no successful import for {@link #GTFS_MAX_AGE}
-     * @param trafficSnapshotAt when the traffic was last fetched (on demand, every 2 min while used), null before
+     * @param trafficSnapshotAt   when the traffic was last fetched (disruptions_bulk, on demand, every 3 min while used),
+     *                            null before
+     * @param elevatorsSnapshotAt when the elevator status was last fetched (open data, on demand, every hour), null before
      * @param features          PRIM calls of the day per feature, by this server
      */
     public record Status(Instant now, Instant startedAt, List<ApiQuota.Usage> quotas, List<ApiQuota.FeatureUsage> features,
                          List<PrimCircuitBreaker.Status> prim,
-                         GtfsImport lastGtfsSuccess, GtfsImport lastGtfsImport, boolean gtfsStale, Instant trafficSnapshotAt) {
+                         GtfsImport lastGtfsSuccess, GtfsImport lastGtfsImport, boolean gtfsStale, Instant trafficSnapshotAt,
+                         Instant elevatorsSnapshotAt) {
     }
 
     @GetMapping("/status")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Service state: PRIM quotas used today (all callers, guests, PRIM's own count), calls per feature, PRIM circuit breakers, GTFS imports, traffic snapshot",
+    @Operation(summary = "Service state: PRIM quotas used today (all callers, guests, PRIM's own count), calls per feature, PRIM circuit breakers, GTFS imports, traffic and elevator snapshots",
         security = @SecurityRequirement(name = "Auth. Token"))
     public Status getStatus() {
         Instant now = Instant.now();
@@ -63,6 +66,6 @@ public class AdminController {
         boolean stale = lastSuccess == null || lastSuccess.finishedAt() == null || lastSuccess.finishedAt().plus(GTFS_MAX_AGE).isBefore(now);
         return new Status(now, Instant.ofEpochMilli(ManagementFactory.getRuntimeMXBean().getStartTime()), apiQuota.usage(),
             apiQuota.featureUsage(), circuitBreaker.status(), lastSuccess, gtfsImportRepository.findLast().orElse(null), stale,
-            trafficService.snapshotTime().orElse(null));
+            trafficService.snapshotTime().orElse(null), trafficService.elevatorsSnapshotTime().orElse(null));
     }
 }

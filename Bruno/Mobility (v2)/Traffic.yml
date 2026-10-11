@@ -11,7 +11,7 @@ http:
 
 docs:
   content: |-
-    État du trafic : toutes les lignes de métro, RER, Transilien et tram (`severity` null si trafic normal) et toute autre ligne perturbée, avec les titres des perturbations en cours. Navitia `traffic_reports` rechargé en arrière-plan toutes les 2 min (premier appel ~2 s).
+    État du trafic : toutes les lignes de métro, RER, Transilien et tram (`severity` null si trafic normal) et toute autre ligne perturbée, avec les titres des perturbations en cours. PRIM `disruptions_bulk` partagé, rechargé en arrière-plan au plus toutes les 3 min quand on le demande.
   type: text/markdown
 
 settings:

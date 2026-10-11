@@ -11,7 +11,7 @@ http:
 
 docs:
   content: |-
-    Perturbations de la zone d'arrêt (ascenseurs en panne, arrêt non desservi...) et perturbations en cours de ses lignes de métro, RER, Transilien et tram. 404 si la zone est inconnue.
+    Perturbations de la zone d'arrêt (ascenseurs en panne, d'après l'open data rechargé toutes les heures ; arrêt non desservi...) et perturbations en cours de ses lignes de métro, RER, Transilien et tram. 404 si la zone est inconnue.
   type: text/markdown
 
 settings:
