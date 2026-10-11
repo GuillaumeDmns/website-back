@@ -1,0 +1,12 @@
+[
+  {"zdcid": "70001", "liftid": "RATP:LiftEquipment:1:LOC", "liftstatus": "notavailable", "liftreason": "liftFailure",
+   "liftdirection": "Ligne M1 direction Nation", "liftsituation": "Niveau 0 :  sortie 2,\n rue de Rivoli", "liftstateupdate": "2026-10-09T06:11",
+   "zdcname": "Châtelet", "liftmode": "Metro"},
+  {"zdcid": "70001", "liftid": "RATP:LiftEquipment:2:LOC", "liftstatus": "available", "liftreason": null,
+   "liftdirection": "Ligne M1 direction La Défense", "liftsituation": null, "liftstateupdate": "2026-10-09T06:11",
+   "zdcname": "Châtelet", "liftmode": "Metro"},
+  {"zdcid": "70002", "liftid": "SNCF:LiftEquipment:3:LOC", "liftstatus": "unknown", "liftreason": "/",
+   "liftdirection": null, "liftsituation": null, "liftstateupdate": "2026-10-09T06:11", "zdcname": "Gare de Lyon", "liftmode": "RapidTransit"},
+  {"zdcid": "70003", "liftid": "RATP:LiftEquipment:4:LOC", "liftstatus": "notavailable", "liftreason": "liftFailure",
+   "liftdirection": null, "liftsituation": null, "liftstateupdate": "2026-10-10T08:30", "zdcname": "Nation", "liftmode": "Metro"}
+]

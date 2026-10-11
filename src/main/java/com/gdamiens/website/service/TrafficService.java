@@ -1,14 +1,17 @@
 package com.gdamiens.website.service;
 
-import com.gdamiens.website.utils.ParisTime;
-import com.gdamiens.website.client.NavitiaClient;
+import com.gdamiens.website.client.DisruptionsClient;
+import com.gdamiens.website.client.ElevatorClient;
 import com.gdamiens.website.controller.object.v2.Disruption;
 import com.gdamiens.website.controller.object.v2.Disruption.Category;
+import com.gdamiens.website.controller.object.v2.Disruption.Section;
 import com.gdamiens.website.controller.object.v2.Disruption.Severity;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.LineTraffic;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
 import com.gdamiens.website.model.TransportMode;
+import com.gdamiens.website.repository.NetworkRepository;
+import com.gdamiens.website.utils.ParisTime;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,34 +20,48 @@ import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Traffic info from Navitia {@code traffic_reports}: one call returns every disruption with the lines and stop areas
- * it is linked to (about 2 s, 25 MB). The snapshot is refreshed in the background when older than {@link #MAX_AGE}:
- * callers get the previous one meanwhile, and keep it if Navitia fails.
+ * Traffic info from PRIM {@code disruptions_bulk} ("Messages Info Trafic, requête globale", its own quota): one call
+ * returns every disruption with the lines and stop points it impacts. Elevator outages come from the open data "État
+ * des ascenseurs" (not PRIM). Each snapshot is shared by every caller and refreshed in the background when a request
+ * finds it older than its max age (nothing is fetched while nobody asks): callers get the previous one meanwhile, and
+ * keep it when the source fails.
  */
 @Service
 public class TrafficService {
 
     private static final Logger log = LoggerFactory.getLogger(TrafficService.class);
 
-    private static final Duration MAX_AGE = Duration.ofMinutes(2);
+    /** At most 480 calls a day, while the app is used: IDFM's messages change a few times an hour */
+    private static final Duration TRAFFIC_MAX_AGE = Duration.ofMinutes(3);
+
+    /** The elevator data change a few times a day */
+    private static final Duration ELEVATORS_MAX_AGE = Duration.ofHours(1);
+
+    /** Without elevator data (source down at startup), tried again after this long */
+    private static final Duration ELEVATORS_RETRY = Duration.ofMinutes(5);
 
     /** Upcoming disruptions shown this long before they start */
     private static final Duration UPCOMING = Duration.ofDays(7);
@@ -68,19 +85,39 @@ public class TrafficService {
         .thenComparing(Disruption::severity, Comparator.reverseOrder())
         .thenComparing(Disruption::start, Comparator.nullsLast(Comparator.naturalOrder()));
 
-    private final NavitiaClient navitiaClient;
-
     private final NetworkService networkService;
 
-    private final Object loadLock = new Object();
+    private final Refreshed<Snapshot> traffic;
 
-    private final AtomicBoolean refreshing = new AtomicBoolean();
+    private final Refreshed<Map<String, List<Disruption>>> elevators;
 
-    private volatile Snapshot snapshot;
-
-    public TrafficService(NavitiaClient navitiaClient, NetworkService networkService) {
-        this.navitiaClient = navitiaClient;
+    public TrafficService(DisruptionsClient disruptionsClient, ElevatorClient elevatorClient, NetworkService networkService,
+                          NetworkRepository networkRepository) {
         this.networkService = networkService;
+        StopLookup stops = new StopLookup() {
+            @Override
+            public Map<String, String> stopAreasOfQuays(Collection<String> quayIds) {
+                return networkRepository.findStopAreasOfQuays(quayIds);
+            }
+
+            @Override
+            public Map<String, String> names(Collection<String> stopAreaIds) {
+                Map<String, String> names = new HashMap<>();
+                networkRepository.findStopAreas(stopAreaIds).forEach((id, row) -> names.put(id, row.name()));
+                return names;
+            }
+        };
+        this.traffic = new Refreshed<>("traffic", TRAFFIC_MAX_AGE, () -> {
+            Snapshot loaded = parse(disruptionsClient.getDisruptions(), stops, Instant.now());
+            log.info("Loaded {} disruptions on {} lines and {} stop areas", loaded.disruptionCount(), loaded.lineDisruptions().size(),
+                loaded.stopDisruptions().size());
+            return loaded;
+        }, null);
+        this.elevators = new Refreshed<>("elevators", ELEVATORS_MAX_AGE, () -> {
+            Map<String, List<Disruption>> loaded = parseElevators(elevatorClient.getElevators());
+            log.info("{} elevators out of order in {} stop areas", loaded.values().stream().mapToInt(List::size).sum(), loaded.size());
+            return loaded;
+        }, Map.of());
     }
 
     /**
@@ -88,7 +125,7 @@ public class TrafficService {
      *         in the usual line order
      */
     public List<LineTraffic> getTraffic() {
-        Snapshot current = current();
+        Snapshot current = traffic.get();
         Map<String, LineSummary> lines = networkService.getLines();
         return lines.values().stream()
             .filter(line -> MAIN_MODES.contains(line.mode()) || current.lineDisruptions().containsKey(line.id()))
@@ -108,7 +145,7 @@ public class TrafficService {
      * @return active and upcoming disruptions of a line, active and worst first
      */
     public List<Disruption> getLineDisruptions(String lineId) {
-        return distinct(current().forLine(lineId).stream().sorted(DISRUPTION_ORDER).toList());
+        return distinct(traffic.get().forLine(lineId).stream().sorted(DISRUPTION_ORDER).toList());
     }
 
     /**
@@ -116,15 +153,16 @@ public class TrafficService {
      *         lines (metro, RER, Transilien, tram). Bus line disruptions are left out: most of them are about other stops.
      */
     public List<Disruption> getStopDisruptions(StopAreaDetail stopArea) {
-        Snapshot current = current();
+        Snapshot current = traffic.get();
         Set<Disruption> disruptions = new LinkedHashSet<>(current.forStopArea(stopArea.id()));
+        disruptions.addAll(elevators.get().getOrDefault(stopArea.id(), List.of()));
         stopArea.lines().stream()
             .filter(line -> MAIN_MODES.contains(line.mode()))
             .forEach(line -> current.forLine(line.id()).stream().filter(Disruption::active).forEach(disruptions::add));
         return distinct(disruptions.stream().sorted(DISRUPTION_ORDER).toList());
     }
 
-    /** Navitia has one disruption per impact: the same text often comes several times */
+    /** The same text often comes several times (one disruption per impact) */
     private static List<Disruption> distinct(List<Disruption> disruptions) {
         Set<List<Object>> seen = new HashSet<>();
         return disruptions.stream()
@@ -134,105 +172,102 @@ public class TrafficService {
 
     /** When the traffic snapshot was fetched, empty before the first request */
     public Optional<Instant> snapshotTime() {
-        return Optional.ofNullable(snapshot).map(Snapshot::loadedAt);
+        return traffic.loadedAt();
     }
 
-    private Snapshot current() {
-        Snapshot current = snapshot;
-        if (current == null) {
-            synchronized (loadLock) {
-                if (snapshot == null) {
-                    snapshot = load();
-                }
-                return snapshot;
-            }
-        }
-        if (current.loadedAt().plus(MAX_AGE).isBefore(Instant.now()) && refreshing.compareAndSet(false, true)) {
-            Thread.ofVirtual().name("traffic-refresh").start(() -> {
-                try {
-                    snapshot = load();
-                } catch (RuntimeException e) {
-                    log.warn("Traffic refresh failed, keeping the snapshot of {}", current.loadedAt(), e);
-                } finally {
-                    refreshing.set(false);
-                }
-            });
-        }
-        return current;
+    /** When the elevator status was fetched, empty before the first request for a stop */
+    public Optional<Instant> elevatorsSnapshotTime() {
+        return elevators.loadedAt();
     }
 
-    private Snapshot load() {
-        long startedAt = System.nanoTime();
-        Snapshot loaded = parse(navitiaClient.getAllTrafficReports(), Instant.now());
-        log.info("Loaded {} disruptions on {} lines in {} ms", loaded.disruptionCount(), loaded.lineDisruptions().size(),
-            Duration.ofNanos(System.nanoTime() - startedAt).toMillis());
-        return loaded;
+    /** GTFS lookups of the parsing */
+    interface StopLookup {
+
+        /** Quay ({@code IDFM:22219}, {@code IDFM:monomodalStopPlace:58792}) → stop area */
+        Map<String, String> stopAreasOfQuays(Collection<String> quayIds);
+
+        /** Stop area → GTFS name */
+        Map<String, String> names(Collection<String> stopAreaIds);
     }
 
-    /** Disruptions of a {@code traffic_reports} response, per line and per stop area */
-    static Snapshot parse(JsonNode response, Instant now) {
-        // Lines and stop areas linked to each disruption
+    /** Disruptions of a {@code disruptions_bulk} answer, per line and per stop area */
+    static Snapshot parse(JsonNode response, StopLookup stops, Instant now) {
+        // Lines (impacts on a line or its network) and quays (impacts on stop points) of each disruption
         Map<String, Set<String>> linesByDisruption = new HashMap<>();
-        Map<String, List<String>> disruptionsByStopArea = new HashMap<>();
-        for (JsonNode report : response.path("traffic_reports").values()) {
-            for (JsonNode line : report.path("lines").values()) {
-                String lineId = StringUtils.substringAfterLast(line.path("id").asString(""), ":");
-                disruptionIds(line).forEach(id -> linesByDisruption.computeIfAbsent(id, k -> new LinkedHashSet<>()).add(lineId));
-            }
-            for (JsonNode stopArea : report.path("stop_areas").values()) {
-                String stopAreaId = StringUtils.removeStart(stopArea.path("id").asString(""), "stop_area:");
-                disruptionsByStopArea.computeIfAbsent(stopAreaId, k -> new ArrayList<>()).addAll(disruptionIds(stopArea));
+        Map<String, Set<String>> quaysByDisruption = new HashMap<>();
+        for (JsonNode line : response.path("lines").values()) {
+            String lineId = lineId(line.path("id").asString(""));
+            for (JsonNode impacted : line.path("impactedObjects").values()) {
+                String type = impacted.path("type").asString("");
+                for (JsonNode disruptionId : impacted.path("disruptionIds").values()) {
+                    if ("stop_point".equals(type)) {
+                        quaysByDisruption.computeIfAbsent(disruptionId.asString(""), k -> new LinkedHashSet<>())
+                            .add(StringUtils.removeStart(impacted.path("id").asString(""), "stop_point:"));
+                    } else {
+                        linesByDisruption.computeIfAbsent(disruptionId.asString(""), k -> new LinkedHashSet<>()).add(lineId);
+                    }
+                }
             }
         }
 
-        Map<String, Disruption> disruptions = new HashMap<>();
-        for (JsonNode node : response.path("disruptions").values()) {
-            Disruption disruption = toDisruption(node, List.copyOf(linesByDisruption.getOrDefault(node.path("id").asString(""), Set.of())), now);
-            if (disruption != null) {
-                disruptions.put(disruption.id(), disruption);
-            }
-        }
+        Map<String, String> quayStopAreas = stops.stopAreasOfQuays(quaysByDisruption.values().stream().flatMap(Set::stream)
+            .collect(Collectors.toSet()));
+        Set<String> sectionStops = new HashSet<>();
+        response.path("disruptions").values().forEach(node -> node.path("impactedSections").values().forEach(section -> {
+            sectionStops.add(stopAreaId(section.path("from").path("id").asString("")));
+            sectionStops.add(stopAreaId(section.path("to").path("id").asString("")));
+        }));
+        Map<String, String> names = sectionStops.isEmpty() ? Map.of() : stops.names(sectionStops);
 
         Map<String, List<Disruption>> lineDisruptions = new HashMap<>();
-        disruptions.values().forEach(disruption -> disruption.lineIds()
-            .forEach(lineId -> lineDisruptions.computeIfAbsent(lineId, k -> new ArrayList<>()).add(disruption)));
         Map<String, List<Disruption>> stopDisruptions = new HashMap<>();
-        disruptionsByStopArea.forEach((stopAreaId, ids) -> ids.stream()
-            .map(disruptions::get)
-            .filter(Objects::nonNull)
-            .distinct()
-            .forEach(disruption -> stopDisruptions.computeIfAbsent(stopAreaId, k -> new ArrayList<>()).add(disruption)));
-
-        return new Snapshot(now, lineDisruptions, stopDisruptions, disruptions.size());
+        int count = 0;
+        for (JsonNode node : response.path("disruptions").values()) {
+            String id = node.path("id").asString("");
+            Disruption disruption = toDisruption(node, List.copyOf(linesByDisruption.getOrDefault(id, Set.of())), names, now);
+            if (disruption == null) {
+                continue;
+            }
+            count++;
+            disruption.lineIds().forEach(lineId -> lineDisruptions.computeIfAbsent(lineId, k -> new ArrayList<>()).add(disruption));
+            quaysByDisruption.getOrDefault(id, Set.of()).stream()
+                .map(quayStopAreas::get)
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(stopAreaId -> stopDisruptions.computeIfAbsent(stopAreaId, k -> new ArrayList<>()).add(disruption));
+        }
+        return new Snapshot(lineDisruptions, stopDisruptions, count);
     }
 
-    private static List<String> disruptionIds(JsonNode object) {
-        return object.path("links").values().stream()
-            .filter(link -> "disruption".equals(link.path("type").asString("")))
-            .map(link -> link.path("id").asString(""))
-            .toList();
+    /** {@code line:IDFM:C01371} → {@code C01371} */
+    private static String lineId(String id) {
+        return StringUtils.substringAfterLast(id, ":");
     }
 
-    /** null for past disruptions, upcoming ones starting later than {@link #UPCOMING} and canceled trips */
-    private static Disruption toDisruption(JsonNode node, List<String> lineIds, Instant now) {
-        String status = node.path("status").asString("");
-        boolean active = "active".equals(status);
-        if (!active && !"future".equals(status)) {
-            return null;
-        }
-        boolean tripsOnly = node.path("impacted_objects").values().stream()
-            .allMatch(object -> "trip".equals(object.path("pt_object").path("embedded_type").asString("")));
-        if (tripsOnly) {
-            return null;
-        }
+    /** {@code stop_area:IDFM:71264} → {@code IDFM:71264} */
+    private static String stopAreaId(String id) {
+        return StringUtils.removeStart(id, "stop_area:");
+    }
 
-        // Current period, or the next one (periods are not always in order)
+    /** null for past disruptions and upcoming ones starting later than {@link #UPCOMING} */
+    private static Disruption toDisruption(JsonNode node, List<String> lineIds, Map<String, String> names, Instant now) {
+        // Current period, else the next one (periods are not always in order)
         Instant start = null;
         Instant end = null;
-        for (JsonNode period : node.path("application_periods").values()) {
+        boolean active = false;
+        for (JsonNode period : node.path("applicationPeriods").values()) {
             Instant periodStart = ParisTime.parseNavitia(period.path("begin").asString(null));
             Instant periodEnd = ParisTime.parseNavitia(period.path("end").asString(null));
-            if ((periodEnd == null || periodEnd.isAfter(now)) && (start == null || periodStart != null && periodStart.isBefore(start))) {
+            if (periodEnd != null && !periodEnd.isAfter(now)) {
+                continue;
+            }
+            if (periodStart == null || !periodStart.isAfter(now)) {
+                active = true;
+                start = periodStart;
+                end = periodEnd;
+                break;
+            }
+            if (start == null || periodStart.isBefore(start)) {
                 start = periodStart;
                 end = periodEnd;
             }
@@ -241,28 +276,66 @@ public class TrafficService {
             return null;
         }
 
-        boolean elevator = node.path("tags").values().stream().anyMatch(tag -> "Ascenseur".equals(tag.asString("")));
         String cause = StringUtils.trimToNull(node.path("cause").asString(null));
-        Category category = elevator ? Category.ELEVATOR : "travaux".equalsIgnoreCase(cause) ? Category.WORKS : Category.TRAFFIC;
-        Severity severity = elevator ? Severity.INFO : switch (node.path("severity").path("effect").asString("")) {
-            case "NO_SERVICE" -> Severity.BLOCKING;
-            case "REDUCED_SERVICE", "SIGNIFICANT_DELAYS", "DETOUR", "MODIFIED_SERVICE", "STOP_MOVED" -> Severity.DISRUPTED;
+        Severity severity = switch (node.path("severity").asString("")) {
+            case "BLOQUANTE" -> Severity.BLOCKING;
+            case "PERTURBEE" -> Severity.DISRUPTED;
             default -> Severity.INFO;
         };
+        // IDFM lists a section both ways: kept once
+        Set<List<String>> seenSections = new HashSet<>();
+        List<Section> sections = node.path("impactedSections").values().stream()
+            .map(section -> {
+                String fromId = stopAreaId(section.path("from").path("id").asString(""));
+                String toId = stopAreaId(section.path("to").path("id").asString(""));
+                return new Section(lineId(section.path("lineId").asString("")), fromId,
+                    names.getOrDefault(fromId, section.path("from").path("name").asString(null)), toId,
+                    names.getOrDefault(toId, section.path("to").path("name").asString(null)));
+            })
+            .filter(section -> seenSections.add(List.of(section.lineId(),
+                StringUtils.compare(section.fromId(), section.toId()) <= 0 ? section.fromId() : section.toId(),
+                StringUtils.compare(section.fromId(), section.toId()) <= 0 ? section.toId() : section.fromId())))
+            .toList();
+        Set<String> allLineIds = new LinkedHashSet<>(lineIds);
+        sections.forEach(section -> allLineIds.add(section.lineId()));
+        String title = StringUtils.trimToNull(node.path("title").asString(null));
 
-        String title = null;
-        String message = null;
-        for (JsonNode text : node.path("messages").values()) {
-            List<String> types = text.path("channel").path("types").values().stream().map(type -> type.asString("")).toList();
-            if (title == null && types.contains("title")) {
-                title = StringUtils.trimToNull(text.path("text").asString(null));
-            } else if (message == null && types.contains("web")) {
-                message = toPlainText(text.path("text").asString(null));
+        return new Disruption(node.path("id").asString(""), severity, "TRAVAUX".equals(cause) ? Category.WORKS : Category.TRAFFIC,
+            title != null ? title : StringUtils.trimToNull(node.path("shortMessage").asString(null)),
+            toPlainText(node.path("message").asString(null)), cause, start, end, active,
+            ParisTime.parseNavitia(node.path("lastUpdate").asString(null)), List.copyOf(allLineIds), sections);
+    }
+
+    /** Elevators out of order, per stop area ({@code zdcid} 71426 → {@code IDFM:71426}) */
+    static Map<String, List<Disruption>> parseElevators(JsonNode elevators) {
+        Map<String, List<Disruption>> byStopArea = new LinkedHashMap<>();
+        for (JsonNode elevator : elevators.values()) {
+            String zone = StringUtils.trimToNull(elevator.path("zdcid").asString(null));
+            if (zone == null || !"notavailable".equals(elevator.path("liftstatus").asString(""))) {
+                continue;
             }
+            String direction = clean(elevator.path("liftdirection").asString(null));
+            Instant since = parseLocal(elevator.path("liftstateupdate").asString(null));
+            Disruption disruption = new Disruption(elevator.path("liftid").asString(""), Severity.INFO, Category.ELEVATOR,
+                direction == null ? "Ascenseur hors service" : "Ascenseur hors service : " + direction,
+                clean(elevator.path("liftsituation").asString(null)), StringUtils.trimToNull(elevator.path("liftreason").asString(null)),
+                since, null, true, since, List.of(), List.of());
+            byStopArea.computeIfAbsent("IDFM:" + zone, k -> new ArrayList<>()).add(disruption);
         }
+        return byStopArea;
+    }
 
-        return new Disruption(node.path("id").asString(""), severity, category, title, message, cause, start, end, active,
-            ParisTime.parseNavitia(node.path("updated_at").asString(null)), lineIds);
+    private static String clean(String text) {
+        return text == null ? null : StringUtils.trimToNull(text.replaceAll("\\s+", " "));
+    }
+
+    /** {@code 2026-10-09T06:11}, Paris time */
+    private static Instant parseLocal(String value) {
+        try {
+            return value == null ? null : LocalDateTime.parse(value).atZone(ParisTime.ZONE).toInstant();
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 
     /** IDFM web messages are small HTML fragments */
@@ -311,8 +384,7 @@ public class TrafficService {
         };
     }
 
-    record Snapshot(Instant loadedAt, Map<String, List<Disruption>> lineDisruptions, Map<String, List<Disruption>> stopDisruptions,
-                    int disruptionCount) {
+    record Snapshot(Map<String, List<Disruption>> lineDisruptions, Map<String, List<Disruption>> stopDisruptions, int disruptionCount) {
 
         List<Disruption> forLine(String lineId) {
             return lineDisruptions.getOrDefault(lineId, List.of());
@@ -320,6 +392,83 @@ public class TrafficService {
 
         List<Disruption> forStopArea(String stopAreaId) {
             return stopDisruptions.getOrDefault(stopAreaId, List.of());
+        }
+    }
+
+    /**
+     * A value loaded on the first request, then reloaded in the background by the first request that finds it older
+     * than [maxAge]. A failed reload keeps the previous value. With a [fallback], a failed first load gives it for
+     * {@link #ELEVATORS_RETRY} instead of failing the request.
+     */
+    private static final class Refreshed<T> {
+
+        private record Loaded<T>(T value, Instant at, Instant expiresAt) {
+        }
+
+        private final String name;
+
+        private final Duration maxAge;
+
+        private final Supplier<T> loader;
+
+        private final T fallback;
+
+        private final AtomicBoolean refreshing = new AtomicBoolean();
+
+        private volatile Loaded<T> loaded;
+
+        Refreshed(String name, Duration maxAge, Supplier<T> loader, T fallback) {
+            this.name = name;
+            this.maxAge = maxAge;
+            this.loader = loader;
+            this.fallback = fallback;
+        }
+
+        T get() {
+            Loaded<T> current = loaded;
+            if (current == null) {
+                synchronized (this) {
+                    if (loaded == null) {
+                        loaded = firstLoad();
+                    }
+                    return loaded.value();
+                }
+            }
+            if (current.expiresAt().isBefore(Instant.now()) && refreshing.compareAndSet(false, true)) {
+                Thread.ofVirtual().name(name + "-refresh").start(() -> {
+                    try {
+                        loaded = load();
+                    } catch (RuntimeException e) {
+                        log.warn("{} refresh failed, keeping the data of {}", name, current.at(), e);
+                    } finally {
+                        refreshing.set(false);
+                    }
+                });
+            }
+            return current.value();
+        }
+
+        Optional<Instant> loadedAt() {
+            return Optional.ofNullable(loaded).map(Loaded::at);
+        }
+
+        private Loaded<T> firstLoad() {
+            try {
+                return load();
+            } catch (RuntimeException e) {
+                if (fallback == null) {
+                    throw e;
+                }
+                log.warn("{} unavailable, tried again in {}", name, ELEVATORS_RETRY, e);
+                Instant now = Instant.now();
+                return new Loaded<>(fallback, now, now.plus(ELEVATORS_RETRY));
+            }
+        }
+
+        private Loaded<T> load() {
+            T value = loader.get();
+            Instant now = Instant.now();
+            return new Loaded<>(value, now, now.plus(maxAge));
         }
     }
 }

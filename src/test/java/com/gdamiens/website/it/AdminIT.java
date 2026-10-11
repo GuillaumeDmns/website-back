@@ -33,7 +33,10 @@ class AdminIT extends IntegrationTest {
         JsonNode status = admin().api().get("/api/admin/status").json();
 
         assertThat(status.path("quotas").values().stream().map(quota -> quota.path("api").asString()))
-            .containsExactlyInAnyOrder("STOP_MONITORING", "ESTIMATED_TIMETABLE", "NAVITIA");
+            .containsExactlyInAnyOrder("STOP_MONITORING", "ESTIMATED_TIMETABLE", "NAVITIA", "DISRUPTIONS_BULK");
+        assertThat(status.path("features").values().stream()
+            .filter(feature -> "TRAFFIC".equals(feature.path("feature").asString()))
+            .map(feature -> feature.path("api").asString())).containsExactly("DISRUPTIONS_BULK");
         assertThat(status.path("prim").values().stream().map(circuit -> circuit.path("state").asString())).containsOnly("CLOSED");
         assertThat(status.path("lastGtfsSuccess").path("status").asString()).isEqualTo("SUCCESS");
         assertThat(status.path("gtfsStale").asBoolean()).isFalse();

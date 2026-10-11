@@ -47,8 +47,10 @@ public class ApiQuota {
         STOP_MONITORING(1_000_000),
         /** Prochains passages, requête globale (estimated-timetable, also with a LineRef: measured 11 October 2026) */
         ESTIMATED_TIMETABLE(1_500),
-        /** Calculateur Île-de-France Mobilités, accès générique v2 (Navitia: journeys, places, traffic reports…) */
-        NAVITIA(20_000);
+        /** Calculateur Île-de-France Mobilités, accès générique v2 (Navitia: journeys, places, walking paths) */
+        NAVITIA(20_000),
+        /** Messages Info Trafic, requête globale (disruptions_bulk) */
+        DISRUPTIONS_BULK(18_000);
 
         final int perDay;
 
@@ -65,7 +67,7 @@ public class ApiQuota {
         /** Walking paths of the Vélib rides */
         WALKING_PATHS(Api.NAVITIA),
         PLACES(Api.NAVITIA),
-        TRAFFIC(Api.NAVITIA);
+        TRAFFIC(Api.DISRUPTIONS_BULK);
 
         private final Api api;
 

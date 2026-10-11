@@ -91,18 +91,6 @@ public class NavitiaClient extends PrimClient {
         return get(ApiQuota.Feature.WALKING_PATHS, builder);
     }
 
-    /**
-     * Every current and upcoming disruption, grouped by network, line and stop area
-     */
-    public JsonNode getAllTrafficReports() {
-        log.info("Getting all traffic reports");
-        UriComponentsBuilder builder = navitia("traffic_reports")
-            .queryParam("count", 1000)
-            .queryParam("depth", 0)
-            .queryParam("disable_geojson", true);
-        return get(ApiQuota.Feature.TRAFFIC, builder);
-    }
-
     private UriComponentsBuilder navitia(String... pathSegments) {
         return UriComponentsBuilder.fromUriString(primUrl()).path("/v2/navitia").pathSegment(pathSegments);
     }

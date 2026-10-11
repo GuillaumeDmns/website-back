@@ -35,7 +35,8 @@ public final class ExternalApis {
         server.on("/prim/v2/navitia/journeys", request -> Response.json(Fixtures.read(
             "only".equals(request.param("direct_path")) ? "navitia/walking-path.json" : "navitia/journeys.json")));
         server.on("/prim/v2/navitia/places", Response.json(Fixtures.read("navitia/places.json")));
-        server.on("/prim/v2/navitia/traffic_reports", Response.json(Fixtures.read("navitia/traffic_reports.json")));
+        server.on("/prim/disruptions_bulk/disruptions/v2", Response.json(Fixtures.read("prim/disruptions_bulk.json")));
+        server.on("/elevators", Response.json(Fixtures.read("opendata/etat-des-ascenseurs.json")));
 
         server.on("/velib/station_information.json", Response.json("""
             {"data": {"stations": [
