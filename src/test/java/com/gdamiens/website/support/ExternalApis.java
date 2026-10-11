@@ -18,13 +18,17 @@ public final class ExternalApis {
     /** Train of the RER A at Châtelet, then at Gare de Lyon (stop-monitoring of both) */
     public static final String RER_A_TRAIN = "154101";
 
+    /** Daily quota of stop-monitoring, as PRIM says it */
+    public static final int STOP_MONITORING_PER_DAY = 1_000_000;
+
     private ExternalApis() {
     }
 
     public static void stubDefaults(FakeServer server, GoogleTokens google) {
         server.on("/google/certs", Response.json(google.jwks()));
 
-        server.on("/prim/stop-monitoring", request -> Response.json(SiriJson.stopMonitoring(visits(request.param("MonitoringRef")))));
+        server.on("/prim/stop-monitoring", request -> primCount(Response.json(SiriJson.stopMonitoring(visits(request.param("MonitoringRef")))),
+            STOP_MONITORING_PER_DAY, server.requests("/prim/stop-monitoring").size()));
         server.on("/prim/estimated-timetable", request -> Response.json(SiriJson.estimatedTimetable(
             ("STIF:Line::" + RER_A + ":").equals(request.param("LineRef")) ? rerAJourneys() : List.of())));
 
@@ -48,6 +52,12 @@ public final class ExternalApis {
               {"station_id": "3", "is_installed": 0, "is_renting": 0, "is_returning": 0, "num_docks_available": 0, "last_reported": 1760000000,
                "num_bikes_available_types": []}
             ]}}"""));
+    }
+
+    /** [answer] with PRIM's count of the day's calls, as its gateway adds it */
+    public static Response primCount(Response answer, int perDay, int used) {
+        return answer.withHeader("x-ratelimit-limit-day", String.valueOf(perDay))
+            .withHeader("x-ratelimit-remaining-day", String.valueOf(perDay - used));
     }
 
     /** Next vehicles at a stop area ({@code STIF:StopArea:SP:70001:}), relative to now */

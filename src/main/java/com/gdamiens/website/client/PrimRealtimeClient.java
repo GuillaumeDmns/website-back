@@ -45,7 +45,7 @@ public class PrimRealtimeClient extends PrimClient {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(primUrl()).path("/stop-monitoring")
             .queryParam("MonitoringRef", "STIF:StopArea:SP:" + stopAreaId.substring(stopAreaId.lastIndexOf(':') + 1) + ":");
 
-        return get(ApiQuota.Api.STOP_MONITORING, builder)
+        return get(ApiQuota.Feature.DEPARTURES, builder)
             .map(ServiceDelivery::getStopMonitoringDelivery)
             .filter(deliveries -> !deliveries.isEmpty())
             .map(deliveries -> deliveries.getFirst())
@@ -66,7 +66,7 @@ public class PrimRealtimeClient extends PrimClient {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(primUrl()).path("/estimated-timetable")
             .queryParam("LineRef", "STIF:Line::" + lineId + ":");
 
-        return get(ApiQuota.Api.ESTIMATED_TIMETABLE, builder)
+        return get(ApiQuota.Feature.VEHICLES, builder)
             .map(ServiceDelivery::getEstimatedTimetableDelivery)
             .filter(deliveries -> !deliveries.isEmpty())
             .map(deliveries -> deliveries.getFirst())
@@ -77,9 +77,9 @@ public class PrimRealtimeClient extends PrimClient {
             .orElseThrow(() -> new CustomException("IDFM response body does not contain any journey", HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
-    private Optional<ServiceDelivery> get(ApiQuota.Api api, UriComponentsBuilder builder) {
-        IDFMResponse response = call(api,
-            () -> restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request(), IDFMResponse.class).getBody());
+    private Optional<ServiceDelivery> get(ApiQuota.Feature feature, UriComponentsBuilder builder) {
+        IDFMResponse response = call(feature,
+            () -> restTemplate.exchange(builder.build().toUri(), HttpMethod.GET, request(), IDFMResponse.class));
 
         return Optional.ofNullable(response)
             .map(IDFMResponse::getSiri)

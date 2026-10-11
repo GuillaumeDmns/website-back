@@ -30,7 +30,9 @@ import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -110,6 +112,12 @@ public class JourneyService {
 
     private final BikeService bikeService;
 
+    /** Same search within a minute (see {@link #plan}) */
+    private final TtlCache<CachedSearch, JourneyPlan> journeyCache = new TtlCache<>(Duration.ofSeconds(60), 5000);
+
+    /** About 50 m north-south (and 37 m east-west at Paris' latitude) */
+    private static final double GRID = 0.0005;
+
     private final TtlCache<String, RidePath> rideCache = new TtlCache<>(Duration.ofHours(24), 5000);
 
     /** With the caller's authentication: ApiQuota counts guests apart (the Vélib option calls Navitia) */
@@ -131,7 +139,44 @@ public class JourneyService {
         this.bikeService = bikeService;
     }
 
+    /**
+     * Journeys of [query]. The same search (positions within about 50 m, same minute, same options) within a minute is
+     * answered from a cache, without calling Navitia: shared links, going back, GO recalculations of travellers side by
+     * side.
+     */
     public JourneyPlan plan(JourneyQuery query) {
+        JourneyQuery shared = withSharedPlaces(query);
+        Instant minute = Optional.ofNullable(query.datetime()).orElseGet(Instant::now).truncatedTo(ChronoUnit.MINUTES);
+        JourneyPlan plan = journeyCache.get(new CachedSearch(shared, minute), search -> compute(search.query()));
+        // GTFS paths have their own cache: one not ready for the first answer comes with the next ones
+        return new JourneyPlan(withGtfsShapes(plan.journeys()), plan.earlier(), plan.later());
+    }
+
+    /** A search and the minute it is for (now when the query has no time) */
+    private record CachedSearch(JourneyQuery query, Instant minute) {
+    }
+
+    /** Positions on a grid of about 50 m, so that close searches share their answer; times to the minute */
+    static JourneyQuery withSharedPlaces(JourneyQuery query) {
+        return new JourneyQuery(gridded(query.from()), gridded(query.to()),
+            query.datetime() == null ? null : query.datetime().truncatedTo(ChronoUnit.MINUTES), query.arriveBy(),
+            query.modes() == null || query.modes().isEmpty() ? Set.of() : EnumSet.copyOf(query.modes()), query.wheelchair(),
+            query.walkingSpeed(), query.maxTransfers(), query.bikeShare());
+    }
+
+    private static String gridded(String place) {
+        if (place == null || !COORDINATES.matcher(place.trim()).matches()) {
+            return place == null ? null : place.trim();
+        }
+        String[] parts = place.trim().split(",");
+        return String.format(Locale.ROOT, "%.4f,%.4f", grid(Double.parseDouble(parts[0])), grid(Double.parseDouble(parts[1])));
+    }
+
+    private static double grid(double degrees) {
+        return Math.round(degrees / GRID) * GRID;
+    }
+
+    private JourneyPlan compute(JourneyQuery query) {
         // Navitia has no Vélib stations in Île-de-France: that option is built here, alongside
         CompletableFuture<Optional<JourneyOption>> bikeShare = query.bikeShare()
             ? CompletableFuture.supplyAsync(() -> bikeShareJourney(query), shapeExecutor)
@@ -179,7 +224,7 @@ public class JourneyService {
                 }
             }
         }
-        return new JourneyPlan(withGtfsShapes(journeys), earlier, later);
+        return new JourneyPlan(journeys, earlier, later);
     }
 
     /**

@@ -37,6 +37,22 @@ class JourneyServiceTest {
     }
 
     @Test
+    void closeSearchesShareTheirAnswer() {
+        JourneyService.JourneyQuery here = new JourneyService.JourneyQuery("48.85843,2.34702", "IDFM:70002",
+            java.time.Instant.parse("2026-10-10T08:30:42Z"), false, List.of(TransportMode.RER, TransportMode.METRO), false, null, null, false);
+        JourneyService.JourneyQuery nextDoor = new JourneyService.JourneyQuery("48.85851,2.34711", " IDFM:70002 ",
+            java.time.Instant.parse("2026-10-10T08:30:05Z"), false, List.of(TransportMode.METRO, TransportMode.RER), false, null, null, false);
+
+        assertThat(JourneyService.withSharedPlaces(here)).isEqualTo(JourneyService.withSharedPlaces(nextDoor));
+        assertThat(JourneyService.withSharedPlaces(here).from()).isEqualTo("48.8585,2.3470");
+        assertThat(JourneyService.withSharedPlaces(here).datetime()).isEqualTo(java.time.Instant.parse("2026-10-10T08:30:00Z"));
+
+        JourneyService.JourneyQuery farther = new JourneyService.JourneyQuery("48.8600,2.3470", "IDFM:70002",
+            java.time.Instant.parse("2026-10-10T08:30:00Z"), false, List.of(), false, null, null, false);
+        assertThat(JourneyService.withSharedPlaces(farther)).isNotEqualTo(JourneyService.withSharedPlaces(here));
+    }
+
+    @Test
     void keepsBusesWhenOnlyNightBusesAreAllowed() {
         // Noctilien and day buses share the Bus physical mode
         assertThat(JourneyService.forbiddenModes(List.of(TransportMode.NOCTILIEN))).doesNotContain("physical_mode:Bus");
