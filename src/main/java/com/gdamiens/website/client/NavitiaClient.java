@@ -44,7 +44,7 @@ public class NavitiaClient extends PrimClient {
             .queryParam("q", query)
             .queryParamIfPresent("count", Optional.ofNullable(count));
         addAll(builder, "type[]", types);
-        return get(builder);
+        return get(ApiQuota.Feature.PLACES, builder);
     }
 
     /**
@@ -70,7 +70,7 @@ public class NavitiaClient extends PrimClient {
             builder.queryParam("wheelchair", true);
         }
         addAll(builder, "forbidden_uris[]", forbiddenUris);
-        return get(builder);
+        return get(ApiQuota.Feature.JOURNEYS, builder);
     }
 
     /**
@@ -88,7 +88,7 @@ public class NavitiaClient extends PrimClient {
             .queryParam("direct_path_mode[]", "walking")
             .queryParamIfPresent("datetime", Optional.ofNullable(datetime))
             .queryParamIfPresent("walking_speed", Optional.ofNullable(walkingSpeed));
-        return get(builder);
+        return get(ApiQuota.Feature.WALKING_PATHS, builder);
     }
 
     /**
@@ -100,7 +100,7 @@ public class NavitiaClient extends PrimClient {
             .queryParam("count", 1000)
             .queryParam("depth", 0)
             .queryParam("disable_geojson", true);
-        return get(builder);
+        return get(ApiQuota.Feature.TRAFFIC, builder);
     }
 
     private UriComponentsBuilder navitia(String... pathSegments) {
@@ -114,10 +114,10 @@ public class NavitiaClient extends PrimClient {
     }
 
     // Values are percent-encoded (accents, &, = in q...); Navitia errors are rethrown with their status and body
-    private JsonNode get(UriComponentsBuilder builder) {
-        return call(ApiQuota.Api.NAVITIA, () -> {
+    private JsonNode get(ApiQuota.Feature feature, UriComponentsBuilder builder) {
+        return call(feature, () -> {
             try {
-                return this.restTemplate.exchange(builder.encode().build().toUri(), HttpMethod.GET, request(), JsonNode.class).getBody();
+                return this.restTemplate.exchange(builder.encode().build().toUri(), HttpMethod.GET, request(), JsonNode.class);
             } catch (HttpStatusCodeException e) {
                 throw new NavitiaException(e.getStatusCode(), e.getResponseBodyAsString());
             }

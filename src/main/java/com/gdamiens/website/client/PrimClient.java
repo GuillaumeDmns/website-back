@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 
@@ -38,23 +39,27 @@ public abstract class PrimClient {
     }
 
     /**
-     * Makes a request to [api]: refused at once while {@link PrimCircuitBreaker} has stopped calling it, else counted
-     * against its quota ({@link ApiQuota}) and its outcome reported to the circuit breaker. No answer, a 5xx or a 429
-     * become a {@link PrimUnavailableException} (a {@link NavitiaException} is rethrown as is, its callers read the
-     * status).
+     * Makes a request for [feature]: refused at once while {@link PrimCircuitBreaker} has stopped calling its API,
+     * else counted against its quota ({@link ApiQuota}, which also reads PRIM's own count in the answer's headers)
+     * and its outcome reported to the circuit breaker. No answer, a 5xx or a 429 become a
+     * {@link PrimUnavailableException} (a {@link NavitiaException} is rethrown as is, its callers read the status).
+     *
+     * @return the body of the answer
      */
-    protected <T> T call(ApiQuota.Api api, Supplier<T> request) {
+    protected <T> T call(ApiQuota.Feature feature, Supplier<ResponseEntity<T>> request) {
+        ApiQuota.Api api = feature.api();
         circuitBreaker.beforeCall(api);
         try {
-            apiQuota.consume(api);
+            apiQuota.consume(feature);
         } catch (RuntimeException e) {
             circuitBreaker.abandon(api);
             throw e;
         }
         try {
-            T result = request.get();
+            ResponseEntity<T> response = request.get();
             circuitBreaker.success(api);
-            return result;
+            observeQuota(api, response.getHeaders());
+            return response.getBody();
         } catch (ResourceAccessException e) {
             circuitBreaker.failure(api, e.getMessage(), false);
             throw new PrimUnavailableException(api + " did not answer: " + e.getMessage());
@@ -76,6 +81,24 @@ public abstract class PrimClient {
             // An answer that can't be read: PRIM is up
             circuitBreaker.success(api);
             throw e;
+        }
+    }
+
+    /** {@code x-ratelimit-limit-day} and {@code x-ratelimit-remaining-day}, when PRIM gives them */
+    private void observeQuota(ApiQuota.Api api, HttpHeaders headers) {
+        Integer limit = intHeader(headers, "x-ratelimit-limit-day");
+        Integer remaining = intHeader(headers, "x-ratelimit-remaining-day");
+        if (limit != null && remaining != null) {
+            apiQuota.observe(api, limit, remaining);
+        }
+    }
+
+    private static Integer intHeader(HttpHeaders headers, String name) {
+        try {
+            String value = headers.getFirst(name);
+            return value == null ? null : Integer.valueOf(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 

@@ -11,7 +11,7 @@ http:
 
 docs:
   content: |-
-    Admin. État du service, pour la supervision : quotas PRIM du jour (`used` / `limit`, part des invités), coupe-circuits PRIM (`CLOSED`, `OPEN` jusqu'à `openUntil`, `TRIAL`), dernier import GTFS réussi et dernier import (`gtfsStale` : aucun succès depuis 26 h), heure du snapshot trafic.
+    Admin. État du service, pour la supervision : quotas PRIM du jour (`used` / `limit`, part des invités, et le décompte de PRIM à sa dernière réponse : `primUsed` / `primLimit` à `primObservedAt`, qui inclut les autres utilisateurs de la clé), appels du jour par fonction (`features` : `DEPARTURES`, `VEHICLES`, `JOURNEYS`, `WALKING_PATHS`, `PLACES`, `TRAFFIC`, avec la part des invités), coupe-circuits PRIM (`CLOSED`, `OPEN` jusqu'à `openUntil`, `TRIAL`), dernier import GTFS réussi et dernier import (`gtfsStale` : aucun succès depuis 26 h), heure du snapshot trafic.
   type: text/markdown
 
 settings:

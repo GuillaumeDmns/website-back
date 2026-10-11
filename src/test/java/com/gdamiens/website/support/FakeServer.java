@@ -44,7 +44,11 @@ public final class FakeServer implements AutoCloseable {
         }
     }
 
-    public record Response(int status, String contentType, byte[] body) {
+    public record Response(int status, String contentType, byte[] body, Map<String, String> headers) {
+
+        public Response(int status, String contentType, byte[] body) {
+            this(status, contentType, body, Map.of());
+        }
 
         public static Response json(String json) {
             return json(200, json);
@@ -60,6 +64,13 @@ public final class FakeServer implements AutoCloseable {
 
         public static Response status(int status) {
             return new Response(status, "text/plain", new byte[0]);
+        }
+
+        /** The same answer with one more header */
+        public Response withHeader(String name, String value) {
+            Map<String, String> more = new java.util.HashMap<>(headers);
+            more.put(name, value);
+            return new Response(status, contentType, body, Map.copyOf(more));
         }
     }
 
@@ -126,6 +137,7 @@ public final class FakeServer implements AutoCloseable {
             Function<Request, Response> handler = route(uri.getPath());
             Response response = handler == null ? Response.status(404) : handler.apply(request);
             exchange.getResponseHeaders().set("Content-Type", response.contentType());
+            response.headers().forEach(exchange.getResponseHeaders()::set);
             exchange.sendResponseHeaders(response.status(), response.body().length == 0 ? -1 : response.body().length);
             if (response.body().length > 0) {
                 try (OutputStream out = exchange.getResponseBody()) {

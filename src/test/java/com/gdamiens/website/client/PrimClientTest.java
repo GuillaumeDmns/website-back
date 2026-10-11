@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -28,6 +29,8 @@ class PrimClientTest {
 
     private static final ApiQuota.Api API = ApiQuota.Api.NAVITIA;
 
+    private static final ApiQuota.Feature FEATURE = ApiQuota.Feature.JOURNEYS;
+
     private final ApiQuota quota = mock(ApiQuota.class);
 
     private final PrimCircuitBreaker breaker = mock(PrimCircuitBreaker.class);
@@ -41,7 +44,11 @@ class PrimClientTest {
         }
 
         <T> T get(Supplier<T> request) {
-            return call(API, request);
+            return call(FEATURE, () -> ResponseEntity.ok(request.get()));
+        }
+
+        <T> T getWithHeaders(HttpHeaders headers, T body) {
+            return call(FEATURE, () -> ResponseEntity.ok().headers(headers).body(body));
         }
     }
 
@@ -57,7 +64,7 @@ class PrimClientTest {
         assertThat(client.get(() -> "ok")).isEqualTo("ok");
 
         verify(breaker).beforeCall(API);
-        verify(quota).consume(API);
+        verify(quota).consume(FEATURE);
         verify(breaker).success(API);
     }
 
@@ -113,7 +120,7 @@ class PrimClientTest {
 
     @Test
     void aQuotaRefusalBeforeTheCallAbandonsIt() {
-        doThrow(new QuotaExceededException("used up", QuotaExceededException.QUOTA_EXHAUSTED)).when(quota).consume(API);
+        doThrow(new QuotaExceededException("used up", QuotaExceededException.QUOTA_EXHAUSTED)).when(quota).consume(FEATURE);
 
         assertThatThrownBy(() -> client.get(() -> "never")).isInstanceOf(QuotaExceededException.class);
 
@@ -131,7 +138,29 @@ class PrimClientTest {
 
         assertThatThrownBy(() -> guarded.get(() -> "never")).isInstanceOf(PrimUnavailableException.class);
 
-        verify(quota, never()).consume(API);
+        verify(quota, never()).consume(FEATURE);
+    }
+
+    @Test
+    void readsPrimsCountInTheAnswer() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("x-ratelimit-limit-day", "20000");
+        headers.set("x-ratelimit-remaining-day", "19996");
+
+        assertThat(client.getWithHeaders(headers, "ok")).isEqualTo("ok");
+
+        verify(quota).observe(API, 20000, 19996);
+    }
+
+    @Test
+    void ignoresAnswersWithoutCount() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("x-ratelimit-limit-day", "not a number");
+
+        client.getWithHeaders(headers, "ok");
+
+        verify(quota, never()).observe(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test
