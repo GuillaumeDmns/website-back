@@ -38,7 +38,7 @@ class GtfsImportIT extends IntegrationTest {
         assertThat(imports.status()).isEqualTo(200);
         JsonNode last = imports.json().path(0);
         assertThat(last.path("status").asString()).isEqualTo("SUCCESS");
-        assertThat(last.path("rowCounts").asString()).contains("routes=4", "agency=3", "stops=20", "calendar=1", "transfers=2");
+        assertThat(last.path("rowCounts").asString()).contains("routes=4", "agency=3", "stops=22", "calendar=1", "transfers=2");
     }
 
     @Test

@@ -19,8 +19,8 @@ class StopCallTest {
     void readsAStopMonitoringVisit() {
         Instant aimed = Instant.parse("2026-10-10T08:00:00Z");
         Instant expected = Instant.parse("2026-10-10T08:02:00Z");
-        StopCall call = StopCall.from(visits(new SiriJson.Visit("C01742", "Marne-la-Vallée", aimed, expected, "2", "UPAC", "154023"))
-            .getFirst());
+        StopCall call = StopCall.from(visits(new SiriJson.Visit("C01742", "Marne-la-Vallée", aimed, expected, "2", "UPAC", "154023",
+            "Châtelet-Les Halles")).getFirst());
 
         assertThat(call.lineId()).isEqualTo("C01742");
         assertThat(call.destination()).isEqualTo("Marne-la-Vallée");
@@ -30,6 +30,7 @@ class StopCallTest {
         assertThat(call.platform()).isEqualTo("2");
         assertThat(call.journeyNote()).isEqualTo("UPAC");
         assertThat(call.vehicleJourneyName()).isEqualTo("154023");
+        assertThat(call.stopName()).isEqualTo("Châtelet-Les Halles");
     }
 
     @Test

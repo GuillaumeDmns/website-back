@@ -34,6 +34,8 @@ public final class MiniGtfs {
     public static final String FONTENAY = "IDFM:70005";
     public static final String JOINVILLE = "IDFM:70006";
     public static final String LES_HALLES = "IDFM:70007";
+    /** Served by no line, far from the others: for the tests that need a stop area of their own */
+    public static final String SAINT_LAZARE = "IDFM:70008";
 
     public static final String METRO_1 = "C01371";
     public static final String RER_A = "C01742";
@@ -53,7 +55,8 @@ public final class MiniGtfs {
             new Stop(VINCENNES, "Vincennes", 48.8474, 2.4334),
             new Stop(FONTENAY, "Fontenay-sous-Bois", 48.8432, 2.4878),
             new Stop(JOINVILLE, "Joinville-le-Pont", 48.8213, 2.4637),
-            new Stop(LES_HALLES, "Les Halles", 48.8622, 2.3464))) {
+            new Stop(LES_HALLES, "Les Halles", 48.8622, 2.3464),
+            new Stop(SAINT_LAZARE, "Gare Saint-Lazare", 48.8759, 2.3253))) {
             STOP_AREAS.put(stop.id(), stop);
         }
     }
@@ -118,6 +121,7 @@ public final class MiniGtfs {
         quay("IDFM:5002", FONTENAY, "1", "1", "");
         quay("IDFM:6002", JOINVILLE, "1", "1", "");
         quay("IDFM:7001", LES_HALLES, "1", "1", "");
+        quay("IDFM:8001", SAINT_LAZARE, "1", "1", "");
 
         file("transfers.txt", "from_stop_id,to_stop_id,transfer_type,min_transfer_time");
         row("transfers.txt", "IDFM:1003", "IDFM:7001", "2", "240");
