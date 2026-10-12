@@ -9,6 +9,7 @@ import com.gdamiens.website.client.siri.LineRef;
 import com.gdamiens.website.client.siri.MonitoredCall;
 import com.gdamiens.website.client.siri.MonitoredStopVisit;
 import com.gdamiens.website.client.siri.MonitoredVehicleJourney;
+import com.gdamiens.website.client.siri.StopPointName;
 import com.gdamiens.website.client.siri.VehicleJourneyName;
 import org.apache.commons.lang3.StringUtils;
 
@@ -32,7 +33,7 @@ import java.util.stream.Stream;
  */
 public record StopCall(String lineId, String destination, Instant aimedDeparture, Instant expectedDeparture,
                        Instant aimedArrival, Instant expectedArrival, String departureStatus, String arrivalStatus,
-                       String platform, Boolean vehicleAtStop, String vehicleJourneyName, String journeyNote) {
+                       String platform, Boolean vehicleAtStop, String vehicleJourneyName, String journeyNote, String stopName) {
 
     /** Expected departure, else arrival, else the aimed ones; null without any time */
     public Instant departureTime() {
@@ -77,7 +78,8 @@ public record StopCall(String lineId, String destination, Instant aimedDeparture
             monitoredCall.map(MonitoredCall::getArrivalPlatformName).map(ArrivalPlatformName::getValue).map(StopCall::platform).orElse(null),
             monitoredCall.map(MonitoredCall::getVehicleAtStop).orElse(null),
             first(journey.getVehicleJourneyName(), VehicleJourneyName::getValue),
-            first(journey.getJourneyNote(), JourneyNote::getValue));
+            first(journey.getJourneyNote(), JourneyNote::getValue),
+            StringUtils.trimToNull(first(monitoredCall.map(MonitoredCall::getStopPointName).orElse(null), StopPointName::getValue)));
     }
 
     /** {@code STIF:Line::C01371:} → {@code C01371} */

@@ -22,7 +22,12 @@ public final class SiriJson {
      * @param vehicleJourneyName train number or mission code, may be null
      */
     public record Visit(String lineId, String destination, Instant aimed, Instant expected, String platform, String journeyNote,
-                        String vehicleJourneyName) {
+                        String vehicleJourneyName, String stopName) {
+
+        public Visit(String lineId, String destination, Instant aimed, Instant expected, String platform, String journeyNote,
+                     String vehicleJourneyName) {
+            this(lineId, destination, aimed, expected, platform, journeyNote, vehicleJourneyName, null);
+        }
     }
 
     /** A call of a vehicle journey at a quay ({@code IDFM:1002}) */
@@ -51,6 +56,9 @@ public final class SiriJson {
                 journey.putArray("VehicleJourneyName").addObject().put("value", visit.vehicleJourneyName());
             }
             ObjectNode call = journey.putObject("MonitoredCall");
+            if (visit.stopName() != null) {
+                call.putArray("StopPointName").addObject().put("value", visit.stopName());
+            }
             if (visit.aimed() != null) {
                 call.put("AimedDepartureTime", visit.aimed().toString());
             }

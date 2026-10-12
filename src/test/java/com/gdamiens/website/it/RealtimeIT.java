@@ -4,6 +4,7 @@ import com.gdamiens.website.support.Api;
 import com.gdamiens.website.support.ExternalApis;
 import com.gdamiens.website.support.FakeServer.Response;
 import com.gdamiens.website.support.IntegrationTest;
+import com.gdamiens.website.support.MiniGtfs;
 import com.gdamiens.website.support.SiriJson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,23 @@ class RealtimeIT extends IntegrationTest {
         JsonNode lines = user.get("/api/v2/stops/IDFM:70001/departures?lineId=C01742&limit=1").json().path("lines");
 
         assertThat(lines).singleElement().satisfies(group -> assertThat(group.path("departures")).hasSize(1));
+    }
+
+    @Test
+    void showsABusOnceWhenTheStopAreaHoldsTwoOfItsStops() {
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        EXTERNAL.on("/prim/stop-monitoring", request -> Response.json(SiriJson.stopMonitoring(
+            "STIF:StopArea:SP:70008:".equals(request.param("MonitoringRef")) ? List.of(
+                new SiriJson.Visit(MiniGtfs.BUS_38, "Gare de Lyon", null, now.plusSeconds(240), null, null, null, "Gare Saint-Lazare"),
+                new SiriJson.Visit(MiniGtfs.BUS_38, "Gare de Lyon", null, now.plusSeconds(274), null, null, null, "Pasquier - Anjou"))
+                : List.of())));
+
+        JsonNode lines = user.get("/api/v2/stops/" + MiniGtfs.SAINT_LAZARE + "/departures").json().path("lines");
+
+        JsonNode bus = lines.values().stream().filter(group -> group.path("line").path("id").asString().equals(MiniGtfs.BUS_38))
+            .findFirst().orElseThrow();
+        assertThat(bus.path("departures")).singleElement()
+            .satisfies(departure -> assertThat(Instant.parse(departure.path("time").asString())).isEqualTo(now.plusSeconds(240)));
     }
 
     @Test

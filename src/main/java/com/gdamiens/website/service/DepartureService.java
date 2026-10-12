@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -164,7 +165,7 @@ public class DepartureService {
             Instant now = Instant.now();
             Map<String, LineSummary> lines = networkService.getLines();
 
-            List<StopCall> calls = realtime ? calls(stopAreaId).orElse(null) : null;
+            List<StopCall> calls = realtime ? calls(stopAreaId).map(DepartureService::withoutNeighbourStopRepeats).orElse(null) : null;
 
             Map<GroupKey, List<Departure>> groups = new LinkedHashMap<>();
 
@@ -283,6 +284,52 @@ public class DepartureService {
             LOGGER.warn("Nearby departures failed for one stop area", e);
             return Optional.empty();
         }
+    }
+
+    /** A neighbour stop's passage repeats a passage when it comes this soon after it */
+    private static final Duration NEIGHBOUR_STOP_GAP = Duration.ofMinutes(5);
+
+    /**
+     * Without the repeats of a neighbour stop. A stop area sometimes holds two consecutive stops of a line under
+     * different names (Gare Saint-Lazare holds "Gare Saint-Lazare" and "Pasquier - Anjou" for the bus 22), and PRIM
+     * gives each bus at both: the stop whose passages mostly come 0 to 5 min after the other's, for the same line and
+     * destination, is the one further along, and is left out. Quays of the same name (a station's platforms) are
+     * never compared, nor different train numbers.
+     */
+    static List<StopCall> withoutNeighbourStopRepeats(List<StopCall> calls) {
+        Map<List<String>, Map<String, List<StopCall>>> byLine = new LinkedHashMap<>();
+        for (StopCall call : calls) {
+            if (call.stopName() != null && call.destination() != null && call.departureTime() != null) {
+                byLine.computeIfAbsent(List.of(call.lineId(), normalize(call.destination())), k -> new LinkedHashMap<>())
+                    .computeIfAbsent(normalize(call.stopName()), k -> new ArrayList<>())
+                    .add(call);
+            }
+        }
+        Set<StopCall> repeats = new HashSet<>();
+        for (Map<String, List<StopCall>> stops : byLine.values()) {
+            for (List<StopCall> first : stops.values()) {
+                for (List<StopCall> second : stops.values()) {
+                    if (first == second) {
+                        continue;
+                    }
+                    long followed = second.stream().filter(call -> first.stream().anyMatch(earlier -> repeats(earlier, call))).count();
+                    long preceded = first.stream().filter(call -> second.stream().anyMatch(earlier -> repeats(earlier, call))).count();
+                    if (followed * 2 >= second.size() && followed > preceded) {
+                        repeats.addAll(second);
+                    }
+                }
+            }
+        }
+        return repeats.isEmpty() ? calls : calls.stream().filter(call -> !repeats.contains(call)).toList();
+    }
+
+    /** [later] is [earlier]'s vehicle at the next stop: 0 to 5 min after it, and not another numbered train */
+    private static boolean repeats(StopCall earlier, StopCall later) {
+        Duration gap = Duration.between(earlier.departureTime(), later.departureTime());
+        String earlierTrain = earlier.journeyNote() != null ? earlier.journeyNote() : earlier.vehicleJourneyName();
+        String laterTrain = later.journeyNote() != null ? later.journeyNote() : later.vehicleJourneyName();
+        boolean otherTrain = earlierTrain != null && laterTrain != null && !earlierTrain.equals(laterTrain);
+        return !gap.isNegative() && gap.compareTo(NEIGHBOUR_STOP_GAP) <= 0 && !otherTrain;
     }
 
     private record GroupKey(LineSummary line, String destination) {
