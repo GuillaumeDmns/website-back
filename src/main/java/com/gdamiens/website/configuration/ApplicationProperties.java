@@ -35,6 +35,9 @@ public class ApplicationProperties {
     /** Verified emails (Google) given {@code ROLE_ADMIN} when they sign in */
     private List<String> adminEmails = new ArrayList<>();
 
+    /** Pages checked for the administration (status, response time, TLS certificate) */
+    private List<String> monitoredSites = new ArrayList<>();
+
     public String getIdfmKey() {
         return idfmKey;
     }
@@ -93,6 +96,14 @@ public class ApplicationProperties {
 
     public void setAdminEmails(List<String> adminEmails) {
         this.adminEmails = adminEmails;
+    }
+
+    public List<String> getMonitoredSites() {
+        return monitoredSites;
+    }
+
+    public void setMonitoredSites(List<String> monitoredSites) {
+        this.monitoredSites = monitoredSites;
     }
 
     /**

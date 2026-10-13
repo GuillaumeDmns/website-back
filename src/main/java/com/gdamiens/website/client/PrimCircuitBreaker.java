@@ -111,6 +111,13 @@ public class PrimCircuitBreaker {
         circuits.get(api).trial = false;
     }
 
+    /** Closes every circuit (an administrator knows PRIM is back): the next calls go through */
+    public synchronized void reset() {
+        for (ApiQuota.Api api : ApiQuota.Api.values()) {
+            success(api);
+        }
+    }
+
     public synchronized List<Status> status() {
         Instant now = clock.instant();
         List<Status> status = new ArrayList<>();

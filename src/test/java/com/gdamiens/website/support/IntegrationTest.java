@@ -61,6 +61,8 @@ public abstract class IntegrationTest {
         registry.add("application.urls.stop-zones", () -> EXTERNAL.url() + "/stop-zones");
         registry.add("application.urls.geoplateforme", () -> EXTERNAL.url() + "/geoplateforme");
         registry.add("application.google.jwk-set-uri", () -> EXTERNAL.url() + "/google/certs");
+        registry.add("application.monitored-sites[0]", () -> EXTERNAL.url() + "/site/");
+        registry.add("application.monitored-sites[1]", () -> EXTERNAL.url() + "/site/down");
     }
 
     @LocalServerPort

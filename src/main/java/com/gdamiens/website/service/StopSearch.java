@@ -94,6 +94,18 @@ public class StopSearch {
     }
 
     /**
+     * Builds the index again now (towns and lines fetched again), for an administrator
+     *
+     * @return the stop areas indexed
+     */
+    public int rebuild() {
+        synchronized (this) {
+            index = build();
+            return index.entries().size();
+        }
+    }
+
+    /**
      * @param lat the caller's position, to rank the closer stop areas first (null when unknown)
      * @return the best matching stop areas, named with their town ({@code Mairie (Montreuil)})
      */

@@ -57,6 +57,11 @@ public class ApiQuota {
         Api(int perDay) {
             this.perDay = perDay;
         }
+
+        /** PRIM's daily quota */
+        public int perDay() {
+            return perDay;
+        }
     }
 
     /** What a request is for: where the quotas go */
