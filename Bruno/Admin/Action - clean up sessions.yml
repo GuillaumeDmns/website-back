@@ -1,0 +1,21 @@
+info:
+  name: "Action - clean up sessions"
+  type: http
+  seq: 18
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/admin/actions/sessions-cleanup"
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. Supprime maintenant les sessions expirées ou révoquées depuis plus de 7 jours (fait chaque nuit à 4 h).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

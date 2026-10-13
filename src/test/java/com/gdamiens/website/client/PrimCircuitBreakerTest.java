@@ -112,6 +112,18 @@ class PrimCircuitBreakerTest {
         assertThat(status().state()).isEqualTo(State.TRIAL);
     }
 
+    @Test
+    void anAdministratorClosesEveryCircuit() {
+        fail(PrimCircuitBreaker.FAILURES);
+        breaker.beforeCall(ApiQuota.Api.NAVITIA);
+        breaker.failure(ApiQuota.Api.NAVITIA, "429 Too Many Requests", true);
+
+        breaker.reset();
+
+        assertThat(breaker.status()).extracting(PrimCircuitBreaker.Status::state).containsOnly(State.CLOSED);
+        assertThatNoException().isThrownBy(() -> breaker.beforeCall(API));
+    }
+
     private void fail(int times) {
         for (int i = 0; i < times; i++) {
             breaker.beforeCall(API);

@@ -1,0 +1,21 @@
+info:
+  name: "Action - reload elevators"
+  type: http
+  seq: 15
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/admin/actions/elevators"
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. Recharge l'état des ascenseurs maintenant (open data).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

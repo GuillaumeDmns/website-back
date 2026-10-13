@@ -77,9 +77,10 @@ public class RefreshTokenService {
 
     @Scheduled(cron = "0 0 4 * * *", zone = "Europe/Paris")
     @Transactional
-    public void deleteObsoleteTokens() {
+    public int deleteObsoleteTokens() {
         // Revoked tokens are kept a few days to detect their reuse
         int deleted = refreshTokenRepository.deleteObsolete(OffsetDateTime.now().minusDays(7));
         LOGGER.info("Deleted {} obsolete refresh tokens", deleted);
+        return deleted;
     }
 }

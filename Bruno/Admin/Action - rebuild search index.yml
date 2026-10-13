@@ -1,0 +1,21 @@
+info:
+  name: "Action - rebuild search index"
+  type: http
+  seq: 16
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/admin/actions/search-index"
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. Reconstruit l'index de recherche des arrêts (environ 3 s).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

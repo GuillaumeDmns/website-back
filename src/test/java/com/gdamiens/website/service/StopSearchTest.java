@@ -118,6 +118,17 @@ class StopSearchTest {
     }
 
     @Test
+    void anAdministratorBuildsItAgain() {
+        names("chatelet");
+        when(networkRepository.findServedStopAreas()).thenReturn(List.of(
+            new ServedStopAreaRow("IDFM:71264", "Châtelet", 48.8584, 2.3470, List.of("metro"))));
+
+        assertThat(stopSearch.rebuild()).isEqualTo(1);
+        assertThat(names("chatelet")).containsExactly("Châtelet (Paris 1er)");
+        verify(networkRepository, times(2)).findServedStopAreas();
+    }
+
+    @Test
     void countsTypos() {
         assertThat(StopSearch.distance("chatlet", "chatelet", 1)).isEqualTo(1);
         assertThat(StopSearch.distance("lazare", "lazare", 1)).isZero();

@@ -1,0 +1,21 @@
+info:
+  name: "Stats - network"
+  type: http
+  seq: 11
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/admin/stats/network"
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. GTFS en service : lignes par mode, zones d'arrêt, quais, jours de service, versions publiée et importée ; taille de la base et des tables.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

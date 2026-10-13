@@ -46,9 +46,17 @@ server:
     enabled: true
 
 application:
-  # Browsers calling the API from another origin: only the web app (the site of guillaumedamiens.com doesn't call it)
+  # Browsers calling the API from another origin: the web app and the administration (the site of
+  # guillaumedamiens.com doesn't call it)
   cors-allowed-origins:
     - https://app.guillaumedamiens.com
+    - https://admin.guillaumedamiens.com
+  # Pages checked by the administration (GET /api/admin/stats/sites): status, response time, TLS certificate
+  monitored-sites:
+    - https://guillaumedamiens.com/
+    - https://app.guillaumedamiens.com/
+    - https://admin.guillaumedamiens.com/
+    - https://guillaumedamiens.com/api/health
   rate-limit:
     auth-per-minute: 10
     user-per-minute: 120

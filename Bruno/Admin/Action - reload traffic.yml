@@ -1,0 +1,21 @@
+info:
+  name: "Action - reload traffic"
+  type: http
+  seq: 14
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/admin/actions/traffic"
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. Recharge l'info trafic maintenant (un appel disruptions_bulk).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

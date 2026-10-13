@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Applies the nginx configuration (run as root): http-level settings (conf.d), API and security header snippets, and
-# the Flutter web app site (sites-available only). In the guillaumedamiens.com site, the former "location /api" block
-# is replaced by the API snippet. Everything is put back when nginx -t fails.
+# the Flutter web app and administration sites (sites-available only). In the guillaumedamiens.com site, the former
+# "location /api" block is replaced by the API snippet. Everything is put back when nginx -t fails.
 #
 # Usage: bash apply.sh [site file, /etc/nginx/sites-enabled/default by default]
 set -euo pipefail
@@ -19,6 +19,7 @@ declare -A targets=(
     [guillaumedamiens-api.conf]=/etc/nginx/snippets/guillaumedamiens-api.conf
     [guillaumedamiens-security-headers.conf]=/etc/nginx/snippets/guillaumedamiens-security-headers.conf
     [app.guillaumedamiens.com]=/etc/nginx/sites-available/app.guillaumedamiens.com
+    [admin.guillaumedamiens.com]=/etc/nginx/sites-available/admin.guillaumedamiens.com
 )
 
 mkdir -p "$BACKUP_DIR"
@@ -42,8 +43,8 @@ rollback() {
 
 install -d /etc/nginx/snippets
 for name in "${!targets[@]}"; do
-    # The app site is only installed the first time: certbot then adds its HTTPS block to it, which must stay
-    if [[ $name == app.guillaumedamiens.com && -f ${targets[$name]} ]]; then
+    # The app and admin sites are only installed the first time: certbot then adds its HTTPS block, which must stay
+    if [[ $name == *.guillaumedamiens.com && -f ${targets[$name]} ]]; then
         echo "${targets[$name]} already exists (certbot's HTTPS block), kept"
         continue
     fi
@@ -59,4 +60,4 @@ fi
 nginx -t || rollback
 systemctl reload nginx
 echo "nginx reloaded (previous files in $BACKUP_DIR)"
-echo "The app site is in /etc/nginx/sites-available/app.guillaumedamiens.com: see its first lines to enable it."
+echo "The app and admin sites are in /etc/nginx/sites-available/{app,admin}.guillaumedamiens.com: see their first lines to enable them."

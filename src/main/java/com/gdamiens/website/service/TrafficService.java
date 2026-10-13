@@ -180,6 +180,20 @@ public class TrafficService {
         return elevators.loadedAt();
     }
 
+    /**
+     * Fetches the traffic now (one {@code disruptions_bulk} call), for an administrator
+     *
+     * @return when it was fetched
+     */
+    public Instant reloadTraffic() {
+        return traffic.reload();
+    }
+
+    /** Fetches the elevator status now, for an administrator */
+    public Instant reloadElevators() {
+        return elevators.reload();
+    }
+
     /** GTFS lookups of the parsing */
     interface StopLookup {
 
@@ -446,6 +460,13 @@ public class TrafficService {
                 });
             }
             return current.value();
+        }
+
+        /** Loads it now, keeping the previous value on failure */
+        synchronized Instant reload() {
+            Loaded<T> reloaded = load();
+            loaded = reloaded;
+            return reloaded.at();
         }
 
         Optional<Instant> loadedAt() {

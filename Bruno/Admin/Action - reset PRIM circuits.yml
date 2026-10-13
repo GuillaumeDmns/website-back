@@ -1,0 +1,21 @@
+info:
+  name: "Action - reset PRIM circuits"
+  type: http
+  seq: 17
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/admin/actions/prim-circuits"
+  auth: inherit
+
+docs:
+  content: |-
+    Admin. Referme les disjoncteurs PRIM : les prochains appels passent.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
