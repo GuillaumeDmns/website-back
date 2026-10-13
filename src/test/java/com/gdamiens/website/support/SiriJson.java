@@ -1,11 +1,13 @@
 package com.gdamiens.website.support;
 
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 /** PRIM real-time answers (SIRI Lite JSON) */
 public final class SiriJson {
@@ -94,11 +96,72 @@ public final class SiriJson {
             for (Call call : journey.calls()) {
                 ObjectNode callNode = calls.addObject();
                 callNode.putObject("StopPointRef").put("value", siriQuay(call.quayId()));
+                callNode.putArray("DestinationDisplay").addObject().put("value", journey.destination());
                 callNode.put("AimedArrivalTime", call.aimed().toString());
                 callNode.put("ExpectedArrivalTime", call.expected().toString());
             }
         }
         return root.toString();
+    }
+
+    /** Text tags that IDFM's new real-time platform gives as one object instead of a list of one */
+    private static final Set<String> SINGLE_OBJECT_TAGS = Set.of("DestinationName", "OriginName", "DestinationDisplay", "PublishedLineName",
+        "DirectionName");
+
+    /**
+     * The same answer from IDFM's new real-time platform (announced on PRIM's Slack for the end of October 2026): text
+     * tags as one object ({@code "DestinationName": {"value": …}}), with a published line name, an origin and a direction
+     * of that shape, a new {@code ResponseMessageIdentifier}, the calls already made ({@code RecordedCalls}), and
+     * without {@code RecordedAtTime} nor {@code ProductCategoryRef}.
+     */
+    public static String newPlatform(String answer) {
+        JsonNode root = JSON.readTree(answer);
+        JsonNode delivery = root.path("Siri").path("ServiceDelivery");
+        for (String name : List.of("StopMonitoringDelivery", "EstimatedTimetableDelivery")) {
+            for (JsonNode part : delivery.path(name).values()) {
+                ((ObjectNode) part).put("ResponseMessageIdentifier", "IVTR_NG_HET:ResponseMessage::0a2f7c1e-5d1b-4f7e-9a51-1c2b3d4e5f60:LOC");
+            }
+        }
+        for (JsonNode visit : delivery.path("StopMonitoringDelivery").path(0).path("MonitoredStopVisit").values()) {
+            ((ObjectNode) visit).remove("RecordedAtTime");
+            newJourney((ObjectNode) visit.path("MonitoredVehicleJourney"));
+        }
+        for (JsonNode journey : delivery.path("EstimatedTimetableDelivery").path(0).path("EstimatedJourneyVersionFrame").path(0)
+            .path("EstimatedVehicleJourney").values()) {
+            newJourney((ObjectNode) journey);
+        }
+        singleObjects(root);
+        return root.toString();
+    }
+
+    private static void newJourney(ObjectNode journey) {
+        journey.remove(List.of("RecordedAtTime", "ProductCategoryRef"));
+        journey.putObject("PublishedLineName").put("value", "Ligne");
+        journey.putObject("OriginName").put("value", "Origine");
+        journey.putObject("DirectionName").put("value", "Direction");
+        ObjectNode recorded = journey.putObject("RecordedCalls").putArray("RecordedCall").addObject();
+        recorded.putObject("StopPointRef").put("value", "STIF:StopPoint:Q:9999:");
+        recorded.put("Order", 1);
+        recorded.put("AimedDepartureTime", "2026-10-10T07:50:00Z");
+        recorded.put("ActualDepartureTime", "2026-10-10T07:51:00Z");
+        recorded.put("DepartureStatus", "onTime");
+        recorded.putObject("DeparturePlatformName").put("value", "1");
+    }
+
+    /** Lists of one {@code {"value": …}} object in [SINGLE_OBJECT_TAGS] become that object, anywhere */
+    private static void singleObjects(JsonNode node) {
+        if (node instanceof ObjectNode object) {
+            for (String name : List.copyOf(object.propertyNames())) {
+                JsonNode child = object.get(name);
+                if (SINGLE_OBJECT_TAGS.contains(name) && child instanceof ArrayNode list && list.size() == 1) {
+                    object.set(name, list.get(0));
+                } else {
+                    singleObjects(child);
+                }
+            }
+        } else if (node instanceof ArrayNode list) {
+            list.forEach(SiriJson::singleObjects);
+        }
     }
 
     /** {@code IDFM:1002} → {@code STIF:StopPoint:Q:1002:} */
