@@ -11,6 +11,9 @@ server {
     listen [::]:80;
     server_name admin.guillaumedamiens.com;
 
+    # Page loads for the administration's visit counts (certbot copies it into its HTTPS block)
+    include snippets/guillaumedamiens-pages-log.conf;
+
     root /var/www/guillaumedamiens-admin/current;
     index index.html;
 

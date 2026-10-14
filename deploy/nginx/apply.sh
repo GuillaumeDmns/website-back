@@ -18,6 +18,7 @@ declare -A targets=(
     [guillaumedamiens.conf]=/etc/nginx/conf.d/guillaumedamiens.conf
     [guillaumedamiens-api.conf]=/etc/nginx/snippets/guillaumedamiens-api.conf
     [guillaumedamiens-security-headers.conf]=/etc/nginx/snippets/guillaumedamiens-security-headers.conf
+    [guillaumedamiens-pages-log.conf]=/etc/nginx/snippets/guillaumedamiens-pages-log.conf
     [app.guillaumedamiens.com]=/etc/nginx/sites-available/app.guillaumedamiens.com
     [admin.guillaumedamiens.com]=/etc/nginx/sites-available/admin.guillaumedamiens.com
 )

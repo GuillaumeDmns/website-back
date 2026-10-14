@@ -10,6 +10,9 @@ server {
     listen [::]:80;
     server_name app.guillaumedamiens.com;
 
+    # Page loads for the administration's visit counts (certbot copies it into its HTTPS block)
+    include snippets/guillaumedamiens-pages-log.conf;
+
     root /var/www/guillaumedamiens-app/current;
     index index.html;
 

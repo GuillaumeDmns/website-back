@@ -38,6 +38,12 @@ public class ApplicationProperties {
     /** Pages checked for the administration (status, response time, TLS certificate) */
     private List<String> monitoredSites = new ArrayList<>();
 
+    /**
+     * Log of the page loads of the static sites written by nginx (format {@code guillaumedamiens_pages} of
+     * {@code deploy/nginx/guillaumedamiens.conf}), read for the visit counts; empty: not read
+     */
+    private String pagesLog = "";
+
     public String getIdfmKey() {
         return idfmKey;
     }
@@ -96,6 +102,14 @@ public class ApplicationProperties {
 
     public void setAdminEmails(List<String> adminEmails) {
         this.adminEmails = adminEmails;
+    }
+
+    public String getPagesLog() {
+        return pagesLog;
+    }
+
+    public void setPagesLog(String pagesLog) {
+        this.pagesLog = pagesLog;
     }
 
     public List<String> getMonitoredSites() {

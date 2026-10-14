@@ -16,6 +16,7 @@ import com.gdamiens.website.repository.AdminStatsRepository.QuotaDay;
 import com.gdamiens.website.repository.AdminStatsRepository.TableSize;
 import com.gdamiens.website.repository.GtfsImportRepository;
 import com.gdamiens.website.repository.NetworkRepository;
+import com.gdamiens.website.usage.UsageRecorder;
 import com.gdamiens.website.utils.ParisTime;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.SpringBootVersion;
@@ -78,6 +79,8 @@ public class AdminStatsService {
 
     private final ObjectProvider<BuildProperties> buildProperties;
 
+    private final UsageRecorder usageRecorder;
+
     private final Clock clock;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -89,7 +92,8 @@ public class AdminStatsService {
 
     public AdminStatsService(AdminStatsRepository repository, NetworkRepository networkRepository, NetworkService networkService,
                              GtfsImportRepository gtfsImportRepository, GtfsImportService gtfsImportService, ApiQuota apiQuota,
-                             ApplicationProperties applicationProperties, ObjectProvider<BuildProperties> buildProperties, Clock clock) {
+                             ApplicationProperties applicationProperties, ObjectProvider<BuildProperties> buildProperties,
+                             UsageRecorder usageRecorder, Clock clock) {
         this.repository = repository;
         this.networkRepository = networkRepository;
         this.networkService = networkService;
@@ -98,6 +102,7 @@ public class AdminStatsService {
         this.apiQuota = apiQuota;
         this.applicationProperties = applicationProperties;
         this.buildProperties = buildProperties;
+        this.usageRecorder = usageRecorder;
         this.clock = clock;
     }
 
@@ -160,6 +165,39 @@ public class AdminStatsService {
     }
 
     public record Sites(Instant checkedAt, List<SiteCheck> sites) {
+    }
+
+    /**
+     * @param perHour   requests per hour (UTC) of every route
+     * @param endpoints routes, the most requested first
+     * @param callers   requests per Paris day and kind of caller
+     */
+    public record Usage(List<AdminStatsRepository.HourRequests> perHour, List<AdminStatsRepository.EndpointRequests> endpoints,
+                        List<AdminStatsRepository.CallerRequests> callers) {
+    }
+
+    /**
+     * @param metrics      distinct members per day: active:account, active:guest, platform:…, version:…, visitors:<site>
+     * @param viewsPerDay  page views per day and site
+     * @param pagesReadAt  when the page log of nginx was last read, null if it isn't (development)
+     */
+    public record Audience(List<AdminStatsRepository.MetricCount> metrics, List<AdminStatsRepository.HostViews> viewsPerDay,
+                           List<AdminStatsRepository.PageViews> pages, List<AdminStatsRepository.ReferrerViews> referrers,
+                           Instant pagesReadAt) {
+    }
+
+    public Usage usage(int days) {
+        usageRecorder.flush();
+        LocalDate from = from(today(), days);
+        Instant since = from.atStartOfDay(ParisTime.ZONE).toInstant();
+        return new Usage(repository.requestsPerHour(since), repository.endpoints(since, 40), repository.callersPerDay(from));
+    }
+
+    public Audience audience(int days) {
+        usageRecorder.flush();
+        LocalDate from = from(today(), days);
+        return new Audience(repository.metricsPerDay(from), repository.viewsPerDay(from), repository.topPages(from, 30),
+            repository.topReferrers(from, 20), repository.pagesReadAt());
     }
 
     public Accounts accounts(int days) {

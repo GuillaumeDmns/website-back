@@ -1,6 +1,8 @@
 package com.gdamiens.website.security;
 
 import com.gdamiens.website.configuration.ApplicationProperties;
+import com.gdamiens.website.usage.UsageFilter;
+import com.gdamiens.website.usage.UsageRecorder;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.jwk.source.JWKSource;
@@ -37,7 +39,7 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, RateLimiter rateLimiter,
-                                           ApplicationProperties applicationProperties) throws Exception {
+                                           ApplicationProperties applicationProperties, UsageRecorder usageRecorder) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
@@ -67,8 +69,10 @@ public class WebSecurityConfig {
                 )
             )
             .cors(Customizer.withDefaults())
-            .addFilterAfter(new RateLimitFilter(rateLimiter, applicationProperties.getRateLimit()),
-                BearerTokenAuthenticationFilter.class);
+            // Both after the JWT authentication, in this order (filters at the same place keep the order they were added
+            // in): usage counts first, so that the rate limiting's refusals are counted too
+            .addFilterAfter(new UsageFilter(usageRecorder), BearerTokenAuthenticationFilter.class)
+            .addFilterAfter(new RateLimitFilter(rateLimiter, applicationProperties.getRateLimit()), BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }

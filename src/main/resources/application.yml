@@ -51,6 +51,9 @@ application:
   cors-allowed-origins:
     - https://app.guillaumedamiens.com
     - https://admin.guillaumedamiens.com
+  # Page loads of the static sites written by nginx (deploy/nginx/guillaumedamiens-pages-log.conf), read for the
+  # administration's visit counts; missing on a development machine: nothing read
+  pages-log: /var/log/guillaumedamiens/pages.log
   # Pages checked by the administration (GET /api/admin/stats/sites): status, response time, TLS certificate
   monitored-sites:
     - https://guillaumedamiens.com/

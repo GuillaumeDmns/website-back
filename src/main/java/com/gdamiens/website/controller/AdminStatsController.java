@@ -62,4 +62,18 @@ public class AdminStatsController {
     public AdminStatsService.Sites getSites() {
         return adminStatsService.sites();
     }
+
+    @GetMapping("/usage")
+    @Operation(summary = "API requests per hour, per route (errors, rate limiting, time) and per day and kind of caller over [days]",
+        security = @SecurityRequirement(name = "Auth. Token"))
+    public AdminStatsService.Usage getUsage(@RequestParam(defaultValue = "7") int days) {
+        return adminStatsService.usage(days);
+    }
+
+    @GetMapping("/audience")
+    @Operation(summary = "Distinct accounts, guest devices, platforms, app versions and site visitors per day; page views, top pages and referring sites over [days]",
+        security = @SecurityRequirement(name = "Auth. Token"))
+    public AdminStatsService.Audience getAudience(@RequestParam(defaultValue = "30") int days) {
+        return adminStatsService.audience(days);
+    }
 }
