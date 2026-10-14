@@ -115,6 +115,7 @@ class AdminStatsIT extends IntegrationTest {
     void describesTheMachine() {
         JsonNode system = admin().api().get("/api/admin/stats/system").json();
 
+        assertThat(system.path("version").asString()).isEqualTo("dev");
         assertThat(system.path("java").asString()).isNotEmpty();
         assertThat(system.path("springBoot").asString()).startsWith("4.");
         assertThat(system.path("heapUsed").asLong()).isGreaterThan(0);

@@ -1,6 +1,7 @@
 package com.gdamiens.website.service;
 
 import com.gdamiens.website.client.ApiQuota;
+import com.gdamiens.website.configuration.AppVersion;
 import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.model.GtfsImport;
@@ -81,6 +82,8 @@ public class AdminStatsService {
 
     private final UsageRecorder usageRecorder;
 
+    private final AppVersion appVersion;
+
     private final Clock clock;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -93,7 +96,7 @@ public class AdminStatsService {
     public AdminStatsService(AdminStatsRepository repository, NetworkRepository networkRepository, NetworkService networkService,
                              GtfsImportRepository gtfsImportRepository, GtfsImportService gtfsImportService, ApiQuota apiQuota,
                              ApplicationProperties applicationProperties, ObjectProvider<BuildProperties> buildProperties,
-                             UsageRecorder usageRecorder, Clock clock) {
+                             UsageRecorder usageRecorder, AppVersion appVersion, Clock clock) {
         this.repository = repository;
         this.networkRepository = networkRepository;
         this.networkService = networkService;
@@ -103,6 +106,7 @@ public class AdminStatsService {
         this.applicationProperties = applicationProperties;
         this.buildProperties = buildProperties;
         this.usageRecorder = usageRecorder;
+        this.appVersion = appVersion;
         this.clock = clock;
     }
 
@@ -147,11 +151,12 @@ public class AdminStatsService {
     }
 
     /**
+     * @param version     the release running ({@link AppVersion}: the git tag's vX.Y.Z, "dev" otherwise)
      * @param builtAt     when the running jar was built (null without build information, e.g. from the IDE)
      * @param diskFree    free space where the GTFS import builds the new schema (temporary directory)
      * @param processCpu  share of the machine's CPU used by the JVM (0-1, null when unknown)
      */
-    public record SystemInfo(String java, String springBoot, Instant builtAt, Instant startedAt, long uptimeSeconds, int processors,
+    public record SystemInfo(String version, String java, String springBoot, Instant builtAt, Instant startedAt, long uptimeSeconds, int processors,
                              Double processCpu, Double systemCpu, Double loadAverage, long heapUsed, long heapMax, long nonHeapUsed,
                              Long memoryTotal, Long memoryFree, int threads, int peakThreads, long gcCount, long gcMillis,
                              long diskFree, long diskTotal) {
@@ -274,7 +279,7 @@ public class AdminStatsService {
         double load = ManagementFactory.getOperatingSystemMXBean().getSystemLoadAverage();
         File disk = new File(System.getProperty("java.io.tmpdir"));
         BuildProperties build = buildProperties.getIfAvailable();
-        return new SystemInfo(Runtime.version().toString(), SpringBootVersion.getVersion(), build == null ? null : build.getTime(),
+        return new SystemInfo(appVersion.get(), Runtime.version().toString(), SpringBootVersion.getVersion(), build == null ? null : build.getTime(),
             Instant.ofEpochMilli(runtime.getStartTime()), runtime.getUptime() / 1000, Runtime.getRuntime().availableProcessors(),
             processCpu, systemCpu, load < 0 ? null : load, heap.getUsed(), heap.getMax(), memory.getNonHeapMemoryUsage().getUsed(),
             memoryTotal, memoryFree, threads.getThreadCount(), threads.getPeakThreadCount(), gcCount, gcMillis, disk.getUsableSpace(),
