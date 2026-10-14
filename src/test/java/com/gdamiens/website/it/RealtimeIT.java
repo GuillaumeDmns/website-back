@@ -9,6 +9,7 @@ import com.gdamiens.website.support.FakeServer.Response;
 import com.gdamiens.website.support.IntegrationTest;
 import com.gdamiens.website.support.MiniGtfs;
 import com.gdamiens.website.support.SiriJson;
+import com.gdamiens.website.utils.ParisTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -225,5 +227,29 @@ class RealtimeIT extends IntegrationTest {
         Api.Response rides = user.get("/api/v2/lines/C01742/rides?from=IDFM:70001&to=IDFM:70002&after=" + Instant.now().plus(Duration.ofDays(1)));
 
         assertThat(rides.status()).isEqualTo(400);
+    }
+
+    @Test
+    void tellsTheFirstAndLastRidesOfTheNight() {
+        JsonNode span = user.get("/api/v2/lines/C01742/rides/span?from=IDFM:70001&to=IDFM:70003").json();
+
+        // RER A from Châtelet to Nation: 5:00 to 1:45 the next night (the express trains too), every service day. The
+        // one running now: yesterday's until its last train has left.
+        Instant now = Instant.now();
+        LocalDate today = LocalDate.now(ParisTime.ZONE);
+        LocalDate day = ParisTime.ofServiceDay(today.minusDays(1), 25 * 3600 + 45 * 60).isBefore(now) ? today : today.minusDays(1);
+        assertThat(Instant.parse(span.path("first").path("departure").asString())).isEqualTo(ParisTime.ofServiceDay(day, 5 * 3600));
+        JsonNode last = span.path("last");
+        assertThat(Instant.parse(last.path("departure").asString())).isEqualTo(ParisTime.ofServiceDay(day, 25 * 3600 + 45 * 60));
+        // Two stops further
+        assertThat(Instant.parse(last.path("arrival").asString())).isEqualTo(ParisTime.ofServiceDay(day, 25 * 3600 + 51 * 60));
+        assertThat(last.path("destination").asString()).isEqualTo("Fontenay-sous-Bois");
+        assertThat(Instant.parse(span.path("next").path("departure").asString())).isEqualTo(ParisTime.ofServiceDay(day.plusDays(1), 5 * 3600));
+
+        // Westbound trains the other way; none to a stop area the line does not serve
+        JsonNode none = user.get("/api/v2/lines/C01742/rides/span?from=IDFM:70003&to=IDFM:70001").json();
+        assertThat(none.has("last")).isTrue();
+        assertThat(user.get("/api/v2/lines/C01742/rides/span?from=IDFM:70001&to=IDFM:70008").json().has("last")).isFalse();
+        assertThat(user.get("/api/v2/lines/C99999/rides/span?from=IDFM:70001&to=IDFM:70003").status()).isEqualTo(404);
     }
 }

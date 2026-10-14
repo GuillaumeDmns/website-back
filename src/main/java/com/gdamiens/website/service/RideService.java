@@ -6,6 +6,8 @@ import com.gdamiens.website.controller.object.v2.LineBranch;
 import com.gdamiens.website.controller.object.v2.LineDepartures;
 import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.Ride;
+import com.gdamiens.website.controller.object.v2.RideSpan;
+import com.gdamiens.website.controller.object.v2.ScheduledRide;
 import com.gdamiens.website.controller.object.v2.StopDepartures;
 import com.gdamiens.website.controller.object.v2.StopRef;
 import com.gdamiens.website.model.IDFMRoute;
@@ -13,10 +15,12 @@ import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.service.DepartureService.Arrival;
 import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -70,10 +74,25 @@ public class RideService {
 
     private final TtlCache<Key, List<Ride>> cache = new TtlCache<>(Duration.ofSeconds(30), 5000);
 
+    /** Scheduled rides between two stop areas over a service day */
+    private final TtlCache<DayKey, List<ScheduledRide>> dayCache = new TtlCache<>(Duration.ofHours(6), 5000);
+
+    /** Service days whose rides are looked for after the current one */
+    private static final int NEXT_DAYS = 7;
+
     public RideService(DepartureService departureService, NetworkService networkService, NetworkRepository networkRepository) {
         this.departureService = departureService;
         this.networkService = networkService;
         this.networkRepository = networkRepository;
+    }
+
+    /** A new GTFS replaced the previous one */
+    @EventListener(GtfsImportedEvent.class)
+    public void onGtfsImported() {
+        dayCache.invalidateAll();
+    }
+
+    private record DayKey(String lineId, String fromId, String toId, LocalDate date) {
     }
 
     /**
@@ -146,6 +165,45 @@ public class RideService {
         }
         rides.sort(Comparator.comparing(ride -> ride.departure().time()));
         return rides;
+    }
+
+    /**
+     * First and last scheduled rides from [fromId] to [toId] of the service day running at [now] (the previous one
+     * while its last trips still run after midnight; the next one once it is over), and the first ride of the
+     * following service day. GTFS only.
+     */
+    public RideSpan getSpan(String lineId, String fromId, String toId, Instant now) {
+        LocalDate today = now.atZone(ParisTime.ZONE).toLocalDate();
+        LocalDate current = null;
+        List<ScheduledRide> rides = List.of();
+        for (LocalDate day = today.minusDays(1); day.isBefore(today.plusDays(NEXT_DAYS)); day = day.plusDays(1)) {
+            rides = scheduledDay(lineId, fromId, toId, day);
+            if (!rides.isEmpty() && !rides.getLast().departure().isBefore(now)) {
+                current = day;
+                break;
+            }
+        }
+        if (current == null) {
+            return new RideSpan(null, null, null);
+        }
+        ScheduledRide next = null;
+        for (LocalDate day = current.plusDays(1); next == null && !day.isAfter(current.plusDays(NEXT_DAYS)); day = day.plusDays(1)) {
+            next = scheduledDay(lineId, fromId, toId, day).stream().findFirst().orElse(null);
+        }
+        return new RideSpan(rides.getFirst(), rides.getLast(), next);
+    }
+
+    /** Scheduled rides of the service day [date] (times past midnight included), earliest first */
+    private List<ScheduledRide> scheduledDay(String lineId, String fromId, String toId, LocalDate date) {
+        return dayCache.get(new DayKey(lineId, fromId, toId, date), key -> networkRepository.findScheduledRides(
+                IDFMRoute.toRouteId(key.lineId()), key.fromId(), key.toId(), key.date(), 0, 48 * 3600).stream()
+            .filter(row -> row.serviceDate().equals(key.date()))
+            .map(row -> new ScheduledRide(ParisTime.ofServiceDay(row.serviceDate(), row.departureSeconds()),
+                ParisTime.ofServiceDay(row.serviceDate(), row.arrivalSeconds()),
+                Optional.ofNullable(row.terminus()).orElse(row.headsign()),
+                DepartureService.isMission(row.headsign()) ? row.headsign() : null))
+            .sorted(Comparator.comparing(ScheduledRide::departure))
+            .toList());
     }
 
     /** A scheduled trip from [from] to [to] */

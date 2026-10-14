@@ -7,6 +7,7 @@ import com.gdamiens.website.controller.object.v2.JourneyPlan;
 import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.LineTraffic;
 import com.gdamiens.website.controller.object.v2.Ride;
+import com.gdamiens.website.controller.object.v2.RideSpan;
 import com.gdamiens.website.controller.object.v2.SearchResult;
 import com.gdamiens.website.controller.object.v2.PlaceResult;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
@@ -214,6 +215,16 @@ public class MobilityController {
             throw new CustomException("after must be within 12 hours", HttpStatus.BAD_REQUEST);
         }
         return rideService.getRides(lineId, from, to, after, limit);
+    }
+
+    @GetMapping("/lines/{lineId}/rides/span")
+    @Operation(summary = "First and last scheduled rides of a line from a stop area to a further one over the service day running now, and the first of the next one (last metro of the night)",
+        security = @SecurityRequirement(name = "Auth. Token"))
+    public RideSpan getLineRideSpan(@Parameter(example = "C01371") @PathVariable String lineId,
+                                    @Parameter(description = "Boarding stop area", example = "IDFM:71264") @RequestParam String from,
+                                    @Parameter(description = "Alighting stop area", example = "IDFM:71673") @RequestParam String to) {
+        networkService.getLine(lineId).orElseThrow(() -> notFound("Line " + lineId));
+        return rideService.getSpan(lineId, from, to, Instant.now());
     }
 
     @GetMapping("/lines/{lineId}/disruptions")
