@@ -1,5 +1,8 @@
 package com.gdamiens.website.it;
 
+import com.gdamiens.website.client.PrimRealtimeClient;
+import com.gdamiens.website.client.StopCall;
+import com.gdamiens.website.client.siri.EstimatedVehicleJourney;
 import com.gdamiens.website.support.Api;
 import com.gdamiens.website.support.ExternalApis;
 import com.gdamiens.website.support.FakeServer.Response;
@@ -8,6 +11,7 @@ import com.gdamiens.website.support.MiniGtfs;
 import com.gdamiens.website.support.SiriJson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
@@ -20,6 +24,9 @@ import static org.assertj.core.api.Assertions.within;
 
 /** Departures, vehicles and rides from PRIM real time merged with the GTFS */
 class RealtimeIT extends IntegrationTest {
+
+    @Autowired
+    private PrimRealtimeClient primRealtimeClient;
 
     private Api user;
 
@@ -79,6 +86,32 @@ class RealtimeIT extends IntegrationTest {
             .findFirst().orElseThrow();
         assertThat(bus.path("departures")).singleElement()
             .satisfies(departure -> assertThat(Instant.parse(departure.path("time").asString())).isEqualTo(now.plusSeconds(240)));
+    }
+
+    /** IDFM's new real-time platform (end of October 2026), read by the client itself: the services cache by stop area */
+    @Test
+    void readsTheNewRealTimePlatformFormat() {
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        EXTERNAL.on("/prim/stop-monitoring", Response.json(SiriJson.newPlatform(SiriJson.stopMonitoring(List.of(
+            new SiriJson.Visit(MiniGtfs.RER_A, "Marne-la-Vallée", now, now.plusSeconds(120), "2", "UPAC", "154023", "Châtelet-Les Halles"))))));
+        EXTERNAL.on("/prim/estimated-timetable", Response.json(SiriJson.newPlatform(SiriJson.estimatedTimetable(List.of(
+            new SiriJson.Journey("RERA-9", MiniGtfs.RER_A, "Fontenay-sous-Bois", null, "UPAC",
+                List.of(new SiriJson.Call("IDFM:2002", now, now.plusSeconds(60)))))))));
+
+        List<StopCall> calls = primRealtimeClient.getStopCalls(MiniGtfs.CHATELET);
+        List<EstimatedVehicleJourney> journeys = primRealtimeClient.getEstimatedVehicleJourneys(MiniGtfs.RER_A);
+
+        assertThat(calls).singleElement().satisfies(call -> {
+            assertThat(call.destination()).isEqualTo("Marne-la-Vallée");
+            assertThat(call.departureTime()).isEqualTo(now.plusSeconds(120));
+            assertThat(call.platform()).isEqualTo("2");
+            assertThat(call.vehicleJourneyName()).isEqualTo("154023");
+        });
+        assertThat(journeys).singleElement().satisfies(journey -> {
+            assertThat(journey.getDestinationName()).singleElement().satisfies(name -> assertThat(name.getValue()).isEqualTo("Fontenay-sous-Bois"));
+            assertThat(journey.getEstimatedCalls().getEstimatedCall()).singleElement().satisfies(call -> assertThat(call.getDestinationDisplay())
+                .singleElement().satisfies(display -> assertThat(display.getValue()).isEqualTo("Fontenay-sous-Bois")));
+        });
     }
 
     @Test

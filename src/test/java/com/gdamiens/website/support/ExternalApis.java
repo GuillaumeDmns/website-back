@@ -27,10 +27,12 @@ public final class ExternalApis {
     public static void stubDefaults(FakeServer server, GoogleTokens google) {
         server.on("/google/certs", Response.json(google.jwks()));
 
-        server.on("/prim/stop-monitoring", request -> primCount(Response.json(SiriJson.stopMonitoring(visits(request.param("MonitoringRef")))),
+        // Real time relative to the start of the test: the stops of one ride agree to the second
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        server.on("/prim/stop-monitoring", request -> primCount(Response.json(SiriJson.stopMonitoring(visits(request.param("MonitoringRef"), now))),
             STOP_MONITORING_PER_DAY, server.requests("/prim/stop-monitoring").size()));
         server.on("/prim/estimated-timetable", request -> Response.json(SiriJson.estimatedTimetable(
-            ("STIF:Line::" + RER_A + ":").equals(request.param("LineRef")) ? rerAJourneys() : List.of())));
+            ("STIF:Line::" + RER_A + ":").equals(request.param("LineRef")) ? rerAJourneys(now) : List.of())));
 
         server.on("/prim/v2/navitia/journeys", request -> Response.json(Fixtures.read(
             "only".equals(request.param("direct_path")) ? "navitia/walking-path.json" : "navitia/journeys.json")));
@@ -67,9 +69,8 @@ public final class ExternalApis {
             .withHeader("x-ratelimit-remaining-day", String.valueOf(perDay - used));
     }
 
-    /** Next vehicles at a stop area ({@code STIF:StopArea:SP:70001:}), relative to now */
-    private static List<SiriJson.Visit> visits(String monitoringRef) {
-        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+    /** Next vehicles at a stop area ({@code STIF:StopArea:SP:70001:}), relative to [now] */
+    private static List<SiriJson.Visit> visits(String monitoringRef, Instant now) {
         return switch (monitoringRef == null ? "" : monitoringRef) {
             case "STIF:StopArea:SP:70001:" -> List.of(
                 new SiriJson.Visit(METRO_1, "Nation", in(now, 2), in(now, 3), null, null, null),
@@ -84,8 +85,7 @@ public final class ExternalApis {
     }
 
     /** One train of the RER A towards Fontenay, between Châtelet and Gare de Lyon */
-    private static List<SiriJson.Journey> rerAJourneys() {
-        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+    private static List<SiriJson.Journey> rerAJourneys(Instant now) {
         return List.of(new SiriJson.Journey("RERA-1", RER_A, "Fontenay-sous-Bois", "IDFM:5002", "UPAC", List.of(
             new SiriJson.Call("IDFM:2002", in(now, 1), in(now, 1)),
             new SiriJson.Call("IDFM:3002", in(now, 4), in(now, 4)),

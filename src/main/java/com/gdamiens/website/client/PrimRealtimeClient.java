@@ -13,9 +13,12 @@ import com.gdamiens.website.exceptions.CustomException;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 import java.util.Objects;
@@ -28,12 +31,23 @@ import java.util.Optional;
 @Component
 public class PrimRealtimeClient extends PrimClient {
 
+    /**
+     * Reads the SIRI Lite answers. Text tags ({@code DestinationName}, {@code DirectionName}, {@code DestinationDisplay}…)
+     * come as a list of one {@code {"value": …}} object, or as that object alone since IDFM's new real-time platform
+     * (announced for the end of October 2026): both are read as the list. Unknown tags ({@code RecordedCalls}) are kept
+     * aside by the generated classes.
+     */
+    public static final JsonMapper SIRI_JSON = new JacksonJsonHttpMessageConverter().getMapper().rebuild()
+        .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+        .build();
+
     private final RestTemplate restTemplate;
 
     public PrimRealtimeClient(ApplicationProperties applicationProperties, ApiQuota apiQuota, PrimCircuitBreaker circuitBreaker,
                               HttpClient httpClient) {
         super(applicationProperties, apiQuota, circuitBreaker);
         this.restTemplate = new RestTemplate(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.DEFAULT_READ_TIMEOUT));
+        this.restTemplate.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter(SIRI_JSON)));
     }
 
     /**
