@@ -26,24 +26,34 @@ public final class Api {
 
     private final String token;
 
-    private Api(String baseUrl, String ip, String token) {
+    private final java.util.Map<String, String> headers;
+
+    private Api(String baseUrl, String ip, String token, java.util.Map<String, String> headers) {
         this.baseUrl = baseUrl;
         this.ip = ip;
         this.token = token;
+        this.headers = headers;
     }
 
     public Api(int port) {
-        this("http://localhost:" + port, randomIp(), null);
+        this("http://localhost:" + port, randomIp(), null, java.util.Map.of());
     }
 
     /** Same client with a bearer token */
     public Api as(String token) {
-        return new Api(baseUrl, ip, token);
+        return new Api(baseUrl, ip, token, headers);
     }
 
     /** Same client from [ip] */
     public Api from(String ip) {
-        return new Api(baseUrl, ip, token);
+        return new Api(baseUrl, ip, token, headers);
+    }
+
+    /** Same client sending [name]: [value] with each request (e.g. the app's X-App-Version) */
+    public Api withHeader(String name, String value) {
+        java.util.Map<String, String> more = new java.util.HashMap<>(headers);
+        more.put(name, value);
+        return new Api(baseUrl, ip, token, java.util.Map.copyOf(more));
     }
 
     public String ip() {
@@ -92,6 +102,7 @@ public final class Api {
         if (token != null) {
             builder.header("Authorization", "Bearer " + token);
         }
+        headers.forEach(builder::header);
         return builder;
     }
 

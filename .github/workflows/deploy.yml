@@ -28,7 +28,13 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: Build
-        run: ./mvnw -B clean package -DskipTests
+        # The tag is the release (served by /api/health): vX.Y.Z only
+        run: |
+          if ! [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag $GITHUB_REF_NAME: the release tags are vX.Y.Z" >&2
+            exit 1
+          fi
+          ./mvnw -B clean package -DskipTests -Dapp.version="${GITHUB_REF_NAME#v}"
       - name: Publish the jar in the release
         id: release
         env:

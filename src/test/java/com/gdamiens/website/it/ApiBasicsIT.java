@@ -15,6 +15,8 @@ class ApiBasicsIT extends IntegrationTest {
 
         assertThat(health.status()).isEqualTo(200);
         assertThat(health.json().path("status").asString()).isEqualTo("UP");
+        // A build without -Dapp.version (not from a release tag)
+        assertThat(health.json().path("version").asString()).isEqualTo("dev");
     }
 
     @Test

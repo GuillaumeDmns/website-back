@@ -14,6 +14,9 @@
     <description>Guillaume Damiens&apos; website</description>
 
     <properties>
+        <!-- The release, from the git tag vX.Y.Z (.github/workflows/deploy.yml: -Dapp.version=X.Y.Z); "dev" otherwise.
+             In META-INF/build-info.properties (build.app.version), served by /api/health -->
+        <app.version>dev</app.version>
         <java.version>25</java.version>
         <springdoc-openapi-starter-webmvc-ui.version>3.0.0</springdoc-openapi-starter-webmvc-ui.version>
         <bucket4j.version>8.21.0</bucket4j.version>
@@ -113,11 +116,16 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <executions>
-                    <!-- META-INF/build-info.properties: the build time shown by the administration -->
+                    <!-- META-INF/build-info.properties: the release and build time shown by /api/health and the administration -->
                     <execution>
                         <goals>
                             <goal>build-info</goal>
                         </goals>
+                        <configuration>
+                            <additionalProperties>
+                                <app.version>${app.version}</app.version>
+                            </additionalProperties>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

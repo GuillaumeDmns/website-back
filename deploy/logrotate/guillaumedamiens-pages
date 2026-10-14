@@ -1,0 +1,15 @@
+# Page loads of the static sites (/etc/logrotate.d/guillaumedamiens-pages): read by the backend every 5 minutes, then
+# only kept 3 days. The day before stays uncompressed (delaycompress): after a rotation the backend reads its end.
+/var/log/guillaumedamiens/pages.log {
+	daily
+	rotate 3
+	missingok
+	notifempty
+	compress
+	delaycompress
+	create 0640 www-data guillaumedamiens
+	sharedscripts
+	postrotate
+		invoke-rc.d nginx rotate >/dev/null 2>&1
+	endscript
+}

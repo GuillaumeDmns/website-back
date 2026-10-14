@@ -36,6 +36,25 @@ public class AdminStatsRepository {
 
     public record Calendar(LocalDate from, LocalDate until) {}
 
+    /** API requests of an hour (UTC), all routes */
+    public record HourRequests(java.time.Instant hour, int requests, int clientErrors, int serverErrors, int rateLimited, long totalMillis) {}
+
+    /** A route over a period */
+    public record EndpointRequests(String endpoint, int requests, int clientErrors, int serverErrors, int rateLimited, long totalMillis,
+                                   long maxMillis) {}
+
+    /** Requests of a kind of caller (ACCOUNT, GUEST, ANONYMOUS) on a Paris day */
+    public record CallerRequests(LocalDate day, String caller, int requests) {}
+
+    /** Distinct members of a metric on a day (active:account, platform:android, visitors:guillaumedamiens.com…) */
+    public record MetricCount(LocalDate day, String metric, int count) {}
+
+    public record PageViews(String host, String path, int views) {}
+
+    public record HostViews(LocalDate day, String host, int views) {}
+
+    public record ReferrerViews(String host, String referrer, int views) {}
+
     private static final String PARIS_DAY = "(%s AT TIME ZONE 'Europe/Paris')::date";
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -191,5 +210,78 @@ public class AdminStatsRepository {
                    (SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()) AS connections
             """, new MapSqlParameterSource(), (rs, row) -> new DatabaseInfo(rs.getLong("bytes"), rs.getString("postgres"),
             rs.getString("postgis"), rs.getInt("connections")));
+    }
+
+    public List<HourRequests> requestsPerHour(java.time.Instant from) {
+        return jdbc.query("""
+            SELECT hour, sum(requests) AS requests,
+                   coalesce(sum(requests) FILTER (WHERE status = '4xx'), 0) AS client_errors,
+                   coalesce(sum(requests) FILTER (WHERE status = '5xx'), 0) AS server_errors,
+                   coalesce(sum(requests) FILTER (WHERE status = '429'), 0) AS rate_limited,
+                   sum(total_millis) AS total_millis
+            FROM public.usage_hourly WHERE hour >= :from GROUP BY hour ORDER BY hour
+            """, new MapSqlParameterSource("from", java.sql.Timestamp.from(from)), (rs, row) -> new HourRequests(rs.getTimestamp("hour").toInstant(),
+            rs.getInt("requests"), rs.getInt("client_errors"), rs.getInt("server_errors"), rs.getInt("rate_limited"), rs.getLong("total_millis")));
+    }
+
+    public List<EndpointRequests> endpoints(java.time.Instant from, int limit) {
+        return jdbc.query("""
+            SELECT endpoint, sum(requests) AS requests,
+                   coalesce(sum(requests) FILTER (WHERE status = '4xx'), 0) AS client_errors,
+                   coalesce(sum(requests) FILTER (WHERE status = '5xx'), 0) AS server_errors,
+                   coalesce(sum(requests) FILTER (WHERE status = '429'), 0) AS rate_limited,
+                   sum(total_millis) AS total_millis, max(max_millis) AS max_millis
+            FROM public.usage_hourly WHERE hour >= :from GROUP BY endpoint ORDER BY requests DESC LIMIT :limit
+            """, new MapSqlParameterSource("from", java.sql.Timestamp.from(from)).addValue("limit", limit),
+            (rs, row) -> new EndpointRequests(rs.getString("endpoint"), rs.getInt("requests"), rs.getInt("client_errors"),
+                rs.getInt("server_errors"), rs.getInt("rate_limited"), rs.getLong("total_millis"), rs.getLong("max_millis")));
+    }
+
+    public List<CallerRequests> callersPerDay(LocalDate from) {
+        String day = PARIS_DAY.formatted("hour");
+        return jdbc.query("""
+            SELECT %1$s AS day, caller, sum(requests) AS requests FROM public.usage_hourly WHERE %1$s >= :from
+            GROUP BY 1, 2 ORDER BY 1, 2
+            """.formatted(day), new MapSqlParameterSource("from", from),
+            (rs, row) -> new CallerRequests(rs.getObject("day", LocalDate.class), rs.getString("caller"), rs.getInt("requests")));
+    }
+
+    /** Distinct counts per day and metric: the closed days, then today's (and yesterday's until closed) from their hashes */
+    public List<MetricCount> metricsPerDay(LocalDate from) {
+        return jdbc.query("""
+            SELECT day, metric, count FROM public.usage_daily WHERE day >= :from
+            UNION ALL
+            SELECT day, metric, count(*) FROM public.usage_member WHERE day >= :from GROUP BY day, metric
+            ORDER BY 1, 2
+            """, new MapSqlParameterSource("from", from),
+            (rs, row) -> new MetricCount(rs.getObject("day", LocalDate.class), rs.getString("metric"), rs.getInt("count")));
+    }
+
+    public List<HostViews> viewsPerDay(LocalDate from) {
+        return jdbc.query("SELECT day, host, sum(views) AS views FROM public.usage_page_daily WHERE day >= :from GROUP BY 1, 2 ORDER BY 1, 2",
+            new MapSqlParameterSource("from", from),
+            (rs, row) -> new HostViews(rs.getObject("day", LocalDate.class), rs.getString("host"), rs.getInt("views")));
+    }
+
+    public List<PageViews> topPages(LocalDate from, int limit) {
+        return jdbc.query("""
+            SELECT host, path, sum(views) AS views FROM public.usage_page_daily WHERE day >= :from
+            GROUP BY 1, 2 ORDER BY 3 DESC, 1, 2 LIMIT :limit
+            """, new MapSqlParameterSource("from", from).addValue("limit", limit),
+            (rs, row) -> new PageViews(rs.getString("host"), rs.getString("path"), rs.getInt("views")));
+    }
+
+    public List<ReferrerViews> topReferrers(LocalDate from, int limit) {
+        return jdbc.query("""
+            SELECT host, referrer, sum(views) AS views FROM public.usage_referrer_daily WHERE day >= :from
+            GROUP BY 1, 2 ORDER BY 3 DESC, 1, 2 LIMIT :limit
+            """, new MapSqlParameterSource("from", from).addValue("limit", limit),
+            (rs, row) -> new ReferrerViews(rs.getString("host"), rs.getString("referrer"), rs.getInt("views")));
+    }
+
+    /** When the page log was last read, null before */
+    public java.time.Instant pagesReadAt() {
+        return jdbc.query("SELECT updated_at FROM public.usage_log_cursor WHERE name = 'pages'", new MapSqlParameterSource(),
+            rs -> rs.next() ? rs.getTimestamp(1).toInstant() : null);
     }
 }
