@@ -41,6 +41,7 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Traffic info from PRIM {@code disruptions_bulk} ("Messages Info Trafic, requête globale", its own quota): one call
@@ -145,7 +146,23 @@ public class TrafficService {
      * @return active and upcoming disruptions of a line, active and worst first
      */
     public List<Disruption> getLineDisruptions(String lineId) {
-        return distinct(traffic.get().forLine(lineId).stream().sorted(DISRUPTION_ORDER).toList());
+        Snapshot current = traffic.get();
+        // Its stops not served too ("Métro 1 : arrêts non desservis" only impacts stop points)
+        return distinct(Stream.concat(current.forLine(lineId).stream(), current.forLineStops(lineId).stream()).distinct()
+            .sorted(DISRUPTION_ORDER).toList());
+    }
+
+    /**
+     * Stop areas the line doesn't serve now: those of its stop points under an active blocking disruption ("Station
+     * fermée", "Arrêts non desservis"). Empty when the traffic can't be fetched: it only completes the real time.
+     */
+    public Set<String> getClosedStops(String lineId) {
+        try {
+            return traffic.get().closedStops().getOrDefault(lineId, Set.of());
+        } catch (RuntimeException e) {
+            log.info("No closed stops for line {}: {}", lineId, e.getMessage());
+            return Set.of();
+        }
     }
 
     /**
@@ -206,17 +223,21 @@ public class TrafficService {
 
     /** Disruptions of a {@code disruptions_bulk} answer, per line and per stop area */
     static Snapshot parse(JsonNode response, StopLookup stops, Instant now) {
-        // Lines (impacts on a line or its network) and quays (impacts on stop points) of each disruption
+        // Lines (impacts on a line or its network) and quays (impacts on stop points, with the line they are listed under)
+        // of each disruption
         Map<String, Set<String>> linesByDisruption = new HashMap<>();
         Map<String, Set<String>> quaysByDisruption = new HashMap<>();
+        Map<String, Map<String, Set<String>>> lineQuaysByDisruption = new HashMap<>();
         for (JsonNode line : response.path("lines").values()) {
             String lineId = lineId(line.path("id").asString(""));
             for (JsonNode impacted : line.path("impactedObjects").values()) {
                 String type = impacted.path("type").asString("");
                 for (JsonNode disruptionId : impacted.path("disruptionIds").values()) {
                     if ("stop_point".equals(type)) {
-                        quaysByDisruption.computeIfAbsent(disruptionId.asString(""), k -> new LinkedHashSet<>())
-                            .add(StringUtils.removeStart(impacted.path("id").asString(""), "stop_point:"));
+                        String quayId = StringUtils.removeStart(impacted.path("id").asString(""), "stop_point:");
+                        quaysByDisruption.computeIfAbsent(disruptionId.asString(""), k -> new LinkedHashSet<>()).add(quayId);
+                        lineQuaysByDisruption.computeIfAbsent(disruptionId.asString(""), k -> new HashMap<>())
+                            .computeIfAbsent(lineId, k -> new LinkedHashSet<>()).add(quayId);
                     } else {
                         linesByDisruption.computeIfAbsent(disruptionId.asString(""), k -> new LinkedHashSet<>()).add(lineId);
                     }
@@ -235,6 +256,8 @@ public class TrafficService {
 
         Map<String, List<Disruption>> lineDisruptions = new HashMap<>();
         Map<String, List<Disruption>> stopDisruptions = new HashMap<>();
+        Map<String, List<Disruption>> lineStopDisruptions = new HashMap<>();
+        Map<String, Set<String>> closedStops = new HashMap<>();
         int count = 0;
         for (JsonNode node : response.path("disruptions").values()) {
             String id = node.path("id").asString("");
@@ -249,8 +272,17 @@ public class TrafficService {
                 .filter(Objects::nonNull)
                 .distinct()
                 .forEach(stopAreaId -> stopDisruptions.computeIfAbsent(stopAreaId, k -> new ArrayList<>()).add(disruption));
+            lineQuaysByDisruption.getOrDefault(id, Map.of()).forEach((lineId, quayIds) -> {
+                if (!disruption.lineIds().contains(lineId)) {
+                    lineStopDisruptions.computeIfAbsent(lineId, k -> new ArrayList<>()).add(disruption);
+                }
+                if (disruption.active() && disruption.severity() == Severity.BLOCKING) {
+                    quayIds.stream().map(quayStopAreas::get).filter(Objects::nonNull)
+                        .forEach(stopAreaId -> closedStops.computeIfAbsent(lineId, k -> new HashSet<>()).add(stopAreaId));
+                }
+            });
         }
-        return new Snapshot(lineDisruptions, stopDisruptions, count);
+        return new Snapshot(lineDisruptions, stopDisruptions, lineStopDisruptions, closedStops, count);
     }
 
     /** {@code line:IDFM:C01371} → {@code C01371} */
@@ -398,10 +430,19 @@ public class TrafficService {
         };
     }
 
-    record Snapshot(Map<String, List<Disruption>> lineDisruptions, Map<String, List<Disruption>> stopDisruptions, int disruptionCount) {
+    /**
+     * @param lineStopDisruptions per line, the disruptions of its stop points that are not on the line itself
+     * @param closedStops         per line, the stop areas it doesn't serve now (see {@link #getClosedStops})
+     */
+    record Snapshot(Map<String, List<Disruption>> lineDisruptions, Map<String, List<Disruption>> stopDisruptions,
+                    Map<String, List<Disruption>> lineStopDisruptions, Map<String, Set<String>> closedStops, int disruptionCount) {
 
         List<Disruption> forLine(String lineId) {
             return lineDisruptions.getOrDefault(lineId, List.of());
+        }
+
+        List<Disruption> forLineStops(String lineId) {
+            return lineStopDisruptions.getOrDefault(lineId, List.of());
         }
 
         List<Disruption> forStopArea(String stopAreaId) {

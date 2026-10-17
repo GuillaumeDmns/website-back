@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -99,6 +100,37 @@ class TrafficServiceTest {
             assertThat(closed.lineIds()).isEmpty();
         });
         assertThat(snapshot.forLine("C02000")).extracting(Disruption::id).doesNotContain("chatelet-bus-stop-closed");
+    }
+
+    @Test
+    void aStopOfALineNotServedIsOneOfItsDisruptionsAndClosesTheStopForIt() {
+        // "Bus 38 : arrêt Châtelet non desservi" impacts a stop point listed under the bus 38, blocking and active
+        assertThat(snapshot.forLineStops("C02000")).extracting(Disruption::id).containsExactly("chatelet-bus-stop-closed");
+        assertThat(snapshot.closedStops()).containsExactly(Map.entry("C02000", Set.of("IDFM:70001")));
+    }
+
+    @Test
+    void theLinePageListsTheDisruptionsOfItsStops() {
+        DisruptionsClient disruptionsClient = mock(DisruptionsClient.class);
+        when(disruptionsClient.getDisruptions()).thenReturn(Fixtures.json("prim/disruptions_bulk.json"));
+        NetworkRepository networkRepository = mock(NetworkRepository.class);
+        when(networkRepository.findStopAreasOfQuays(any())).thenReturn(Map.of("IDFM:1003", "IDFM:70001"));
+        TrafficService service = new TrafficService(disruptionsClient, mock(ElevatorClient.class), mock(NetworkService.class), networkRepository);
+
+        assertThat(service.getLineDisruptions("C02000")).extracting(Disruption::id)
+            .containsExactly("chatelet-bus-stop-closed", "bus-38-delays", "bus-network-info");
+        assertThat(service.getClosedStops("C02000")).containsExactly("IDFM:70001");
+        assertThat(service.getClosedStops("C01371")).isEmpty();
+    }
+
+    @Test
+    void withoutTrafficNoStopIsClosed() {
+        DisruptionsClient disruptionsClient = mock(DisruptionsClient.class);
+        when(disruptionsClient.getDisruptions()).thenThrow(new IllegalStateException("PRIM is down"));
+        TrafficService service = new TrafficService(disruptionsClient, mock(ElevatorClient.class), mock(NetworkService.class),
+            mock(NetworkRepository.class));
+
+        assertThat(service.getClosedStops("C02000")).isEmpty();
     }
 
     @Test

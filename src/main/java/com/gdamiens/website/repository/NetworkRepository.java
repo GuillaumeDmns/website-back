@@ -43,6 +43,9 @@ public class NetworkRepository {
     /** A call of a trip at a stop area, in the order of the trip; [pickup]: passengers can board there */
     public record TripCallRow(String tripId, String stopAreaId, int departureSeconds, boolean pickup) {}
 
+    /** A call of a trip where it stops (boarding or alighting), in the order of the trip; [number]: its short name (SNCF train number) */
+    public record ScheduledCallRow(String tripId, String number, String stopAreaId, int arrivalSeconds, int departureSeconds) {}
+
     private static final String STOP_AREA_COLUMNS = "p.stop_id, p.stop_name, p.stop_lat, p.stop_lon";
 
     /**
@@ -416,6 +419,29 @@ public class NetworkRepository {
                 ORDER BY st.trip_id, st.stop_sequence""",
             params,
             (rs, i) -> new TripCallRow(rs.getString(1), rs.getString(2), rs.getInt(3), rs.getBoolean(4)));
+    }
+
+    /**
+     * Calls of the route's trips running on the service day {@code date} where they stop (times may go past 24:00), at
+     * their stop areas, trip by trip in the order of each trip
+     */
+    public List<ScheduledCallRow> findScheduledCalls(String routeId, LocalDate date) {
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("routeId", routeId).addValue("date", date);
+
+        return jdbc.query(ACTIVE_ON_DATE + """
+                trips AS MATERIALIZED (
+                  SELECT t.trip_id, t.trip_short_name FROM gtfs.trips t JOIN active a ON a.service_id = t.service_id WHERE t.route_id = :routeId
+                )
+                SELECT t.trip_id, t.trip_short_name, coalesce(q.parent_station, q.stop_id),
+                       extract(epoch FROM coalesce(st.arrival_time, st.departure_time))::int,
+                       extract(epoch FROM coalesce(st.departure_time, st.arrival_time))::int
+                FROM trips t
+                JOIN gtfs.stop_times st ON st.trip_id = t.trip_id
+                JOIN gtfs.stops q ON q.stop_id = st.stop_id
+                WHERE coalesce(st.pickup_type, 0) <> 1 OR coalesce(st.drop_off_type, 0) <> 1
+                ORDER BY st.trip_id, st.stop_sequence""",
+            params,
+            (rs, i) -> new ScheduledCallRow(rs.getString(1), rs.getString(2), rs.getString(3), rs.getInt(4), rs.getInt(5)));
     }
 
     private static Short getShort(ResultSet rs, int column) throws SQLException {

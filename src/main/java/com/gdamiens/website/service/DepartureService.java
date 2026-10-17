@@ -66,14 +66,18 @@ public class DepartureService {
 
     private final PrimRealtimeClient primRealtimeClient;
 
+    private final TrafficService trafficService;
+
     private final TtlCache<String, Optional<StopDepartures>> cache = new TtlCache<>(Duration.ofSeconds(30), 10000);
 
     private final TtlCache<String, Optional<List<StopCall>>> callCache = new TtlCache<>(Duration.ofSeconds(30), 10000);
 
-    public DepartureService(NetworkService networkService, NetworkRepository networkRepository, PrimRealtimeClient primRealtimeClient) {
+    public DepartureService(NetworkService networkService, NetworkRepository networkRepository, PrimRealtimeClient primRealtimeClient,
+                            TrafficService trafficService) {
         this.networkService = networkService;
         this.networkRepository = networkRepository;
         this.primRealtimeClient = primRealtimeClient;
+        this.trafficService = trafficService;
     }
 
     /**
@@ -182,10 +186,12 @@ public class DepartureService {
                 }
             }
 
-            // Lines of the stop area without real-time data fall back to the schedule
+            // Lines of the stop area without real-time data fall back to the schedule, unless a disruption says they
+            // don't stop here now (station closed)
             Set<String> realtimeLineIds = groups.keySet().stream().map(key -> key.line().id()).collect(Collectors.toSet());
             Set<String> scheduledLineIds = stop.lines().stream().map(LineSummary::id)
                 .filter(id -> !realtimeLineIds.contains(id))
+                .filter(id -> !trafficService.getClosedStops(id).contains(stopAreaId))
                 .collect(Collectors.toSet());
 
             if (!scheduledLineIds.isEmpty()) {
