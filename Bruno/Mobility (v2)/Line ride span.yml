@@ -1,0 +1,31 @@
+info:
+  name: "Line ride span"
+  type: http
+  seq: 25
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/lines/C01371/rides/span?from=IDFM:71264&to=IDFM:71673"
+  params:
+    - name: "from"
+      value: "IDFM:71264"
+      type: query
+      description: "Zone d'arrêt de montée"
+    - name: "to"
+      value: "IDFM:71673"
+      type: query
+      description: "Zone d'arrêt de descente"
+
+  auth: inherit
+
+docs:
+  content: |-
+    Premier et dernier trajets théoriques (GTFS) de la ligne de `from` à `to` sur la journée de service en cours (la veille tant que ses derniers trains roulent après minuit, la suivante une fois terminée), et `next`, le premier de la journée de service suivante (dans la semaine) : le dernier métro du soir et la reprise du service. Chaque trajet : départ, arrivée, destination, code mission SNCF. Aucun appel PRIM. Mis en cache 6 h par journée. 404 si la ligne est inconnue ; champs absents sans trajet.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
