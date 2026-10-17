@@ -40,6 +40,9 @@ public class NetworkRepository {
 
     public record ScheduledRideRow(String headsign, String tripShortName, String terminus, LocalDate serviceDate, int departureSeconds, int arrivalSeconds) {}
 
+    /** A call of a trip at a stop area, in the order of the trip; [pickup]: passengers can board there */
+    public record TripCallRow(String tripId, String stopAreaId, int departureSeconds, boolean pickup) {}
+
     private static final String STOP_AREA_COLUMNS = "p.stop_id, p.stop_name, p.stop_lat, p.stop_lon";
 
     /**
@@ -61,6 +64,19 @@ public class NetworkRepository {
                   SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 1
                   EXCEPT
                   SELECT cd.date, cd.service_id FROM gtfs.calendar_dates cd JOIN days d ON d.service_date = cd.date WHERE cd.exception_type = 2
+                ),
+        """;
+
+    /** CTE {@code active}: services running on the service day {@code :date} (calendar and exceptions) */
+    private static final String ACTIVE_ON_DATE = """
+                WITH active AS (
+                  SELECT c.service_id FROM gtfs.calendar c
+                  WHERE CAST(:date AS date) BETWEEN c.start_date AND c.end_date
+                    AND (ARRAY[c.monday, c.tuesday, c.wednesday, c.thursday, c.friday, c.saturday, c.sunday])[extract(isodow FROM CAST(:date AS date))::int]
+                  UNION
+                  SELECT service_id FROM gtfs.calendar_dates WHERE date = :date AND exception_type = 1
+                  EXCEPT
+                  SELECT service_id FROM gtfs.calendar_dates WHERE date = :date AND exception_type = 2
                 ),
         """;
 
@@ -361,16 +377,7 @@ public class NetworkRepository {
         MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("id", stopAreaId).addValue("routeId", routeId).addValue("date", date);
 
-        return jdbc.query("""
-                WITH active AS (
-                  SELECT c.service_id FROM gtfs.calendar c
-                  WHERE CAST(:date AS date) BETWEEN c.start_date AND c.end_date
-                    AND (ARRAY[c.monday, c.tuesday, c.wednesday, c.thursday, c.friday, c.saturday, c.sunday])[extract(isodow FROM CAST(:date AS date))::int]
-                  UNION
-                  SELECT service_id FROM gtfs.calendar_dates WHERE date = :date AND exception_type = 1
-                  EXCEPT
-                  SELECT service_id FROM gtfs.calendar_dates WHERE date = :date AND exception_type = 2
-                ),
+        return jdbc.query(ACTIVE_ON_DATE + """
                 trips AS MATERIALIZED (
                   SELECT t.trip_id, t.direction_id, t.trip_headsign FROM gtfs.trips t JOIN active a ON a.service_id = t.service_id
                   WHERE t.route_id = :routeId
@@ -388,6 +395,27 @@ public class NetworkRepository {
                 ORDER BY 2""",
             params,
             (rs, i) -> new TimetableRow(getShort(rs, 1), rs.getInt(2), rs.getString(3), rs.getString(4), rs.getString(5)));
+    }
+
+    /**
+     * Every call of the route's trips running on the service day {@code date} (times may go past 24:00), at their
+     * stop areas, trip by trip in the order of each trip
+     */
+    public List<TripCallRow> findTripCalls(String routeId, LocalDate date) {
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("routeId", routeId).addValue("date", date);
+
+        return jdbc.query(ACTIVE_ON_DATE + """
+                trips AS MATERIALIZED (
+                  SELECT t.trip_id FROM gtfs.trips t JOIN active a ON a.service_id = t.service_id WHERE t.route_id = :routeId
+                )
+                SELECT st.trip_id, coalesce(q.parent_station, q.stop_id), extract(epoch FROM st.departure_time)::int,
+                       coalesce(st.pickup_type, 0) <> 1
+                FROM trips t
+                JOIN gtfs.stop_times st ON st.trip_id = t.trip_id
+                JOIN gtfs.stops q ON q.stop_id = st.stop_id
+                ORDER BY st.trip_id, st.stop_sequence""",
+            params,
+            (rs, i) -> new TripCallRow(rs.getString(1), rs.getString(2), rs.getInt(3), rs.getBoolean(4)));
     }
 
     private static Short getShort(ResultSet rs, int column) throws SQLException {

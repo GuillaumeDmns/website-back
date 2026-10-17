@@ -5,6 +5,7 @@ import com.gdamiens.website.controller.object.v2.BikeStation;
 import com.gdamiens.website.controller.object.v2.Disruption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan;
 import com.gdamiens.website.controller.object.v2.LineDetail;
+import com.gdamiens.website.controller.object.v2.LineServiceHours;
 import com.gdamiens.website.controller.object.v2.LineTraffic;
 import com.gdamiens.website.controller.object.v2.Ride;
 import com.gdamiens.website.controller.object.v2.RideSpan;
@@ -13,6 +14,7 @@ import com.gdamiens.website.controller.object.v2.PlaceResult;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
 import com.gdamiens.website.controller.object.v2.StopDepartures;
+import com.gdamiens.website.controller.object.v2.StopServiceHours;
 import com.gdamiens.website.controller.object.v2.Timetable;
 import com.gdamiens.website.controller.object.v2.Vehicle;
 import com.gdamiens.website.exceptions.CustomException;
@@ -26,6 +28,7 @@ import com.gdamiens.website.service.JourneyService.WalkingSpeed;
 import com.gdamiens.website.service.NetworkService;
 import com.gdamiens.website.service.RideService;
 import com.gdamiens.website.service.SearchService;
+import com.gdamiens.website.service.ServiceHoursService;
 import com.gdamiens.website.service.TimetableService;
 import com.gdamiens.website.service.TrafficService;
 import com.gdamiens.website.service.VehicleService;
@@ -72,13 +75,15 @@ public class MobilityController {
 
     private final TimetableService timetableService;
 
+    private final ServiceHoursService serviceHoursService;
+
     private final BikeService bikeService;
 
     private final UsageBudgets usageBudgets;
 
     public MobilityController(NetworkService networkService, DepartureService departureService, SearchService searchService,
                               JourneyService journeyService, TrafficService trafficService, VehicleService vehicleService,
-                              RideService rideService, TimetableService timetableService,
+                              RideService rideService, TimetableService timetableService, ServiceHoursService serviceHoursService,
                               BikeService bikeService, UsageBudgets usageBudgets) {
         this.networkService = networkService;
         this.departureService = departureService;
@@ -88,6 +93,7 @@ public class MobilityController {
         this.vehicleService = vehicleService;
         this.rideService = rideService;
         this.timetableService = timetableService;
+        this.serviceHoursService = serviceHoursService;
         this.bikeService = bikeService;
         this.usageBudgets = usageBudgets;
     }
@@ -171,6 +177,15 @@ public class MobilityController {
             .orElseThrow(() -> notFound("Stop area " + stopAreaId + " or line " + lineId));
     }
 
+    @GetMapping("/stops/{stopAreaId}/service-hours")
+    @Operation(summary = "First and last scheduled departures of each line leaving a stop area over a day, and their frequency per period of the day",
+        security = @SecurityRequirement(name = "Auth. Token"))
+    public StopServiceHours getStopServiceHours(@Parameter(example = "IDFM:71264") @PathVariable String stopAreaId,
+                                                @Parameter(description = "Service day, the one running now by default (until 3:00, the day before: departures after midnight belong to it)")
+                                                @RequestParam(required = false) LocalDate date) {
+        return serviceHoursService.getStopServiceHours(stopAreaId, serviceDay(date)).orElseThrow(() -> notFound("Stop area " + stopAreaId));
+    }
+
     @GetMapping("/bikes/stations")
     @Operation(summary = "Vélib stations inside a box with their available bikes and docks (at most 300)", security = @SecurityRequirement(name = "Auth. Token"))
     public List<BikeStation> getBikeStations(@RequestParam double minLat, @RequestParam double minLon,
@@ -193,6 +208,15 @@ public class MobilityController {
     @Operation(summary = "Line with its ordered stops and drawn path, per direction and branch", security = @SecurityRequirement(name = "Auth. Token"))
     public LineDetail getLine(@Parameter(example = "C01371") @PathVariable String lineId) {
         return networkService.getLineDetail(lineId).orElseThrow(() -> notFound("Line " + lineId));
+    }
+
+    @GetMapping("/lines/{lineId}/service-hours")
+    @Operation(summary = "First and last scheduled departures of each direction of a line over a day (at its busiest stop), and its frequency per period of the day",
+        security = @SecurityRequirement(name = "Auth. Token"))
+    public LineServiceHours getLineServiceHours(@Parameter(example = "C01371") @PathVariable String lineId,
+                                                @Parameter(description = "Service day, the one running now by default (until 3:00, the day before: departures after midnight belong to it)")
+                                                @RequestParam(required = false) LocalDate date) {
+        return serviceHoursService.getLineServiceHours(lineId, serviceDay(date)).orElseThrow(() -> notFound("Line " + lineId));
     }
 
     @GetMapping("/lines/{lineId}/vehicles")
@@ -244,6 +268,11 @@ public class MobilityController {
     @Operation(summary = "Traffic state of the metro, RER, Transilien and tram lines, and of every other disrupted line", security = @SecurityRequirement(name = "Auth. Token"))
     public List<LineTraffic> getTraffic() {
         return trafficService.getTraffic();
+    }
+
+    /** [date], else the service day running now in Paris (the day before until 3:00, its last trips may still run) */
+    private static LocalDate serviceDay(LocalDate date) {
+        return date == null ? LocalDate.ofInstant(Instant.now().minus(Duration.ofHours(3)), ParisTime.ZONE) : date;
     }
 
     private static void checkPosition(double lat, double lon) {

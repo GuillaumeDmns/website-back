@@ -113,6 +113,59 @@ class NetworkIT extends IntegrationTest {
     }
 
     @Test
+    void tellsTheServiceHoursOfTheLinesOfAStop() {
+        JsonNode hours = user.get("/api/v2/stops/IDFM:70001/service-hours?date=2026-10-12").json();
+
+        assertThat(hours.path("date").asString()).isEqualTo("2026-10-12");
+        assertThat(hours.path("stop").path("name").asString()).isEqualTo("Châtelet");
+        assertThat(hours.path("lines").values().stream().map(line -> line.path("line").path("name").asString()))
+            .containsExactly("1", "A", "38", "N11");
+
+        // Métro 1: towards Nation only (trains from Nation end there), every 10 min from 5:00 to 1:50
+        JsonNode metro = hours.path("lines").path(0).path("directions");
+        assertThat(metro).singleElement().satisfies(direction -> {
+            assertThat(direction.path("name").asString()).isEqualTo("Nation");
+            assertThat(direction.has("at")).isFalse();
+            assertThat(direction.has("direction")).isFalse();
+            assertThat(Instant.parse(direction.path("first").asString())).isEqualTo(Instant.parse("2026-10-12T03:00:00Z"));
+            assertThat(Instant.parse(direction.path("last").asString())).isEqualTo(Instant.parse("2026-10-12T23:50:00Z"));
+            assertThat(direction.path("frequencies").values().stream().map(frequency -> frequency.path("period").asString()))
+                .containsExactly("EARLY_MORNING", "MORNING_PEAK", "DAYTIME", "EVENING_PEAK", "EVENING", "NIGHT");
+            JsonNode peak = direction.path("frequencies").path(1);
+            assertThat(peak.path("departures").asInt()).isEqualTo(18);
+            assertThat(peak.path("minMinutes").asInt()).isEqualTo(10);
+            assertThat(peak.path("maxMinutes").asInt()).isEqualTo(10);
+        });
+        // The Noctilien only runs after midnight, on the same service day
+        assertThat(hours.path("lines").path(3).path("directions").path(0).path("frequencies").values().stream()
+            .map(frequency -> frequency.path("period").asString())).containsExactly("NIGHT");
+    }
+
+    @Test
+    void tellsTheServiceHoursOfEachDirectionOfALine() {
+        JsonNode hours = user.get("/api/v2/lines/C01742/service-hours?date=2026-10-12").json();
+
+        assertThat(hours.path("line").path("name").asString()).isEqualTo("A");
+        JsonNode directions = hours.path("directions");
+        assertThat(directions).hasSize(2);
+        // Eastbound: at Châtelet, where every train boards (as at Nation, further)
+        assertThat(directions.path(0).path("name").asString()).isEqualTo("Fontenay-sous-Bois / Joinville-le-Pont");
+        assertThat(directions.path(0).path("direction").asInt()).isZero();
+        assertThat(directions.path(0).path("at").path("id").asString()).isEqualTo("IDFM:70001");
+        assertThat(Instant.parse(directions.path(0).path("first").asString())).isEqualTo(Instant.parse("2026-10-12T03:00:00Z"));
+        assertThat(Instant.parse(directions.path(0).path("last").asString())).isEqualTo(Instant.parse("2026-10-12T23:45:00Z"));
+        // Westbound: from Fontenay
+        assertThat(directions.path(1).path("direction").asInt()).isEqualTo(1);
+        assertThat(directions.path(1).path("at").path("name").asString()).isEqualTo("Fontenay-sous-Bois");
+        assertThat(Instant.parse(directions.path(1).path("first").asString())).isEqualTo(Instant.parse("2026-10-12T03:10:00Z"));
+
+        assertThat(user.get("/api/v2/lines/C99999/service-hours").status()).isEqualTo(404);
+        assertThat(user.get("/api/v2/stops/IDFM:99999/service-hours").status()).isEqualTo(404);
+        // Nothing on a day without service
+        assertThat(user.get("/api/v2/lines/C01742/service-hours?date=2099-12-25").json().path("directions")).isEmpty();
+    }
+
+    @Test
     void searchesLinesStopsAndAddressesWithoutNavitia() {
         JsonNode result = user.get("/api/v2/search?q=Chatelet&lat=48.8512&lon=2.3456").json();
 
