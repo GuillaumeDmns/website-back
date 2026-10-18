@@ -30,6 +30,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "ProductCategoryRef",
     "JourneyNote",
     "FirstOrLastJourney",
+    "RecordedCalls",
     "EstimatedCalls",
     "VehicleJourneyName"
 })
@@ -68,6 +69,8 @@ public class EstimatedVehicleJourney {
     private List<JourneyNote> journeyNote = null;
     @JsonProperty("FirstOrLastJourney")
     private FirstOrLastJourneyEnum firstOrLastJourney;
+    @JsonProperty("RecordedCalls")
+    private RecordedCalls recordedCalls;
     @JsonProperty("EstimatedCalls")
     private EstimatedCalls estimatedCalls;
     @JsonProperty("VehicleJourneyName")
@@ -233,6 +236,16 @@ public class EstimatedVehicleJourney {
     @JsonProperty("FirstOrLastJourney")
     public void setFirstOrLastJourney(FirstOrLastJourneyEnum firstOrLastJourney) {
         this.firstOrLastJourney = firstOrLastJourney;
+    }
+
+    @JsonProperty("RecordedCalls")
+    public RecordedCalls getRecordedCalls() {
+        return recordedCalls;
+    }
+
+    @JsonProperty("RecordedCalls")
+    public void setRecordedCalls(RecordedCalls recordedCalls) {
+        this.recordedCalls = recordedCalls;
     }
 
     @JsonProperty("EstimatedCalls")

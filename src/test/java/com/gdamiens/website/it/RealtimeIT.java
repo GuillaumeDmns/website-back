@@ -45,9 +45,9 @@ class RealtimeIT extends IntegrationTest {
         JsonNode lines = departures.path("lines");
         assertThat(lines.values().stream().map(group -> group.path("line").path("name").asString() + " → " + group.path("destination").asString()))
             .startsWith("1 → Nation", "A → Fontenay-sous-Bois")
-            // The metro ending its trip here is not a departure; the bus has no real time: from the schedule
-            .doesNotContain("1 → Châtelet")
-            .contains("38 → Gare de Lyon");
+            // The metro ending its trip here is not a departure; the bus has no real time and doesn't stop here now
+            // ("Bus 38 : arrêt Châtelet non desservi"): not from the schedule either
+            .doesNotContain("1 → Châtelet", "38 → Gare de Lyon");
 
         JsonNode metro = lines.path(0).path("departures");
         assertThat(metro).hasSize(2);
@@ -60,7 +60,10 @@ class RealtimeIT extends IntegrationTest {
         assertThat(rer.path("trainNumber").asString()).isEqualTo(ExternalApis.RER_A_TRAIN);
         assertThat(rer.path("platform").asString()).isEqualTo("A");
 
-        JsonNode bus = lines.values().stream().filter(group -> group.path("line").path("name").asString().equals("38")).findFirst().orElseThrow();
+        // At Gare de Lyon, the bus has no real time: from the schedule
+        JsonNode bus = user.get("/api/v2/stops/IDFM:70002/departures?limit=5").json().path("lines").values().stream()
+            .filter(group -> group.path("line").path("name").asString().equals("38")).findFirst().orElseThrow();
+        assertThat(bus.path("destination").asString()).isEqualTo("Châtelet");
         assertThat(bus.path("departures").path(0).path("realtime").asBoolean()).isFalse();
 
         assertThat(EXTERNAL.requests("/prim/stop-monitoring")).allSatisfy(request -> assertThat(request.header("apiKey")).isEqualTo("test-prim-key"));

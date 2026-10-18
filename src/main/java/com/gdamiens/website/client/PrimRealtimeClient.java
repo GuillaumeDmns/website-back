@@ -34,8 +34,8 @@ public class PrimRealtimeClient extends PrimClient {
     /**
      * Reads the SIRI Lite answers. Text tags ({@code DestinationName}, {@code DirectionName}, {@code DestinationDisplay}…)
      * come as a list of one {@code {"value": …}} object, or as that object alone since IDFM's new real-time platform
-     * (announced for the end of October 2026): both are read as the list. Unknown tags ({@code RecordedCalls}) are kept
-     * aside by the generated classes.
+     * (announced for the end of October 2026): both are read as the list. Its calls already made ({@code RecordedCalls})
+     * are read; other unknown tags are kept aside by the generated classes.
      */
     public static final JsonMapper SIRI_JSON = new JacksonJsonHttpMessageConverter().getMapper().rebuild()
         .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
