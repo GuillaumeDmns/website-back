@@ -303,10 +303,11 @@ public class VehicleService {
 
     private static Vehicle withId(Vehicle vehicle, String id) {
         return new Vehicle(id, vehicle.name(), vehicle.destination(), vehicle.direction(), vehicle.branch(), vehicle.fromStopId(),
-            vehicle.toStopId(), vehicle.toStopName(), vehicle.progress(), vehicle.expectedAt(), vehicle.delaySeconds(), vehicle.calls());
+            vehicle.toStopId(), vehicle.toStopName(), vehicle.progress(), vehicle.expectedAt(), vehicle.delaySeconds(), vehicle.calls(),
+            vehicle.stale());
     }
 
-    /** [vehicle] as loaded at [at], moved along its segment at the same pace until [now] */
+    /** [vehicle] as loaded at [at], moved along its segment at the same pace until [now], marked stale */
     private static Vehicle moved(Vehicle vehicle, Instant at, Instant now) {
         double progress = vehicle.progress();
         long remainingThen = Duration.between(at, vehicle.expectedAt()).toMillis();
@@ -316,7 +317,7 @@ public class VehicleService {
         }
         List<VehicleCall> calls = vehicle.calls().stream().filter(call -> call.expectedAt().isAfter(now.minus(PAST_MARGIN))).toList();
         return new Vehicle(vehicle.id(), vehicle.name(), vehicle.destination(), vehicle.direction(), vehicle.branch(), vehicle.fromStopId(),
-            vehicle.toStopId(), vehicle.toStopName(), progress, vehicle.expectedAt(), vehicle.delaySeconds(), calls);
+            vehicle.toStopId(), vehicle.toStopName(), progress, vehicle.expectedAt(), vehicle.delaySeconds(), calls, true);
     }
 
     private static Run toRun(EstimatedVehicleJourney journey, Map<String, String> quayStopAreas, Instant now) {
@@ -822,7 +823,7 @@ public class VehicleService {
         // the branch's terminus otherwise
         String headsign = destination >= 0 && run.destination() != null ? run.destination() : branch.stops().getLast().name();
         return new Vehicle(id, name, headsign, direction, branchIndex, from == null ? null : from.id(), to.id(), to.name(), progress,
-            next.expected(), delay(next), calls);
+            next.expected(), delay(next), calls, false);
     }
 
     private static VehicleCall call(TimedCall call, String stopName) {

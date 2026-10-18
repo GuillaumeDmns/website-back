@@ -11,7 +11,7 @@ http:
 
 docs:
   content: |-
-    Véhicules de la ligne placés entre deux arrêts d'une de ses branches (`direction` / `branch` = index dans `GET /lines/{id}`), estimés depuis l'estimated-timetable PRIM : prochain arrêt, arrêt quitté, `progress` 0→1 entre les deux. Vide sans temps réel. Mis en cache 30 s. 404 si la ligne est inconnue.
+    Véhicules de la ligne placés entre deux arrêts d'une de ses branches (`direction` / `branch` = index dans `GET /lines/{id}`), estimés depuis l'estimated-timetable PRIM : prochain arrêt, arrêt quitté, `progress` 0→1 entre les deux ; `stale` pour un véhicule absent du dernier temps réel, gardé une ou deux minutes. Vide sans temps réel. Mis en cache 60 s. 404 si la ligne est inconnue.
   type: text/markdown
 
 settings:
