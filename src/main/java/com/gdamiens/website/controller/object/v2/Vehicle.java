@@ -15,7 +15,10 @@ import java.util.List;
  * @param expectedAt   expected time at the next stop
  * @param delaySeconds expected minus scheduled time at the next stop, when known
  * @param calls        its next stops with their times, from the next one (as far as the real time goes)
+ * @param stale        missing from the latest real time: kept for a minute or two, moved along from where it was last
+ *                     seen
  */
 public record Vehicle(String id, String name, String destination, int direction, int branch, String fromStopId, String toStopId,
-                      String toStopName, double progress, Instant expectedAt, Integer delaySeconds, List<VehicleCall> calls) {
+                      String toStopName, double progress, Instant expectedAt, Integer delaySeconds, List<VehicleCall> calls,
+                      boolean stale) {
 }

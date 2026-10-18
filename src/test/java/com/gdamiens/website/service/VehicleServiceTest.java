@@ -232,11 +232,13 @@ class VehicleServiceTest {
         trip("T-N", "123457", N1, -6, N2, -2, M, 2, A, 5, P, 9);
         feed(train("SNCF-1", "123457", call(M, 2), call(A, 5), call(P, 9)));
         Vehicle seen = single(service.getVehicles(TRAIN_LINE));
+        assertThat(seen.stale()).isFalse();
         when(prim.getEstimatedVehicleJourneys(TRAIN_LINE)).thenReturn(List.of());
 
         for (int load = 1; load <= 2; load++) {
             Vehicle kept = single(reload(TRAIN_LINE));
             assertThat(kept.id()).isEqualTo(seen.id());
+            assertThat(kept.stale()).isTrue();
             assertThat(kept.toStopId()).isEqualTo(M.id());
             assertThat(kept.progress()).isGreaterThanOrEqualTo(seen.progress());
         }
