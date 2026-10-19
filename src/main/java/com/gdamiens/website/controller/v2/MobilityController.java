@@ -258,6 +258,20 @@ public class MobilityController {
         return trafficService.getLineDisruptions(lineId);
     }
 
+    @GetMapping("/lines/{lineId}/closed-stops")
+    @Operation(summary = "Stop areas the line doesn't serve now (station closed, stops not served: blocking disruptions)", security = @SecurityRequirement(name = "Auth. Token"))
+    public List<String> getLineClosedStops(@Parameter(example = "C01371") @PathVariable String lineId) {
+        networkService.getLine(lineId).orElseThrow(() -> notFound("Line " + lineId));
+        return trafficService.getClosedStops(lineId).stream().sorted().toList();
+    }
+
+    @GetMapping("/stops/{stopAreaId}/closed-lines")
+    @Operation(summary = "Lines that don't stop at the stop area now (station closed, stops not served: blocking disruptions)", security = @SecurityRequirement(name = "Auth. Token"))
+    public List<String> getStopClosedLines(@Parameter(example = "IDFM:71264") @PathVariable String stopAreaId) {
+        networkService.getStopArea(stopAreaId).orElseThrow(() -> notFound("Stop area " + stopAreaId));
+        return trafficService.getClosedLines(stopAreaId).stream().sorted().toList();
+    }
+
     @GetMapping("/stops/{stopAreaId}/disruptions")
     @Operation(summary = "Disruptions of a stop area (elevators, stop not served...) and active disruptions of its lines", security = @SecurityRequirement(name = "Auth. Token"))
     public List<Disruption> getStopDisruptions(@Parameter(example = "IDFM:71264") @PathVariable String stopAreaId) {
