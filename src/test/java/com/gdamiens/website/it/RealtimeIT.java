@@ -217,10 +217,11 @@ class RealtimeIT extends IntegrationTest {
         JsonNode first = rides.path(0);
         assertThat(first.path("departure").path("trainNumber").asString()).isEqualTo(ExternalApis.RER_A_TRAIN);
         assertThat(first.path("destination").asString()).isEqualTo("Fontenay-sous-Bois");
-        // Same train in the stop-monitoring of Gare de Lyon
+        // Same train in the stop-monitoring of Gare de Lyon, 3 min later (the two stops' answers may be cached from
+        // stubs made a second apart by earlier tests)
         assertThat(first.path("arrivalSource").asString()).isEqualTo("realtime");
-        assertThat(Duration.between(Instant.parse(first.path("departure").path("time").asString()), Instant.parse(first.path("arrivalAt").asString())))
-            .isEqualTo(Duration.ofMinutes(3));
+        assertThat(Duration.between(Instant.parse(first.path("departure").path("time").asString()), Instant.parse(first.path("arrivalAt").asString())).toSeconds())
+            .isBetween(178L, 182L);
         // Then trains from the schedule
         assertThat(rides.values().stream().skip(1)).allSatisfy(ride -> assertThat(ride.path("arrivalSource").asString()).isEqualTo("scheduled"));
     }

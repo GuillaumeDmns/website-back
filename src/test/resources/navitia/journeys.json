@@ -21,8 +21,9 @@
           "from": {"embedded_type": "address", "name": "10 Rue de Rivoli (Paris)", "address": {"coord": {"lat": "48.86", "lon": "2.34"}}},
           "to": {"embedded_type": "stop_point", "name": "Châtelet", "stop_point": {"coord": {"lat": "48.8584", "lon": "2.347"}, "stop_area": {"id": "stop_area:IDFM:70001"}}},
           "path": [
-            {"instruction": "Marchez vers l'est sur Rue de Rivoli", "length": 300, "duration": 250},
-            {"instruction": "", "length": 50, "duration": 50}
+            {"instruction": "Marchez vers l'est sur Rue de Rivoli", "length": 300, "duration": 250, "direction": 0, "name": "Rue de Rivoli"},
+            {"instruction": "", "length": 20, "duration": 17, "direction": 0, "name": "Rue de Rivoli"},
+            {"instruction": "Tournez à gauche sur Rue des Halles", "length": 30, "duration": 33, "direction": -90, "name": "Rue des Halles"}
           ],
           "geojson": {"type": "LineString", "coordinates": [[2.34, 48.86], [2.347, 48.8584]], "properties": [{"length": 350}]}
         },

@@ -37,7 +37,7 @@
     },
     {
       "id": "rer-a-works",
-      "applicationPeriods": [{"begin": "20261019T220000", "end": "20261020T050000"}, {"begin": "20261012T220000", "end": "20261013T050000"}],
+      "applicationPeriods": [{"begin": "20991019T220000", "end": "20991020T050000"}, {"begin": "20261012T220000", "end": "20261013T050000"}],
       "lastUpdate": "20261001T120000",
       "cause": "TRAVAUX",
       "severity": "PERTURBEE",

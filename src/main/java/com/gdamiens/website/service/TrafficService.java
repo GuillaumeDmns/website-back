@@ -165,6 +165,19 @@ public class TrafficService {
         }
     }
 
+    /** Lines that don't stop at the stop area now (see {@link #getClosedStops}) */
+    public Set<String> getClosedLines(String stopAreaId) {
+        try {
+            return traffic.get().closedStops().entrySet().stream()
+                .filter(entry -> entry.getValue().contains(stopAreaId))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+        } catch (RuntimeException e) {
+            log.info("No closed lines at {}: {}", stopAreaId, e.getMessage());
+            return Set.of();
+        }
+    }
+
     /**
      * @return disruptions of the stop area itself (elevators, stop not served...) and active disruptions of its main
      *         lines (metro, RER, Transilien, tram). Bus line disruptions are left out: most of them are about other stops.

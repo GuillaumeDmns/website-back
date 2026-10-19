@@ -60,6 +60,18 @@ class TrafficIT extends IntegrationTest {
     }
 
     @Test
+    void tellsTheStopsALineDoesNotServeNow() {
+        // "Bus 38 : arrêt Châtelet non desservi"
+        assertThat(user.get("/api/v2/lines/C02000/closed-stops").json().values().stream().map(JsonNode::asString))
+            .containsExactly("IDFM:70001");
+        assertThat(user.get("/api/v2/stops/IDFM:70001/closed-lines").json().values().stream().map(JsonNode::asString))
+            .containsExactly("C02000");
+        assertThat(user.get("/api/v2/lines/C01371/closed-stops").json()).isEmpty();
+        assertThat(user.get("/api/v2/lines/C99999/closed-stops").status()).isEqualTo(404);
+        assertThat(user.get("/api/v2/stops/IDFM:99999/closed-lines").status()).isEqualTo(404);
+    }
+
+    @Test
     void sharesOneFetchBetweenEveryone() {
         user.get("/api/v2/traffic");
         guest().get("/api/v2/lines/C01742/disruptions");

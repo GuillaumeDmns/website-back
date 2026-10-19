@@ -109,10 +109,17 @@ final class NavitiaJourneys {
             }
         }
 
-        List<WalkStep> steps = section.path("path").values().stream()
-            .filter(step -> StringUtils.isNotBlank(step.path("instruction").asString(null)))
-            .map(step -> new WalkStep(step.path("instruction").asString(""), step.path("length").asInt(0), step.path("duration").asInt(0)))
-            .toList();
+        // Each instruction with where it starts along the path (the parts without one count too)
+        List<WalkStep> steps = new ArrayList<>();
+        int offset = 0;
+        for (JsonNode step : section.path("path").values()) {
+            int stepLength = step.path("length").asInt(0);
+            if (StringUtils.isNotBlank(step.path("instruction").asString(null))) {
+                steps.add(new WalkStep(step.path("instruction").asString(""), stepLength, step.path("duration").asInt(0),
+                    step.path("direction").asInt(0), offset, StringUtils.trimToNull(step.path("name").asString(null))));
+            }
+            offset += stepLength;
+        }
         Integer length = optionalInt(section.path("geojson").path("properties").path(0).path("length"));
 
         List<double[]> shape = new ArrayList<>();

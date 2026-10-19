@@ -3,6 +3,7 @@ package com.gdamiens.website.service;
 import com.gdamiens.website.controller.object.v2.JourneyOption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan.PageCursor;
 import com.gdamiens.website.controller.object.v2.JourneySection;
+import com.gdamiens.website.controller.object.v2.WalkStep;
 import com.gdamiens.website.controller.object.v2.JourneySection.Kind;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.model.TransportMode;
@@ -56,7 +57,12 @@ class NavitiaJourneysTest {
         assertThat(walk.from().lat()).isEqualTo(48.86);
         assertThat(walk.from().stopAreaId()).isNull();
         assertThat(walk.to().stopAreaId()).isEqualTo("IDFM:70001");
-        assertThat(walk.steps()).singleElement().satisfies(step -> assertThat(step.instruction()).startsWith("Marchez"));
+        assertThat(walk.steps()).extracting(WalkStep::instruction).containsExactly("Marchez vers l'est sur Rue de Rivoli",
+            "Tournez à gauche sur Rue des Halles");
+        // Where each starts along the path (the part without instruction counts), the turn and the street
+        assertThat(walk.steps()).extracting(WalkStep::offset).containsExactly(0, 320);
+        assertThat(walk.steps().getLast().direction()).isEqualTo(-90);
+        assertThat(walk.steps().getLast().name()).isEqualTo("Rue des Halles");
         assertThat(walk.length()).isEqualTo(350);
         assertThat(walk.shape()).hasSize(2);
     }
