@@ -196,6 +196,24 @@ class VehicleServiceTest {
     }
 
     @Test
+    void aTrainStandingAtAStopIsThereUntilItsDeparture() {
+        // Arrived at M a minute ago, leaves it in a minute: M stays its next stop, with its departure
+        trip("T-N", "123457", N1, -6, N2, -4, M, -1, A, 5, P, 9);
+        feed(train("SNCF-1", "123457", call(M, -1), call(A, 5), call(P, 9)), journey -> {
+            ObjectNode atM = (ObjectNode) journey.path("EstimatedCalls").path("EstimatedCall").get(0);
+            atM.put("ExpectedDepartureTime", at(1).toString());
+        });
+
+        Vehicle vehicle = single(service.getVehicles(TRAIN_LINE));
+
+        assertThat(vehicle.toStopId()).isEqualTo(M.id());
+        assertThat(vehicle.progress()).isEqualTo(1);
+        assertThat(vehicle.calls().getFirst().departureAt()).isEqualTo(at(1));
+        // Arrival and departure the same: no departure told
+        assertThat(vehicle.calls().get(1).departureAt()).isNull();
+    }
+
+    @Test
     void aCancelledCallIsNotTheNextStop() {
         trip("T-N", "123457", N1, -6, N2, -2, M, 2, A, 5, P, 9);
         feed(train("SNCF-1", "123457", call(M, 2), call(A, 5), call(P, 9)), journey -> {

@@ -157,8 +157,18 @@ public class VehicleService {
         }
     }
 
-    /** A call of a journey at a stop area */
-    private record TimedCall(String stopAreaId, Instant expected, Instant aimed, String platform) {
+    /**
+     * A call of a journey at a stop area
+     *
+     * @param expected  expected arrival, else departure
+     * @param departure expected departure when later than [expected], else null
+     */
+    private record TimedCall(String stopAreaId, Instant expected, Instant departure, Instant aimed, String platform) {
+
+        /** When the vehicle leaves the stop, as far as the feed says */
+        Instant leaves() {
+            return departure != null ? departure : expected;
+        }
     }
 
     /** The stop a vehicle left, and when; a null stop for a vehicle whose trip starts at its next stop */
@@ -315,7 +325,9 @@ public class VehicleService {
             double segment = remainingThen / (1 - progress);
             progress = Math.clamp(1 - Duration.between(now, vehicle.expectedAt()).toMillis() / segment, progress, 1);
         }
-        List<VehicleCall> calls = vehicle.calls().stream().filter(call -> call.expectedAt().isAfter(now.minus(PAST_MARGIN))).toList();
+        List<VehicleCall> calls = vehicle.calls().stream()
+            .filter(call -> Optional.ofNullable(call.departureAt()).orElse(call.expectedAt()).isAfter(now.minus(PAST_MARGIN)))
+            .toList();
         return new Vehicle(vehicle.id(), vehicle.name(), vehicle.destination(), vehicle.direction(), vehicle.branch(), vehicle.fromStopId(),
             vehicle.toStopId(), vehicle.toStopName(), progress, vehicle.expectedAt(), vehicle.delaySeconds(), calls, true);
     }
@@ -327,13 +339,16 @@ public class VehicleService {
             .map(call -> {
                 String stopAreaId = stopArea(quayId(call), quayStopAreas);
                 Instant expected = Optional.ofNullable(parse(call.getExpectedArrivalTime())).orElse(parse(call.getExpectedDepartureTime()));
+                Instant departure = Optional.ofNullable(parse(call.getExpectedDepartureTime()))
+                    .filter(time -> expected != null && time.isAfter(expected)).orElse(null);
                 Instant aimed = Optional.ofNullable(parse(call.getAimedArrivalTime())).orElse(parse(call.getAimedDepartureTime()));
                 String platform = Optional.ofNullable(call.getArrivalPlatformName()).map(ArrivalPlatformName::getValue)
                     .filter(StringUtils::isNotBlank).orElse(null);
-                return stopAreaId == null || expected == null ? null : new TimedCall(stopAreaId, expected, aimed, platform);
+                return stopAreaId == null || expected == null ? null : new TimedCall(stopAreaId, expected, departure, aimed, platform);
             })
             .filter(Objects::nonNull)
-            .filter(call -> call.expected().isAfter(now.minus(PAST_MARGIN)))
+            // Kept while the vehicle stands there (a train's stop)
+            .filter(call -> call.leaves().isAfter(now.minus(PAST_MARGIN)))
             .sorted(Comparator.comparing(TimedCall::expected))
             .toList();
         String id = Optional.ofNullable(journey.getDatedVehicleJourneyRef()).map(DatedVehicleJourneyRef::getValue).orElse(null);
@@ -827,7 +842,7 @@ public class VehicleService {
     }
 
     private static VehicleCall call(TimedCall call, String stopName) {
-        return new VehicleCall(call.stopAreaId(), stopName, call.expected(), delay(call), call.platform());
+        return new VehicleCall(call.stopAreaId(), stopName, call.expected(), call.departure(), delay(call), call.platform());
     }
 
     private static Integer delay(TimedCall call) {
