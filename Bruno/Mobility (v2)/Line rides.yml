@@ -29,7 +29,7 @@ http:
 
 docs:
   content: |-
-    Prochains départs de la ligne depuis l'arrêt `from` qui desservent l'arrêt `to` (ici Transilien L, Bécon-les-Bruyères → Saint-Lazare), avec l'heure d'arrivée à `to` : `arrivalSource` = `realtime` (appels temps réel du train), `scheduled` (son trajet théorique décalé de son retard) ou `typical` (temps de trajet habituel de la ligne). Code mission (`POPI`) et numéro de train pour le SNCF. Avec `after`, la liste commence à cette heure et se poursuit avec l'horaire théorique au-delà de ce que donne le temps réel. Mis en cache 30 s. 404 si la ligne est inconnue.
+    Prochains départs de la ligne depuis l'arrêt `from` qui desservent l'arrêt `to` (ici Transilien L, Bécon-les-Bruyères → Saint-Lazare), avec l'heure d'arrivée à `to` : `arrivalSource` = `realtime` (appels temps réel du train), `scheduled` (son trajet théorique décalé de son retard) ou `typical` (temps de trajet habituel de la ligne). Code mission (`POPI`) et numéro de train pour le SNCF. `stops` : où il s'arrête de `from` à `to` inclus, d'après son trajet théorique (même numéro de train, sinon même heure prévue ; horaires décalés de son retard) : un direct en saute ; absent quand son trajet n'est pas trouvé. Avec `after`, la liste commence à cette heure et se poursuit avec l'horaire théorique au-delà de ce que donne le temps réel. Mis en cache 30 s. 404 si la ligne est inconnue.
   type: text/markdown
 
 settings:
