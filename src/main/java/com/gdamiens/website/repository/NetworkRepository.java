@@ -8,6 +8,7 @@ import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,7 +39,12 @@ public class NetworkRepository {
 
     public record TimetableRow(Short directionId, int departureSeconds, String headsign, String terminusId, String terminus) {}
 
-    public record ScheduledRideRow(String headsign, String tripShortName, String terminus, LocalDate serviceDate, int departureSeconds, int arrivalSeconds) {}
+    /** [stops]: where the trip stops from the boarding stop area to the alighting one, both included (empty unless asked) */
+    public record ScheduledRideRow(String headsign, String tripShortName, String terminus, LocalDate serviceDate, int departureSeconds, int arrivalSeconds,
+                                   List<RideStopRow> stops) {}
+
+    /** A stop of a scheduled ride: its stop area's name, its quay's position, its time (seconds of the service day, null when not given) */
+    public record RideStopRow(String name, double lat, double lon, Integer seconds) {}
 
     /** A call of a trip at a stop area, in the order of the trip; [pickup]: passengers can board there */
     public record TripCallRow(String tripId, String stopAreaId, int departureSeconds, boolean pickup) {}
@@ -333,12 +339,27 @@ public class NetworkRepository {
     /**
      * Scheduled trips of the route leaving a quay of {@code fromId} between {@code fromSeconds} and {@code toSeconds}
      * after midnight of {@code today} (Europe/Paris, trips of the previous service day included) and stopping
-     * further at a quay of {@code toId}, with the times at both and the name of the trip's last stop.
+     * further at a quay of {@code toId}, with the times at both and the name of the trip's last stop; with
+     * {@code withStops}, the stops in between too (a direct train skips some).
      */
-    public List<ScheduledRideRow> findScheduledRides(String routeId, String fromId, String toId, LocalDate today, int fromSeconds, int toSeconds) {
+    public List<ScheduledRideRow> findScheduledRides(String routeId, String fromId, String toId, LocalDate today, int fromSeconds, int toSeconds,
+                                                     boolean withStops) {
         MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("routeId", routeId).addValue("fromId", fromId).addValue("toId", toId).addValue("today", today)
             .addValue("from", fromSeconds).addValue("to", toSeconds);
+        // Where it stops (boarding or alighting) from the boarding stop to the alighting one: departure times, the
+        // arrival at the last one
+        String stopColumns = withStops ? ", stops.names, stops.lats, stops.lons, stops.times" : "";
+        String stops = !withStops ? "" : """
+                CROSS JOIN LATERAL (
+                  SELECT array_agg(coalesce(p.stop_name, q.stop_name) ORDER BY s.stop_sequence) AS names,
+                         array_agg(q.stop_lat ORDER BY s.stop_sequence) AS lats, array_agg(q.stop_lon ORDER BY s.stop_sequence) AS lons,
+                         array_agg(extract(epoch FROM CASE WHEN s.stop_sequence = a.stop_sequence THEN coalesce(s.arrival_time, s.departure_time)
+                                                           ELSE coalesce(s.departure_time, s.arrival_time) END)::int ORDER BY s.stop_sequence) AS times
+                  FROM gtfs.stop_times s JOIN gtfs.stops q ON q.stop_id = s.stop_id LEFT JOIN gtfs.stops p ON p.stop_id = q.parent_station
+                  WHERE s.trip_id = c.trip_id AND s.stop_sequence BETWEEN c.stop_sequence AND a.stop_sequence
+                    AND (coalesce(s.pickup_type, 0) <> 1 OR coalesce(s.drop_off_type, 0) <> 1)
+                ) stops""";
 
         return jdbc.query(SERVICE_DAYS + """
                 from_quays AS MATERIALIZED (
@@ -356,7 +377,7 @@ public class NetworkRepository {
                   ) st ON true
                 )
                 SELECT DISTINCT coalesce(c.stop_headsign, t.trip_headsign), t.trip_short_name, last.name, c.service_date,
-                       extract(epoch FROM c.departure_time)::int, extract(epoch FROM a.arrival_time)::int
+                       extract(epoch FROM c.departure_time)::int, extract(epoch FROM a.arrival_time)::int%s
                 FROM candidates c
                 JOIN gtfs.trips t ON t.trip_id = c.trip_id AND t.route_id = :routeId
                 JOIN active ac ON ac.service_id = t.service_id AND ac.service_date = c.service_date
@@ -367,9 +388,24 @@ public class NetworkRepository {
                   FROM gtfs.stop_times l JOIN gtfs.stops q ON q.stop_id = l.stop_id LEFT JOIN gtfs.stops p ON p.stop_id = q.parent_station
                   WHERE l.trip_id = c.trip_id ORDER BY l.stop_sequence DESC LIMIT 1
                 ) last
-                ORDER BY 4, 5""",
+                %s
+                ORDER BY 4, 5""".formatted(stopColumns, stops),
             params,
-            (rs, i) -> new ScheduledRideRow(rs.getString(1), rs.getString(2), rs.getString(3), rs.getObject(4, LocalDate.class), rs.getInt(5), rs.getInt(6)));
+            (rs, i) -> new ScheduledRideRow(rs.getString(1), rs.getString(2), rs.getString(3), rs.getObject(4, LocalDate.class), rs.getInt(5), rs.getInt(6),
+                withStops ? rideStops(rs) : List.of()));
+    }
+
+    /** Stops of a ride from the arrays of the columns 7 to 10 (names, latitudes, longitudes, times) */
+    private static List<RideStopRow> rideStops(ResultSet rs) throws SQLException {
+        String[] names = (String[]) rs.getArray(7).getArray();
+        Double[] lats = (Double[]) rs.getArray(8).getArray();
+        Double[] lons = (Double[]) rs.getArray(9).getArray();
+        Integer[] times = (Integer[]) rs.getArray(10).getArray();
+        List<RideStopRow> stops = new ArrayList<>(names.length);
+        for (int k = 0; k < names.length; k++) {
+            stops.add(new RideStopRow(names[k], lats[k], lons[k], times[k]));
+        }
+        return stops;
     }
 
     /**
