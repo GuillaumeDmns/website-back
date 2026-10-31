@@ -1,0 +1,70 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.3482, 48.8622]},
+      "properties": {
+        "osm_type": "N", "osm_id": 1345636994, "osm_key": "shop", "osm_value": "electronics", "type": "house",
+        "name": "Fnac", "housenumber": "1-7", "street": "Rue Pierre Lescot", "postcode": "75001", "district": "Paris",
+        "city": "Paris", "countrycode": "FR"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.3483, 48.8623]},
+      "properties": {
+        "osm_type": "W", "osm_id": 1036323792, "osm_key": "building", "osm_value": "retail", "type": "house",
+        "name": "Fnac", "street": "Rue Pierre Lescot", "postcode": "75001", "city": "Paris", "countrycode": "FR"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.3207, 48.8463]},
+      "properties": {
+        "osm_type": "N", "osm_id": 3001, "osm_key": "shop", "osm_value": "electronics", "type": "house",
+        "name": "Fnac", "housenumber": "136", "street": "Rue de Rennes", "postcode": "75006", "city": "Paris", "countrycode": "FR"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.3470, 48.8612]},
+      "properties": {
+        "osm_type": "N", "osm_id": 3002, "osm_key": "railway", "osm_value": "station", "type": "house",
+        "name": "Châtelet - Les Halles", "postcode": "75001", "city": "Paris", "countrycode": "FR"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.3400, 48.8590]},
+      "properties": {
+        "osm_type": "W", "osm_id": 3003, "osm_key": "highway", "osm_value": "residential", "type": "street",
+        "name": "Rue de la Fnac", "postcode": "75001", "city": "Paris", "countrycode": "FR"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.4417, 48.8638]},
+      "properties": {
+        "osm_type": "N", "osm_id": 3004, "osm_key": "shop", "osm_value": "sports", "type": "house",
+        "name": "Decathlon", "street": "Place Hannah Arendt", "postcode": "93100", "city": "Montreuil", "countrycode": "FR"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [4.8357, 45.764]},
+      "properties": {
+        "osm_type": "N", "osm_id": 3005, "osm_key": "shop", "osm_value": "electronics", "type": "house",
+        "name": "Fnac", "postcode": "69002", "city": "Lyon", "countrycode": "FR"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.3376, 48.8606]},
+      "properties": {
+        "osm_type": "W", "osm_id": 3006, "osm_key": "tourism", "osm_value": "museum", "type": "house",
+        "name": "Musée du Louvre", "street": "Place du Carrousel", "postcode": "75001", "city": "Paris", "countrycode": "FR"
+      }
+    }
+  ]
+}

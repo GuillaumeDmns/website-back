@@ -171,13 +171,18 @@ class NetworkIT extends IntegrationTest {
 
         assertThat(result.path("lines")).isEmpty();
         JsonNode places = result.path("places");
-        // The stop area from the GTFS (with its town), then the Géoplateforme's addresses and places
+        // The stop area from the GTFS (with its town), then the Géoplateforme's addresses and OpenStreetMap's places in turn
         assertThat(places.values().stream().map(place -> place.path("type").asString()))
-            .containsExactly("STOP_AREA", "ADDRESS", "POI", "ADDRESS", "POI");
+            .containsExactly("STOP_AREA", "ADDRESS", "POI", "ADDRESS", "POI", "POI", "POI");
         assertThat(places.path(0).path("id").asString()).isEqualTo("IDFM:70001");
         assertThat(places.path(0).path("name").asString()).isEqualTo("Châtelet (Paris 1er)");
         assertThat(places.path(0).path("lines")).hasSize(4);
+        assertThat(places.path(0).has("address")).isFalse();
         assertThat(places.path(1).path("name").asString()).isEqualTo("8 Rue de Rivoli 75004 Paris");
+        assertThat(places.path(2).path("id").asString()).isEqualTo("osm:N1345636994");
+        assertThat(places.path(2).path("name").asString()).isEqualTo("Fnac (Paris 1er)");
+        assertThat(places.path(2).path("address").asString()).isEqualTo("1-7 Rue Pierre Lescot");
+        assertThat(places.path(2).path("category").asString()).isEqualTo("electronics");
         assertThat(EXTERNAL.requests("/geoplateforme/search")).singleElement().satisfies(request -> {
             assertThat(request.param("q")).isEqualTo("chatelet");
             assertThat(request.param("index")).isEqualTo("address,poi");
@@ -185,6 +190,16 @@ class NetworkIT extends IntegrationTest {
             // The area only
             assertThat(request.param("lat")).isEqualTo("48.85");
             assertThat(request.param("lon")).isEqualTo("2.35");
+        });
+        assertThat(EXTERNAL.requests("/photon/api")).singleElement().satisfies(request -> {
+            assertThat(request.param("q")).isEqualTo("chatelet");
+            assertThat(request.param("lang")).isEqualTo("fr");
+            // Île-de-France only, around the area
+            assertThat(request.param("bbox")).isEqualTo("1.4,48.1,3.6,49.25");
+            assertThat(request.param("lat")).isEqualTo("48.85");
+            assertThat(request.param("lon")).isEqualTo("2.35");
+            // A public instance asks to be told who calls
+            assertThat(request.header("User-Agent")).isEqualTo("guillaumedamiens.com mobility app");
         });
         assertThat(EXTERNAL.requests("/prim/v2/navitia/places")).isEmpty();
 
@@ -199,6 +214,38 @@ class NetworkIT extends IntegrationTest {
             // The town is already in the name
             .isEqualTo("Fontenay-sous-Bois");
         assertThat(user.get("/api/v2/search?q=gare%20lyon").json().path("places").path(0).path("id").asString()).isEqualTo("IDFM:70002");
+    }
+
+    @Test
+    void findsTheClosestPlacesOfAKind() {
+        JsonNode places = user.get("/api/v2/search?q=Pharmacies&lat=48.8581&lon=2.3459").json().path("places");
+
+        // The closest first, before the stops
+        assertThat(places.values().stream().map(place -> place.path("name").asString()))
+            .startsWith("Pharmacie Lafayette des Halles (Paris 1er)", "Pharmacie Rivoli - Saint Jacques (Paris 4e)");
+        assertThat(places.path(1).path("address").asString()).isEqualTo("18 Rue Saint-Martin");
+        assertThat(places.path(1).path("category").asString()).isEqualTo("pharmacy");
+        assertThat(EXTERNAL.requests("/photon/reverse")).singleElement().satisfies(request -> {
+            assertThat(request.params("osm_tag")).containsExactly("amenity:pharmacy");
+            assertThat(request.param("radius")).isEqualTo("2.0");
+            // The area only (about 200 m)
+            assertThat(request.param("lat")).isEqualTo("48.858");
+            assertThat(request.param("lon")).isEqualTo("2.346");
+        });
+        assertThat(EXTERNAL.requests("/photon/api")).isEmpty();
+    }
+
+    @Test
+    void keepsTheGeoplateformePlacesWhenPhotonIsDown() {
+        EXTERNAL.on("/photon/api", Response.status(503));
+
+        // From an area of its own: answers are cached per text and area
+        JsonNode places = user.get("/api/v2/search?q=tour%20eiffel&lat=48.8584&lon=2.2945").json().path("places");
+
+        assertThat(places.values().stream().map(place -> place.path("name").asString()))
+            .contains("Tour Eiffel (Paris 7e)", "8 Rue de Rivoli 75004 Paris").doesNotContain("Fnac (Paris 1er)");
+        assertThat(EXTERNAL.requests("/photon/api")).hasSize(1);
+        assertThat(EXTERNAL.requests("/prim/v2/navitia/places")).isEmpty();
     }
 
     @Test
@@ -217,6 +264,7 @@ class NetworkIT extends IntegrationTest {
     @Test
     void searchesLinesAndStopsWhenEverythingElseIsDown() {
         EXTERNAL.on("/geoplateforme/search", Response.status(503));
+        EXTERNAL.on("/photon/api", Response.status(503));
         EXTERNAL.on("/prim/v2/navitia/places", Response.status(503));
 
         JsonNode result = user.get("/api/v2/search?q=n11").json();

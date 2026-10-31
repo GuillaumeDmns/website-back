@@ -2,12 +2,14 @@ package com.gdamiens.website.service;
 
 import com.gdamiens.website.client.GeoplateformeClient;
 import com.gdamiens.website.client.NavitiaClient;
+import com.gdamiens.website.client.PhotonClient;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.PlaceResult;
 import com.gdamiens.website.controller.object.v2.SearchResult;
 import com.gdamiens.website.model.TransportMode;
 import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.repository.NetworkRepository.StopAreaRow;
+import com.gdamiens.website.utils.Geo;
 import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -17,6 +19,8 @@ import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -24,14 +28,22 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static java.util.Map.entry;
 
 /**
  * Unified search, without Navitia whenever possible (its quota is for the journeys): lines from the GTFS by name, stop
- * areas from the GTFS ({@link StopSearch}), addresses and places from the IGN Géoplateforme. Navitia {@code places} only
- * answers when the Géoplateforme fails or nothing else found anything. Also the address of a position (reverse
- * geocoding, Géoplateforme).
+ * areas from the GTFS ({@link StopSearch}), addresses from the IGN Géoplateforme, places from OpenStreetMap through
+ * Photon (shops, cafés, cinemas, chains: the IGN only knows public places), the IGN's when Photon fails, and the
+ * closest of a kind for a word such as "pharmacie". Navitia {@code places} only answers when both fail or nothing else
+ * found anything. Also the address of a position (reverse geocoding, Géoplateforme).
  */
 @Service
 public class SearchService {
@@ -63,6 +75,56 @@ public class SearchService {
     /** A reverse geocoded address farther than this is not "here" */
     private static final double REVERSE_MAX_METERS = 250;
 
+    /** OpenStreetMap's keys of what is no place to go to: streets, towns, borders, rivers, and stations (the GTFS has them) */
+    private static final Set<String> NOT_PLACES = Set.of("highway", "place", "railway", "public_transport", "boundary", "waterway");
+
+    /** The kinds of places asked for by a word ("pharmacie", "boulangeries"): the closest ones, from OpenStreetMap's tags */
+    static final Map<String, List<String>> CATEGORIES = Map.ofEntries(
+        entry("pharmacie", List.of("amenity:pharmacy")),
+        entry("boulangerie", List.of("shop:bakery")),
+        entry("supermarche", List.of("shop:supermarket")),
+        entry("epicerie", List.of("shop:convenience")),
+        entry("cafe", List.of("amenity:cafe")),
+        entry("restaurant", List.of("amenity:restaurant", "amenity:fast_food")),
+        entry("bar", List.of("amenity:bar", "amenity:pub")),
+        entry("cinema", List.of("amenity:cinema")),
+        entry("theatre", List.of("amenity:theatre")),
+        entry("musee", List.of("tourism:museum")),
+        entry("hotel", List.of("tourism:hotel")),
+        entry("banque", List.of("amenity:bank")),
+        entry("distributeur", List.of("amenity:atm")),
+        entry("poste", List.of("amenity:post_office")),
+        entry("toilettes", List.of("amenity:toilets")),
+        entry("hopital", List.of("amenity:hospital")),
+        entry("hopitaux", List.of("amenity:hospital")),
+        entry("urgences", List.of("amenity:hospital")),
+        entry("medecin", List.of("amenity:doctors")),
+        entry("dentiste", List.of("amenity:dentist")),
+        entry("veterinaire", List.of("amenity:veterinary")),
+        entry("parking", List.of("amenity:parking")),
+        entry("station service", List.of("amenity:fuel")),
+        entry("parc", List.of("leisure:park")),
+        entry("jardin", List.of("leisure:garden", "leisure:park")),
+        entry("piscine", List.of("leisure:swimming_pool")),
+        entry("salle de sport", List.of("leisure:fitness_centre")),
+        entry("bibliotheque", List.of("amenity:library")),
+        entry("librairie", List.of("shop:books")),
+        entry("fleuriste", List.of("shop:florist")),
+        entry("boucherie", List.of("shop:butcher")),
+        entry("tabac", List.of("shop:tobacco")),
+        entry("pressing", List.of("shop:dry_cleaning")),
+        entry("laverie", List.of("shop:laundry")),
+        entry("marche", List.of("amenity:marketplace")),
+        entry("mairie", List.of("amenity:townhall")),
+        entry("commissariat", List.of("amenity:police")),
+        entry("police", List.of("amenity:police")));
+
+    /** At most this long a search waits for Photon */
+    private static final Duration PHOTON_WAIT = Duration.ofMillis(1500);
+
+    /** How far the closest places of a kind are looked for (km) */
+    private static final double CLOSEST_RADIUS_KM = 2;
+
     /** Optional mode word then the line name: {@code rer b}, {@code métro 13}, {@code m13}, {@code bus 38}, {@code 7bis} */
     private static final Pattern LINE_QUERY = Pattern.compile("^(ligne|metro|m|rer|bus|tram|tramway|noctilien|train|transilien)?\\s*([a-z]?\\d*[a-z]*)$");
 
@@ -85,7 +147,15 @@ public class SearchService {
 
     private final GeoplateformeClient geoplateformeClient;
 
+    private final PhotonClient photonClient;
+
     private final NavitiaClient navitiaClient;
+
+    /** Photon asked while the Géoplateforme is: the search waits for the slower of the two, not for both in turn */
+    private final ExecutorService photonExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+    /** Per text and area (about 1 km), or per kind and area (about 200 m) for the closest */
+    private final TtlCache<String, List<PlaceResult>> photonCache = new TtlCache<>(Duration.ofMinutes(10), 5000);
 
     /** Per text and area (about 1 km): typing the same address again, or near each other */
     private final TtlCache<String, List<PlaceResult>> geoCache = new TtlCache<>(Duration.ofMinutes(10), 5000);
@@ -105,16 +175,17 @@ public class SearchService {
     }
 
     public SearchService(NetworkService networkService, NetworkRepository networkRepository, StopSearch stopSearch,
-                         GeoplateformeClient geoplateformeClient, NavitiaClient navitiaClient) {
+                         GeoplateformeClient geoplateformeClient, PhotonClient photonClient, NavitiaClient navitiaClient) {
         this.networkService = networkService;
         this.networkRepository = networkRepository;
         this.stopSearch = stopSearch;
         this.geoplateformeClient = geoplateformeClient;
+        this.photonClient = photonClient;
         this.navitiaClient = navitiaClient;
     }
 
     /**
-     * @param lat the caller's position (null when unknown): closer stop areas and addresses first
+     * @param lat the caller's position (null when unknown): closer stop areas, addresses and places first
      */
     public SearchResult search(String query, int limit, Double lat, Double lon) {
         String normalized = normalize(query);
@@ -123,17 +194,53 @@ public class SearchService {
         }
 
         List<LineSummary> lines = searchLines(normalized);
+        // A kind of place near the caller ("pharmacie"): the closest ones
+        List<String> tags = lat == null || lon == null ? null : categoryTags(normalized);
+        CompletableFuture<List<PlaceResult>> osm = CompletableFuture.supplyAsync(
+            () -> tags != null ? closestPlaces(normalized, tags, lat, lon, limit) : osmPlaces(normalized, limit, lat, lon), photonExecutor);
         List<PlaceResult> stops = stopSearch.search(normalized, lat, lon, limit);
-        List<PlaceResult> others = geoPlaces(normalized, limit, lat, lon);
-        if (others == null || stops.isEmpty() && others.isEmpty() && lines.isEmpty()) {
-            others = navitiaPlaces(normalized, limit, stops.isEmpty());
+        List<PlaceResult> geo = geoPlaces(normalized, limit, lat, lon);
+        // A slow Photon (a public instance) is not waited for: the Géoplateforme's places meanwhile, its answer cached for the next keystroke
+        List<PlaceResult> places = osm.completeOnTimeout(null, PHOTON_WAIT.toMillis(), TimeUnit.MILLISECONDS).join();
+        if (tags != null && places != null && !places.isEmpty()) {
+            // Then the stop areas named so, typed on the way to them ("Hôtel de Ville", "Mairie de Montreuil"): half at most
+            List<PlaceResult> namedStops = stops.stream().filter(stop -> namedAfter(normalized, stop)).limit(limit / 2).toList();
+            return new SearchResult(lines, Stream.concat(places.stream().limit(limit - namedStops.size()), namedStops.stream()).toList());
+        }
+        List<PlaceResult> osmPlaces = tags == null ? places : null;
+        List<PlaceResult> others = others(geo, osmPlaces);
+        if (geo == null || stops.isEmpty() && others.isEmpty() && lines.isEmpty()) {
+            // Navitia's addresses and places instead of the Géoplateforme's, then OpenStreetMap's
+            others = Stream.concat(navitiaPlaces(normalized, limit, stops.isEmpty()).stream(),
+                Objects.requireNonNullElse(osmPlaces, List.<PlaceResult>of()).stream()).toList();
         }
         return new SearchResult(lines, merge(normalized, stops, others, limit));
     }
 
     /**
+     * The Géoplateforme's addresses and OpenStreetMap's places, one after the other (neither drowns the other); the
+     * Géoplateforme's own places when Photon failed or found none
+     */
+    static List<PlaceResult> others(List<PlaceResult> geo, List<PlaceResult> osm) {
+        List<PlaceResult> fromGeo = Objects.requireNonNullElse(geo, List.of());
+        List<PlaceResult> addresses = fromGeo.stream().filter(place -> place.type() == PlaceResult.Type.ADDRESS).toList();
+        List<PlaceResult> pois = osm != null && !osm.isEmpty() ? osm : fromGeo.stream().filter(place -> place.type() == PlaceResult.Type.POI).toList();
+        List<PlaceResult> others = new ArrayList<>();
+        for (int i = 0; i < Math.max(addresses.size(), pois.size()); i++) {
+            if (i < addresses.size()) {
+                others.add(addresses.get(i));
+            }
+            if (i < pois.size()) {
+                others.add(pois.get(i));
+            }
+        }
+        return others;
+    }
+
+    /**
      * Stop areas first, addresses first when the query starts with a house number; each keeps half the places when the
-     * other has enough
+     * other has enough. Then a place named after every word typed comes before one only resembling them (a typo away:
+     * "fnac" is not "Frachon").
      */
     static List<PlaceResult> merge(String normalized, List<PlaceResult> stops, List<PlaceResult> others, int limit) {
         boolean houseNumber = Character.isDigit(normalized.charAt(0));
@@ -142,7 +249,24 @@ public class SearchService {
         int keptForSecond = Math.min(second.size(), limit / 2);
         List<PlaceResult> merged = new ArrayList<>(first.stream().limit(limit - keptForSecond).toList());
         second.stream().limit(limit - merged.size()).forEach(merged::add);
+        // Stable: the order above among the ones named so, and among the others
+        merged.sort(Comparator.comparing(place -> !namedAfter(normalized, place)));
         return merged;
+    }
+
+    /** Every word typed starts a word of the place's name (its town in brackets aside) */
+    static boolean namedAfter(String normalized, PlaceResult place) {
+        List<String> words = List.of(normalize(place.name().replaceAll("\\s*\\([^)]*\\)$", "")).split("[ '-]+"));
+        return Arrays.stream(normalized.split("[ '-]+")).allMatch(typed -> words.stream().anyMatch(word -> word.startsWith(typed)));
+    }
+
+    /** OpenStreetMap's tags of a kind of place asked for by its word, singular or plural; null for any other text */
+    static List<String> categoryTags(String normalized) {
+        List<String> tags = CATEGORIES.get(normalized);
+        if (tags == null && (normalized.endsWith("s") || normalized.endsWith("x"))) {
+            tags = CATEGORIES.get(normalized.substring(0, normalized.length() - 1));
+        }
+        return tags;
     }
 
     List<LineSummary> searchLines(String normalized) {
@@ -226,6 +350,90 @@ public class SearchService {
             }
         }
         return places;
+    }
+
+    /** OpenStreetMap's places matching a text (Photon), null when it failed (too short a text: none) */
+    private List<PlaceResult> osmPlaces(String normalized, int limit, Double lat, Double lon) {
+        if (normalized.length() < 3) {
+            return List.of();
+        }
+        // About 1 km, as for the Géoplateforme
+        Double areaLat = lat == null ? null : Math.round(lat * 100) / 100.0;
+        Double areaLon = lon == null ? null : Math.round(lon * 100) / 100.0;
+        try {
+            return photonCache.get("search|" + normalized + "|" + limit + "|" + areaLat + "|" + areaLon,
+                k -> toOsmPlaces(photonClient.search(normalized, areaLat, areaLon, limit + 5)));
+        } catch (RuntimeException e) {
+            LOGGER.warn("Photon search failed for '{}': {}", normalized, e.getMessage());
+            return null;
+        }
+    }
+
+    /** The closest places of a kind (Photon), null when it failed */
+    private List<PlaceResult> closestPlaces(String normalized, List<String> tags, double lat, double lon, int limit) {
+        // About 200 m: the closest stay the closest, and the position stays vague
+        double areaLat = Math.round(lat * 500) / 500.0;
+        double areaLon = Math.round(lon * 500) / 500.0;
+        try {
+            return photonCache.get("closest|" + String.join(",", tags) + "|" + limit + "|" + areaLat + "|" + areaLon,
+                k -> toOsmPlaces(photonClient.closest(tags, areaLat, areaLon, limit, CLOSEST_RADIUS_KM)));
+        } catch (RuntimeException e) {
+            LOGGER.warn("Photon closest '{}' failed: {}", normalized, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * OpenStreetMap's places of a Photon answer: named, in Île-de-France, no street, town or station (the GTFS has
+     * them), each once (a shop is often both a point and a building); with their street and number, and their kind
+     */
+    static List<PlaceResult> toOsmPlaces(JsonNode collection) {
+        List<PlaceResult> places = new ArrayList<>();
+        if (collection == null) {
+            return places;
+        }
+        for (JsonNode feature : collection.path("features").values()) {
+            double lon = feature.path("geometry").path("coordinates").path(0).asDouble(Double.NaN);
+            double lat = feature.path("geometry").path("coordinates").path(1).asDouble(Double.NaN);
+            if (!(lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON)) {
+                continue;
+            }
+            JsonNode properties = feature.path("properties");
+            String name = StringUtils.trimToNull(properties.path("name").asString(null));
+            String key = properties.path("osm_key").asString("");
+            String value = StringUtils.trimToNull(properties.path("osm_value").asString(null));
+            if (name == null || NOT_PLACES.contains(key) || "bus_station".equals(value)) {
+                continue;
+            }
+            String postcode = StringUtils.trimToNull(properties.path("postcode").asString(null));
+            if (postcode != null && (postcode.length() < 2 || !DEPARTMENTS.contains(postcode.substring(0, 2)))) {
+                continue;
+            }
+            String town = town(postcode, StringUtils.trimToNull(properties.path("city").asString(null)));
+            String label = town == null || town.equalsIgnoreCase(name) ? name : name + " (" + town + ")";
+            // Within 100 m, the same name is the same place (a shop and its building)
+            if (places.stream().anyMatch(place -> place.name().equals(label) && Geo.meters(lat, lon, place.lat(), place.lon()) < 100)) {
+                continue;
+            }
+            String street = StringUtils.trimToNull(properties.path("street").asString(null));
+            String number = StringUtils.trimToNull(properties.path("housenumber").asString(null));
+            places.add(new PlaceResult(PlaceResult.Type.POI,
+                "osm:" + properties.path("osm_type").asString("") + properties.path("osm_id").asString(""),
+                label, lat, lon, null,
+                street == null ? null : number == null ? street : number + " " + street, value));
+        }
+        return places;
+    }
+
+    /** "Paris 1er", "Paris 16e" from a Paris postcode, like the stop areas' towns; else the city */
+    static String town(String postcode, String city) {
+        if (postcode != null && postcode.matches("75\\d{3}")) {
+            int arrondissement = Integer.parseInt(postcode.substring(3));
+            if (arrondissement >= 1 && arrondissement <= 20) {
+                return "Paris " + (arrondissement == 1 ? "1er" : arrondissement + "e");
+            }
+        }
+        return city;
     }
 
     /** A text, or a list of texts (the Géoplateforme gives both) */

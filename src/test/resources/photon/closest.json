@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.3486, 48.8592]},
+      "properties": {
+        "osm_type": "N", "osm_id": 4001, "osm_key": "amenity", "osm_value": "pharmacy", "type": "house",
+        "name": "Pharmacie Lafayette des Halles", "street": "Boulevard de Sébastopol", "postcode": "75001", "city": "Paris"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [2.3497, 48.8591]},
+      "properties": {
+        "osm_type": "N", "osm_id": 4002, "osm_key": "amenity", "osm_value": "pharmacy", "type": "house",
+        "name": "Pharmacie Rivoli - Saint Jacques", "housenumber": "18", "street": "Rue Saint-Martin", "postcode": "75004", "city": "Paris"
+      }
+    }
+  ]
+}

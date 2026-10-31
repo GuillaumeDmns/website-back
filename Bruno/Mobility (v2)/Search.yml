@@ -26,7 +26,7 @@ http:
 
 docs:
   content: |-
-    Recherche unifiée, sans Navitia sauf en dernier recours. `lines` : lignes du GTFS dont le nom correspond (mot de mode optionnel). `places` : zones d'arrêt du GTFS (avec leurs lignes, id `IDFM:…`, la commune dans le nom ; tolère accents, fautes de frappe, « st »), puis adresses et lieux de la Géoplateforme IGN (`address:…`, `poi:…`, cache 10 min ; les adresses d'abord si le texte commence par un numéro). Navitia `places` seulement si la Géoplateforme échoue ou si rien n'est trouvé.
+    Recherche unifiée, sans Navitia sauf en dernier recours. `lines` : lignes du GTFS dont le nom correspond (mot de mode optionnel). `places` : zones d'arrêt du GTFS (avec leurs lignes, id `IDFM:…`, la commune dans le nom ; tolère accents, fautes de frappe, « st »), puis adresses de la Géoplateforme IGN (`address:…`) et lieux d'OpenStreetMap par Photon (`osm:…`, magasins, cafés, musées… avec `address` et `category`, le tag OSM ; les lieux de la Géoplateforme, `poi:…`, si Photon échoue), cache 10 min ; les adresses d'abord si le texte commence par un numéro, et ce qui porte les mots tapés avant ce qui y ressemble seulement. Un type de lieu (« pharmacie », « boulangeries ») avec une position : les plus proches. Navitia `places` seulement si la Géoplateforme échoue ou si rien n'est trouvé.
   type: text/markdown
 
 settings:
