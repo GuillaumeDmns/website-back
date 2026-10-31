@@ -18,6 +18,7 @@ import tools.jackson.databind.JsonNode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -222,8 +223,45 @@ class RealtimeIT extends IntegrationTest {
         assertThat(first.path("arrivalSource").asString()).isEqualTo("realtime");
         assertThat(Duration.between(Instant.parse(first.path("departure").path("time").asString()), Instant.parse(first.path("arrivalAt").asString())).toSeconds())
             .isBetween(178L, 182L);
-        // Then trains from the schedule
-        assertThat(rides.values().stream().skip(1)).allSatisfy(ride -> assertThat(ride.path("arrivalSource").asString()).isEqualTo("scheduled"));
+        // Not in the schedule: where it stops is not known
+        assertThat(first.has("stops")).isFalse();
+        // Then trains from the schedule, with their stops
+        assertThat(rides.values().stream().skip(1)).allSatisfy(ride -> {
+            assertThat(ride.path("arrivalSource").asString()).isEqualTo("scheduled");
+            assertThat(stopNames(ride)).containsExactly("Châtelet", "Gare de Lyon");
+        });
+    }
+
+    @Test
+    void tellsWhereEachRideStops() {
+        // RER A from Châtelet to Nation while it runs (from the next 8:00 or 20:00): trains through Gare de Lyon, and
+        // hourly express trains straight there
+        ZonedDateTime now = ZonedDateTime.now(ParisTime.ZONE);
+        ZonedDateTime after = now.truncatedTo(ChronoUnit.DAYS).withHour(8);
+        while (after.isBefore(now)) {
+            after = after.plusHours(12);
+        }
+        JsonNode rides = user.get("/api/v2/lines/C01742/rides?from=IDFM:70001&to=IDFM:70003&limit=10&after=" + after.toInstant()).json();
+
+        assertThat(rides.values().stream().map(RealtimeIT::stopNames))
+            .contains(List.of("Châtelet", "Nation"), List.of("Châtelet", "Gare de Lyon", "Nation"))
+            .allSatisfy(stops -> assertThat(stops).hasSizeBetween(2, 3));
+        // Each train at its own times, from its departure to its arrival, at its quays
+        JsonNode express = rides.values().stream().filter(ride -> ride.path("stops").size() == 2).findFirst().orElseThrow();
+        JsonNode stops = express.path("stops");
+        Instant departure = Instant.parse(express.path("departure").path("time").asString());
+        assertThat(Instant.parse(stops.path(0).path("time").asString())).isEqualTo(departure);
+        assertThat(Instant.parse(stops.path(1).path("time").asString()))
+            .isEqualTo(Instant.parse(express.path("arrivalAt").asString()))
+            .isEqualTo(departure.plus(Duration.ofMinutes(4)));
+        assertThat(stops.path(1).path("lat").asDouble()).isCloseTo(MiniGtfs.STOP_AREAS.get(MiniGtfs.NATION).lat() + 0.0001, within(1e-6));
+        JsonNode stopping = rides.values().stream().filter(ride -> ride.path("stops").size() == 3).findFirst().orElseThrow();
+        assertThat(Duration.between(Instant.parse(stopping.path("departure").path("time").asString()),
+            Instant.parse(stopping.path("stops").path(1).path("time").asString()))).isEqualTo(Duration.ofMinutes(3));
+    }
+
+    private static List<String> stopNames(JsonNode ride) {
+        return ride.path("stops").values().stream().map(stop -> stop.path("name").asString()).toList();
     }
 
     @Test

@@ -205,7 +205,8 @@ class NetworkIT extends IntegrationTest {
     void asksNavitiaWhenTheGeoplateformeIsDown() {
         EXTERNAL.on("/geoplateforme/search", Response.status(503));
 
-        JsonNode places = user.get("/api/v2/search?q=nation").json().path("places");
+        // From an area of its own: answers are cached per text and area, and other tests look for Nation too
+        JsonNode places = user.get("/api/v2/search?q=nation&lat=48.8484&lon=2.3959").json().path("places");
 
         assertThat(places.path(0).path("id").asString()).isEqualTo("IDFM:70003");
         assertThat(places.values().stream().map(place -> place.path("name").asString())).contains("10 Rue de Rivoli (Paris)");

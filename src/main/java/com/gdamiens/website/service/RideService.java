@@ -2,6 +2,7 @@ package com.gdamiens.website.service;
 
 import com.gdamiens.website.utils.ParisTime;
 import com.gdamiens.website.controller.object.v2.Departure;
+import com.gdamiens.website.controller.object.v2.JourneyStop;
 import com.gdamiens.website.controller.object.v2.LineBranch;
 import com.gdamiens.website.controller.object.v2.LineDepartures;
 import com.gdamiens.website.controller.object.v2.LineDetail;
@@ -12,6 +13,7 @@ import com.gdamiens.website.controller.object.v2.StopDepartures;
 import com.gdamiens.website.controller.object.v2.StopRef;
 import com.gdamiens.website.model.IDFMRoute;
 import com.gdamiens.website.repository.NetworkRepository;
+import com.gdamiens.website.repository.NetworkRepository.ScheduledRideRow;
 import com.gdamiens.website.service.DepartureService.Arrival;
 import com.gdamiens.website.utils.TtlCache;
 import org.apache.commons.lang3.StringUtils;
@@ -35,8 +37,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * Next departures of a line from a stop area that stop at a further one, with their arrival there: what a traveller
- * can take for a ride of a journey. Cached 30 s per line and stop pair.
+ * Next departures of a line from a stop area that stop at a further one, with their arrival there and, from their
+ * scheduled trip, where they stop in between (a direct train skips some): what a traveller can take for a ride of a
+ * journey. Cached 30 s per line and stop pair.
  * <p>
  * The arrival comes from the real-time arrivals at the alighting stop (its stop-monitoring: same train number, else
  * the vehicle expected there about when it should arrive), else from its scheduled GTFS trip shifted by its delay,
@@ -125,9 +128,9 @@ public class RideService {
         ZonedDateTime base = Optional.ofNullable(key.after()).orElse(now).atZone(ParisTime.ZONE);
         int baseSeconds = base.toLocalTime().toSecondOfDay();
         List<Scheduled> scheduled = networkRepository.findScheduledRides(IDFMRoute.toRouteId(key.lineId()), key.fromId(), key.toId(),
-                base.toLocalDate(), baseSeconds - 3600, baseSeconds + 3 * 3600).stream()
+                base.toLocalDate(), baseSeconds - 3600, baseSeconds + 3 * 3600, true).stream()
             .map(row -> new Scheduled(row.headsign(), DepartureService.isTrainNumber(row.tripShortName()) ? row.tripShortName() : null, row.terminus(), ParisTime.ofServiceDay(row.serviceDate(), row.departureSeconds()),
-                ParisTime.ofServiceDay(row.serviceDate(), row.arrivalSeconds())))
+                ParisTime.ofServiceDay(row.serviceDate(), row.arrivalSeconds()), stops(row)))
             .toList();
         boolean realtime = groups.stream().anyMatch(group -> group.departures().stream().anyMatch(Departure::realtime));
         List<Arrival> arrivals = realtime ? departureService.getArrivals(key.toId(), key.lineId()) : List.of();
@@ -160,7 +163,8 @@ public class RideService {
             if (!known && ride.departure().isAfter(until.plus(SAME_SCHEDULE))) {
                 String mission = DepartureService.isMission(ride.headsign()) ? ride.headsign() : null;
                 Departure departure = new Departure(ride.departure(), ride.departure(), false, null, null, null, mission, ride.number());
-                rides.add(new Ride(departure, Optional.ofNullable(ride.terminus()).orElse(ride.headsign()), ride.arrival(), "scheduled"));
+                rides.add(new Ride(departure, Optional.ofNullable(ride.terminus()).orElse(ride.headsign()), ride.arrival(), "scheduled",
+                    ride.shiftedStops(Duration.ZERO)));
             }
         }
         rides.sort(Comparator.comparing(ride -> ride.departure().time()));
@@ -196,7 +200,7 @@ public class RideService {
     /** Scheduled rides of the service day [date] (times past midnight included), earliest first */
     private List<ScheduledRide> scheduledDay(String lineId, String fromId, String toId, LocalDate date) {
         return dayCache.get(new DayKey(lineId, fromId, toId, date), key -> networkRepository.findScheduledRides(
-                IDFMRoute.toRouteId(key.lineId()), key.fromId(), key.toId(), key.date(), 0, 48 * 3600).stream()
+                IDFMRoute.toRouteId(key.lineId()), key.fromId(), key.toId(), key.date(), 0, 48 * 3600, false).stream()
             .filter(row -> row.serviceDate().equals(key.date()))
             .map(row -> new ScheduledRide(ParisTime.ofServiceDay(row.serviceDate(), row.departureSeconds()),
                 ParisTime.ofServiceDay(row.serviceDate(), row.arrivalSeconds()),
@@ -206,12 +210,27 @@ public class RideService {
             .toList());
     }
 
-    /** A scheduled trip from [from] to [to] */
-    private record Scheduled(String headsign, String number, String terminus, Instant departure, Instant arrival) {
+    /** A scheduled trip from [from] to [to], with where it stops from one to the other */
+    private record Scheduled(String headsign, String number, String terminus, Instant departure, Instant arrival, List<JourneyStop> stops) {
 
         Duration duration() {
             return Duration.between(departure, arrival);
         }
+
+        /** Its stops for a departure [delay] late, null when unknown */
+        List<JourneyStop> shiftedStops(Duration delay) {
+            return stops.isEmpty() ? null : stops.stream()
+                .map(stop -> new JourneyStop(stop.name(), stop.lat(), stop.lon(), stop.time() == null ? null : stop.time().plus(delay)))
+                .toList();
+        }
+    }
+
+    /** Where a scheduled ride stops, at its scheduled times */
+    private static List<JourneyStop> stops(ScheduledRideRow row) {
+        return row.stops().stream()
+            .map(stop -> new JourneyStop(stop.name(), stop.lat(), stop.lon(),
+                stop.seconds() == null ? null : ParisTime.ofServiceDay(row.serviceDate(), stop.seconds())))
+            .toList();
     }
 
     /**
@@ -270,15 +289,17 @@ public class RideService {
             .filter(DepartureService::isMission).findFirst().orElse(null);
         Departure shown = Objects.equals(mission, departure.mission()) ? departure : new Departure(departure.time(), departure.aimedTime(),
             departure.realtime(), departure.status(), departure.platform(), departure.atStop(), mission, number);
+        // Its stops from its scheduled trip: a direct train skips some
+        Duration delay = Duration.between(aimed, departure.time());
+        List<JourneyStop> stops = same == null ? null : same.shiftedStops(delay);
         if (arrival != null) {
-            return Optional.of(new Ride(shown, destination, arrival.time(), "realtime"));
+            return Optional.of(new Ride(shown, destination, arrival.time(), "realtime", stops));
         }
         if (same != null) {
-            Duration delay = Duration.between(aimed, departure.time());
-            return Optional.of(new Ride(shown, destination, same.arrival().plus(delay), "scheduled"));
+            return Optional.of(new Ride(shown, destination, same.arrival().plus(delay), "scheduled", stops));
         }
         Instant arrivalAt = typical == null ? null : departure.time().plus(typical);
-        return Optional.of(new Ride(shown, destination, arrivalAt, arrivalAt == null ? null : "typical"));
+        return Optional.of(new Ride(shown, destination, arrivalAt, arrivalAt == null ? null : "typical", null));
     }
 
     /**
