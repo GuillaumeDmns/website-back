@@ -45,6 +45,8 @@ public final class ExternalApis {
              {"zdcid": "70006", "zdctown": "Joinville-le-Pont"}, {"zdcid": "70007", "zdctown": "Paris 1er"}]"""));
         server.on("/geoplateforme/search", Response.json(Fixtures.read("geoplateforme/search.json")));
         server.on("/geoplateforme/reverse", Response.json(Fixtures.read("geoplateforme/reverse.json")));
+        server.on("/photon/api", Response.json(Fixtures.read("photon/search.json")));
+        server.on("/photon/reverse", Response.json(Fixtures.read("photon/closest.json")));
 
         server.on("/velib/station_information.json", Response.json("""
             {"data": {"stations": [

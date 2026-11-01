@@ -2,6 +2,7 @@ package com.gdamiens.website.service;
 
 import com.gdamiens.website.client.GeoplateformeClient;
 import com.gdamiens.website.client.NavitiaClient;
+import com.gdamiens.website.client.PhotonClient;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.PlaceResult;
 import com.gdamiens.website.controller.object.v2.SearchResult;
@@ -39,6 +40,8 @@ class SearchServiceTest {
 
     private final GeoplateformeClient geoplateformeClient = mock(GeoplateformeClient.class);
 
+    private final PhotonClient photonClient = mock(PhotonClient.class);
+
     private final NavitiaClient navitiaClient = mock(NavitiaClient.class);
 
     private SearchService searchService;
@@ -58,7 +61,7 @@ class SearchServiceTest {
             .collect(Collectors.toMap(LineSummary::id, Function.identity()));
         when(networkService.getLines()).thenReturn(lines);
         when(stopSearch.search(anyString(), any(), any(), anyInt())).thenReturn(List.of());
-        searchService = new SearchService(networkService, mock(NetworkRepository.class), stopSearch, geoplateformeClient, navitiaClient);
+        searchService = new SearchService(networkService, mock(NetworkRepository.class), stopSearch, geoplateformeClient, photonClient, navitiaClient);
     }
 
     @ParameterizedTest
@@ -147,11 +150,82 @@ class SearchServiceTest {
     @Test
     void putsTheAddressesFirstForAHouseNumber() {
         PlaceResult address = new PlaceResult(PlaceResult.Type.ADDRESS, "address:1", "8 Rue de Rivoli 75004 Paris", 48.85, 2.36, null);
-        List<PlaceResult> stops = List.of(CHATELET, CHATELET, CHATELET);
+        PlaceResult rivoli = new PlaceResult(PlaceResult.Type.STOP_AREA, "IDFM:1", "Louvre - Rivoli (Paris 1er)", 48.8609, 2.3409, List.of());
+        List<PlaceResult> stops = List.of(rivoli, rivoli, rivoli);
 
-        assertThat(SearchService.merge("8 rue", stops, List.of(address), 3)).containsExactly(address, CHATELET, CHATELET);
-        assertThat(SearchService.merge("rivoli", stops, List.of(address, address), 4)).containsExactly(CHATELET, CHATELET, address, address);
-        assertThat(SearchService.merge("rivoli", stops, List.of(), 4)).containsExactly(CHATELET, CHATELET, CHATELET);
+        assertThat(SearchService.merge("8 rue", stops, List.of(address), 3)).containsExactly(address, rivoli, rivoli);
+        assertThat(SearchService.merge("rivoli", stops, List.of(address, address), 4)).containsExactly(rivoli, rivoli, address, address);
+        assertThat(SearchService.merge("rivoli", stops, List.of(), 4)).containsExactly(rivoli, rivoli, rivoli);
+    }
+
+    @Test
+    void putsWhatIsNamedAfterTheQueryBeforeWhatOnlyResemblesIt() {
+        PlaceResult frachon = new PlaceResult(PlaceResult.Type.STOP_AREA, "IDFM:1", "Benoît Frachon (Bobigny)", 48.9, 2.44, List.of());
+        PlaceResult fnac = new PlaceResult(PlaceResult.Type.POI, "osm:N1", "Fnac (Paris 1er)", 48.86, 2.35, null);
+        PlaceResult chatelet = new PlaceResult(PlaceResult.Type.POI, "osm:N2", "Théâtre du Châtelet (Paris 1er)", 48.857, 2.346, null);
+
+        assertThat(SearchService.merge("fnac", List.of(frachon), List.of(fnac), 4)).containsExactly(fnac, frachon);
+        // Each word typed starts a word of the name, accents aside, the town aside
+        assertThat(SearchService.namedAfter("theatre chat", chatelet)).isTrue();
+        assertThat(SearchService.namedAfter("paris", fnac)).isFalse();
+    }
+
+    @Test
+    void readsOpenStreetMapPlacesOfIleDeFrance() {
+        List<PlaceResult> places = SearchService.toOsmPlaces(Fixtures.json("photon/search.json"));
+
+        // Each Fnac once (a shop and its building), no station (the GTFS has it), no street, not Lyon's
+        assertThat(places).extracting(PlaceResult::name)
+            .containsExactly("Fnac (Paris 1er)", "Fnac (Paris 6e)", "Decathlon (Montreuil)", "Musée du Louvre (Paris 1er)");
+        assertThat(places.getFirst()).isEqualTo(new PlaceResult(PlaceResult.Type.POI, "osm:N1345636994", "Fnac (Paris 1er)",
+            48.8622, 2.3482, null, "1-7 Rue Pierre Lescot", "electronics"));
+        assertThat(places.get(2).address()).isEqualTo("Place Hannah Arendt");
+        assertThat(SearchService.town("75116", "Paris")).isEqualTo("Paris 16e");
+        assertThat(SearchService.town("92100", "Boulogne-Billancourt")).isEqualTo("Boulogne-Billancourt");
+    }
+
+    @Test
+    void takesThePlacesFromOpenStreetMapAndTheAddressesFromTheGeoplateforme() {
+        when(stopSearch.search("fnac", 48.8512, 2.3456, 10)).thenReturn(List.of(
+            new PlaceResult(PlaceResult.Type.STOP_AREA, "IDFM:1", "Benoît Frachon (Bobigny)", 48.9, 2.44, List.of())));
+        when(geoplateformeClient.search("fnac", 48.85, 2.35, 15)).thenReturn(Fixtures.json("geoplateforme/search.json"));
+        when(photonClient.search("fnac", 48.85, 2.35, 15)).thenReturn(Fixtures.json("photon/search.json"));
+
+        SearchResult result = searchService.search("Fnac", 10, 48.8512, 2.3456);
+
+        // Named after what is typed, the shops come before a stop only resembling it; the IGN's places aside
+        assertThat(result.places()).extracting(PlaceResult::name).startsWith("Fnac (Paris 1er)", "Fnac (Paris 6e)", "Benoît Frachon (Bobigny)")
+            .contains("8 Rue de Rivoli 75004 Paris").doesNotContain("Tour Eiffel (Paris 7e)");
+    }
+
+    @Test
+    void keepsTheGeoplateformePlacesWhenPhotonFails() {
+        when(geoplateformeClient.search(anyString(), any(), any(), anyInt())).thenReturn(Fixtures.json("geoplateforme/search.json"));
+        when(photonClient.search(anyString(), any(), any(), anyInt())).thenThrow(new IllegalStateException("503"));
+
+        SearchResult result = searchService.search("tour eiffel", 10, null, null);
+
+        assertThat(result.places()).extracting(PlaceResult::name).startsWith("Tour Eiffel (Paris 7e)").contains("8 Rue de Rivoli 75004 Paris");
+        verify(navitiaClient, never()).getPlaces(anyString(), any(), any());
+    }
+
+    @Test
+    void findsTheClosestOfAKindNearTheCaller() {
+        PlaceResult pharmacieStop = new PlaceResult(PlaceResult.Type.STOP_AREA, "IDFM:1", "Pharmacie (Évry)", 48.63, 2.44, List.of());
+        when(stopSearch.search(anyString(), any(), any(), anyInt())).thenReturn(List.of(CHATELET, pharmacieStop, pharmacieStop));
+        // The area only (about 200 m)
+        when(photonClient.closest(List.of("amenity:pharmacy"), 48.858, 2.346, 3, 2.0)).thenReturn(Fixtures.json("photon/closest.json"));
+
+        SearchResult result = searchService.search("Pharmacie", 3, 48.8581, 2.3459);
+
+        // Then a stop named so, not one only resembling the word; the closest ones keep at least half
+        assertThat(result.places()).extracting(PlaceResult::name)
+            .containsExactly("Pharmacie Lafayette des Halles (Paris 1er)", "Pharmacie Rivoli - Saint Jacques (Paris 4e)", "Pharmacie (Évry)");
+        assertThat(result.places().getFirst().category()).isEqualTo("pharmacy");
+        // A name, not a kind: searched as any text
+        assertThat(SearchService.categoryTags("pharmacie lafayette")).isNull();
+        assertThat(SearchService.categoryTags("pharmacies")).containsExactly("amenity:pharmacy");
+        assertThat(SearchService.categoryTags("hopitaux")).containsExactly("amenity:hospital");
     }
 
     @Test

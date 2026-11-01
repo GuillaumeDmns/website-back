@@ -164,6 +164,12 @@ public class ApplicationProperties {
         /** IGN Géoplateforme geocoder (addresses, places, reverse geocoding; no key, 50 requests/s per IP) */
         private String geoplateforme = "https://data.geopf.fr/geocodage";
 
+        /**
+         * Photon geocoder on OpenStreetMap data (places: shops, cafés, cinemas, museums…; no key): komoot's public instance,
+         * free for a fair use, or one of our own (the same API) by changing this
+         */
+        private String photon = "https://photon.komoot.io";
+
         /** Opendatasoft export of the IDFM stop zones (zones de correspondance = GTFS stop areas), for their town */
         private String stopZones = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/zones-de-correspondance/exports/json";
 
@@ -200,6 +206,14 @@ public class ApplicationProperties {
 
         public void setGeoplateforme(String geoplateforme) {
             this.geoplateforme = geoplateforme;
+        }
+
+        public String getPhoton() {
+            return photon;
+        }
+
+        public void setPhoton(String photon) {
+            this.photon = photon;
         }
 
         public String getStopZones() {

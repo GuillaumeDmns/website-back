@@ -117,7 +117,8 @@ public class MobilityController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Search lines, stop areas (GTFS), addresses and points of interest (IGN Géoplateforme)",
+    @Operation(summary = "Search lines, stop areas (GTFS), addresses (IGN Géoplateforme) and places (OpenStreetMap through Photon); "
+        + "a kind of place near the caller (\"pharmacie\") gives the closest ones",
         security = @SecurityRequirement(name = "Auth. Token"))
     public SearchResult search(@Parameter(example = "chatelet") @RequestParam String q,
                                @Parameter(description = "Places, at most 20") @RequestParam(defaultValue = "10") int limit,
