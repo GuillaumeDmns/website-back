@@ -168,7 +168,7 @@ class TrafficServiceTest {
         NetworkRepository networkRepository = mock(NetworkRepository.class);
         when(networkRepository.findStopAreasOfQuays(any())).thenReturn(Map.of("IDFM:1003", "IDFM:70001"));
         TrafficService service = new TrafficService(disruptionsClient, elevatorClient, mock(NetworkService.class), networkRepository);
-        StopAreaDetail chatelet = new StopAreaDetail("IDFM:70001", "Châtelet", 48.8584, 2.3470, (short) 0, List.of(), List.of(), List.of());
+        StopAreaDetail chatelet = new StopAreaDetail("IDFM:70001", "Châtelet", 48.8584, 2.3470, (short) 0, List.of(), List.of(), List.of(), List.of());
 
         assertThat(service.getStopDisruptions(chatelet)).extracting(Disruption::id).containsExactly("chatelet-bus-stop-closed");
         assertThat(service.getStopDisruptions(chatelet)).hasSize(1);

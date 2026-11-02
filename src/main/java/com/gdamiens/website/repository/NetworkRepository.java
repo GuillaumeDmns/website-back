@@ -33,6 +33,8 @@ public class NetworkRepository {
 
     public record ConnectionRow(String id, String name, Integer minTransferSeconds) {}
 
+    public record EntranceRow(String id, String code, String name, double lat, double lon, Short wheelchairBoarding) {}
+
     public record TripPatternRow(int directionId, List<String> stopAreaIds, int tripCount, String shapeId, String headsign) {}
 
     public record ScheduledDepartureRow(String routeId, String headsign, LocalDate serviceDate, int departureSeconds) {}
@@ -197,6 +199,19 @@ public class NetworkRepository {
             Map.of("id", stopAreaId),
             (rs, i) -> new QuayRow(rs.getString(1), rs.getString(2), rs.getDouble(3), rs.getDouble(4), rs.getString(5),
                 getShort(rs, 6), toList(rs.getArray(7))));
+    }
+
+    /**
+     * The stop area's entrances (GTFS {@code location_type} 2), by number: {@code 2} before {@code 10}, unnumbered last.
+     */
+    public List<EntranceRow> findEntrances(String stopAreaId) {
+        return jdbc.query("""
+                SELECT stop_id, nullif(stop_code, ''), stop_name, stop_lat, stop_lon, wheelchair_boarding
+                FROM gtfs.stops
+                WHERE parent_station = :id AND location_type = 2
+                ORDER BY nullif(stop_code, '') IS NULL, length(stop_code), stop_code, stop_name, stop_id""",
+            Map.of("id", stopAreaId),
+            (rs, i) -> new EntranceRow(rs.getString(1), rs.getString(2), rs.getString(3), rs.getDouble(4), rs.getDouble(5), getShort(rs, 6)));
     }
 
     /**

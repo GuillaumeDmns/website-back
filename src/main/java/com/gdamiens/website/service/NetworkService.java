@@ -1,6 +1,7 @@
 package com.gdamiens.website.service;
 
 import com.gdamiens.website.controller.object.v2.Connection;
+import com.gdamiens.website.controller.object.v2.Entrance;
 import com.gdamiens.website.controller.object.v2.LineBranch;
 import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.LineDirection;
@@ -115,10 +116,15 @@ public class NetworkService {
                 .map(connection -> new Connection(connection.id(), connection.name(), connection.minTransferSeconds()))
                 .toList();
 
+            List<Entrance> entrances = networkRepository.findEntrances(id).stream()
+                .map(entrance -> new Entrance(entrance.id(), entrance.code(), entrance.name(), entrance.lat(), entrance.lon(),
+                    entrance.wheelchairBoarding()))
+                .toList();
+
             List<String> routeIds = quayRows.stream().flatMap(quay -> quay.routeIds().stream()).distinct().toList();
 
             return new StopAreaDetail(row.id(), row.name(), row.lat(), row.lon(), aggregateWheelchairBoarding(quayRows),
-                toLineSummaries(routeIds), quays, connections);
+                toLineSummaries(routeIds), quays, connections, entrances);
         }));
     }
 
