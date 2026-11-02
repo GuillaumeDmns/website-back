@@ -11,7 +11,7 @@ http:
 
 docs:
   content: |-
-    Zone d'arrêt : lignes, quais (accessibilité, lignes par quai) et correspondances à pied (`gtfs.transfers`). 404 si inconnue.
+    Zone d'arrêt : lignes, quais (accessibilité, lignes par quai), correspondances à pied (`gtfs.transfers`) et accès (`entrances` : entrées / sorties du GTFS, `location_type` 2, numéro `code` quand il existe, nom de la rue, position ; vide hors des gares). 404 si inconnue.
   type: text/markdown
 
 settings:

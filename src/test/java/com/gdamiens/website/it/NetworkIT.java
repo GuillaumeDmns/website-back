@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /** Network data read from the imported GTFS: stops, lines, branches, timetables, search, Vélib */
 class NetworkIT extends IntegrationTest {
@@ -59,6 +60,20 @@ class NetworkIT extends IntegrationTest {
             assertThat(connection.path("id").asString()).isEqualTo("IDFM:70007");
             assertThat(connection.path("minTransferSeconds").asInt()).isEqualTo(240);
         });
+    }
+
+    @Test
+    void listsTheWaysOutOfAStation() {
+        JsonNode entrances = user.get("/api/v2/stops/IDFM:70003").json().path("entrances");
+
+        // By number as on the signs, then the unnumbered one
+        assertThat(entrances.values().stream().map(entrance -> entrance.path("code").asString(null))).containsExactly("2", "10", null);
+        assertThat(entrances.path(0).path("name").asString()).isEqualTo("av. du Trône");
+        assertThat(entrances.path(0).path("wheelchairBoarding").asInt()).isEqualTo(1);
+        assertThat(entrances.path(0).path("lat").asDouble()).isCloseTo(48.8484 - 0.0005, within(0.00001));
+        assertThat(entrances.path(2).has("code")).isFalse();
+        // A stop without entrances in the GTFS: none
+        assertThat(user.get("/api/v2/stops/IDFM:70001").json().path("entrances")).isEmpty();
     }
 
     @Test

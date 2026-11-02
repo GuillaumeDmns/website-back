@@ -122,6 +122,10 @@ public final class MiniGtfs {
         quay("IDFM:6002", JOINVILLE, "1", "1", "");
         quay("IDFM:7001", LES_HALLES, "1", "1", "");
         quay("IDFM:8001", SAINT_LAZARE, "1", "1", "");
+        // Nation's ways out: numbered ones (2 before 10), then one without a number
+        entrance("IDFM:StopPlaceEntrance:3", NATION, "", "Place de la Nation", 0.0006, 0.0004, "0");
+        entrance("IDFM:StopPlaceEntrance:1", NATION, "10", "av. Dorian", -0.0004, -0.0011, "0");
+        entrance("IDFM:StopPlaceEntrance:2", NATION, "2", "av. du Trône", -0.0005, 0.0009, "1");
 
         file("transfers.txt", "from_stop_id,to_stop_id,transfer_type,min_transfer_time");
         row("transfers.txt", "IDFM:1003", "IDFM:7001", "2", "240");
@@ -161,6 +165,12 @@ public final class MiniGtfs {
         Stop parent = STOP_AREAS.get(stopArea);
         row("stops.txt", id, "", parent.name(), "", coordinate(parent.lat() + 0.0001), coordinate(parent.lon() + 0.0001), zone, "", "0",
             stopArea, wheelchair, platform);
+    }
+
+    private void entrance(String id, String stopArea, String code, String name, double latShift, double lonShift, String wheelchair) {
+        Stop parent = STOP_AREAS.get(stopArea);
+        row("stops.txt", id, code, name, "", coordinate(parent.lat() + latShift), coordinate(parent.lon() + lonShift), "", "", "2",
+            stopArea, wheelchair, "");
     }
 
     /** Trips every [headway] s from [first] to [last], [hop] s between stops, along a shape through the stops */
