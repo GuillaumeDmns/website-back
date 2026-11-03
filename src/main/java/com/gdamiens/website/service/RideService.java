@@ -63,6 +63,9 @@ public class RideService {
     /** Same trip in the real-time departures and the schedule */
     private static final Duration SAME_SCHEDULE = Duration.ofSeconds(60);
 
+    /** A vehicle listed at the second of two stops of a stop area in a row comes at most this long after the first */
+    private static final Duration NEXT_STOP_GAP = Duration.ofMinutes(3);
+
     /** Scheduled trips used for the usual ride time: leaving this close to the departure */
     private static final Duration TYPICAL_WINDOW = Duration.ofMinutes(45);
 
@@ -134,7 +137,11 @@ public class RideService {
             .toList();
         boolean realtime = groups.stream().anyMatch(group -> group.departures().stream().anyMatch(Departure::realtime));
         List<Arrival> arrivals = realtime ? departureService.getArrivals(key.toId(), key.lineId()) : List.of();
-        Set<String> destinations = destinations(key, scheduled);
+        LineDetail detail = networkService.getLineDetail(key.lineId()).orElse(null);
+        Set<String> destinations = destinations(key, scheduled, detail);
+        // A line serving two stops of [from] in a row (a bus around a square) has each vehicle listed at both: its
+        // stops share a name, which the stop's departures never compare (a station's platforms)
+        boolean twice = servesTwiceInARow(detail, key.fromId());
 
         List<Ride> rides = new ArrayList<>();
         // Departures listed by the stop for the destinations going to [to], until when each destination is listed
@@ -143,7 +150,7 @@ public class RideService {
         for (LineDepartures group : groups) {
             boolean towards = served(group.destination(), destinations);
             int before = rides.size();
-            for (Departure departure : group.departures()) {
+            for (Departure departure : twice ? onceEach(group.departures()) : group.departures()) {
                 ride(group.destination(), departure, towards, arrivals, scheduled).ifPresent(rides::add);
             }
             if (rides.size() > before) {
@@ -306,10 +313,9 @@ public class RideService {
      * Destinations of trips from [from] stopping at [to]: headsigns of the scheduled ones, and stops at or after
      * [to] on the branches serving [from] then [to]
      */
-    private Set<String> destinations(Key key, List<Scheduled> scheduled) {
+    private static Set<String> destinations(Key key, List<Scheduled> scheduled, LineDetail detail) {
         Set<String> names = new HashSet<>();
         scheduled.forEach(ride -> names.add(ride.headsign()));
-        LineDetail detail = networkService.getLineDetail(key.lineId()).orElse(null);
         if (detail != null) {
             for (var direction : detail.directions()) {
                 for (LineBranch branch : direction.branches()) {
@@ -324,6 +330,41 @@ public class RideService {
         }
         names.remove(null);
         return names;
+    }
+
+    /** A branch of the line stops at two stops of [stopAreaId] in a row */
+    static boolean servesTwiceInARow(LineDetail detail, String stopAreaId) {
+        if (detail == null) {
+            return false;
+        }
+        for (var direction : detail.directions()) {
+            for (LineBranch branch : direction.branches()) {
+                List<StopRef> stops = branch.stops();
+                for (int k = 1; k < stops.size(); k++) {
+                    if (stopAreaId.equals(stops.get(k).id()) && stopAreaId.equals(stops.get(k - 1).id())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * [departures] (earliest first, of one destination) with each vehicle once: the one listed again at the next
+     * stop, at most {@link #NEXT_STOP_GAP} later, is left out (never another numbered train)
+     */
+    static List<Departure> onceEach(List<Departure> departures) {
+        List<Departure> kept = new ArrayList<>();
+        for (Departure departure : departures) {
+            Departure last = kept.isEmpty() ? null : kept.getLast();
+            boolean otherTrain = last != null && last.trainNumber() != null && departure.trainNumber() != null
+                && !last.trainNumber().equals(departure.trainNumber());
+            if (last == null || otherTrain || Duration.between(last.time(), departure.time()).compareTo(NEXT_STOP_GAP) > 0) {
+                kept.add(departure);
+            }
+        }
+        return kept;
     }
 
     private static boolean served(String destination, Set<String> destinations) {

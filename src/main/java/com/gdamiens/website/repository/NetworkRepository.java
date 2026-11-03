@@ -355,7 +355,9 @@ public class NetworkRepository {
      * Scheduled trips of the route leaving a quay of {@code fromId} between {@code fromSeconds} and {@code toSeconds}
      * after midnight of {@code today} (Europe/Paris, trips of the previous service day included) and stopping
      * further at a quay of {@code toId}, with the times at both and the name of the trip's last stop; with
-     * {@code withStops}, the stops in between too (a direct train skips some).
+     * {@code withStops}, the stops in between too (a direct train skips some). One row per pass: a route serving two
+     * quays of a stop area (a bus around a square) leaves from the first one of {@code fromId} and arrives at the first
+     * one of {@code toId}.
      */
     public List<ScheduledRideRow> findScheduledRides(String routeId, String fromId, String toId, LocalDate today, int fromSeconds, int toSeconds,
                                                      boolean withStops) {
@@ -369,10 +371,10 @@ public class NetworkRepository {
                 CROSS JOIN LATERAL (
                   SELECT array_agg(coalesce(p.stop_name, q.stop_name) ORDER BY s.stop_sequence) AS names,
                          array_agg(q.stop_lat ORDER BY s.stop_sequence) AS lats, array_agg(q.stop_lon ORDER BY s.stop_sequence) AS lons,
-                         array_agg(extract(epoch FROM CASE WHEN s.stop_sequence = a.stop_sequence THEN coalesce(s.arrival_time, s.departure_time)
+                         array_agg(extract(epoch FROM CASE WHEN s.stop_sequence = c.to_sequence THEN coalesce(s.arrival_time, s.departure_time)
                                                            ELSE coalesce(s.departure_time, s.arrival_time) END)::int ORDER BY s.stop_sequence) AS times
                   FROM gtfs.stop_times s JOIN gtfs.stops q ON q.stop_id = s.stop_id LEFT JOIN gtfs.stops p ON p.stop_id = q.parent_station
-                  WHERE s.trip_id = c.trip_id AND s.stop_sequence BETWEEN c.stop_sequence AND a.stop_sequence
+                  WHERE s.trip_id = c.trip_id AND s.stop_sequence BETWEEN c.stop_sequence AND c.to_sequence
                     AND (coalesce(s.pickup_type, 0) <> 1 OR coalesce(s.drop_off_type, 0) <> 1)
                 ) stops""";
 
@@ -390,14 +392,32 @@ public class NetworkRepository {
                     SELECT s.trip_id, s.departure_time, s.stop_sequence, s.stop_headsign FROM gtfs.stop_times s
                     WHERE s.stop_id = fq.stop_id AND s.departure_time BETWEEN d.lo AND d.hi AND coalesce(s.pickup_type, 0) <> 1
                   ) st ON true
+                ),
+                -- Each boarding with the first quay of [to] after it (a route serving two of its quays arrives at the first one)
+                legs AS MATERIALIZED (
+                  SELECT c.service_date, c.trip_id, c.departure_time, c.stop_sequence, c.stop_headsign, a.arrival_time,
+                         a.stop_sequence AS to_sequence
+                  FROM candidates c
+                  JOIN gtfs.trips t ON t.trip_id = c.trip_id AND t.route_id = :routeId
+                  JOIN active ac ON ac.service_id = t.service_id AND ac.service_date = c.service_date
+                  JOIN LATERAL (
+                    SELECT s.arrival_time, s.stop_sequence FROM gtfs.stop_times s
+                    WHERE s.trip_id = c.trip_id AND s.stop_sequence > c.stop_sequence
+                      AND s.stop_id IN (SELECT stop_id FROM to_quays) AND coalesce(s.drop_off_type, 0) <> 1
+                    ORDER BY s.stop_sequence LIMIT 1
+                  ) a ON true
+                ),
+                -- One boarding per arrival: the first quay of [from] (two of its quays in a row are one pass, like the stop's
+                -- departures keep the first)
+                rides AS MATERIALIZED (
+                  SELECT DISTINCT ON (service_date, trip_id, to_sequence) *
+                  FROM legs
+                  ORDER BY service_date, trip_id, to_sequence, stop_sequence
                 )
                 SELECT DISTINCT coalesce(c.stop_headsign, t.trip_headsign), t.trip_short_name, last.name, c.service_date,
-                       extract(epoch FROM c.departure_time)::int, extract(epoch FROM a.arrival_time)::int%s
-                FROM candidates c
-                JOIN gtfs.trips t ON t.trip_id = c.trip_id AND t.route_id = :routeId
-                JOIN active ac ON ac.service_id = t.service_id AND ac.service_date = c.service_date
-                JOIN gtfs.stop_times a ON a.trip_id = c.trip_id AND a.stop_sequence > c.stop_sequence
-                 AND a.stop_id IN (SELECT stop_id FROM to_quays) AND coalesce(a.drop_off_type, 0) <> 1
+                       extract(epoch FROM c.departure_time)::int, extract(epoch FROM c.arrival_time)::int%s
+                FROM rides c
+                JOIN gtfs.trips t ON t.trip_id = c.trip_id
                 CROSS JOIN LATERAL (
                   SELECT coalesce(p.stop_name, q.stop_name) AS name
                   FROM gtfs.stop_times l JOIN gtfs.stops q ON q.stop_id = l.stop_id LEFT JOIN gtfs.stops p ON p.stop_id = q.parent_station
