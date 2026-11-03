@@ -260,6 +260,53 @@ class RealtimeIT extends IntegrationTest {
             Instant.parse(stopping.path("stops").path(1).path("time").asString()))).isEqualTo(Duration.ofMinutes(3));
     }
 
+    @Test
+    void givesEachBusOnceWhenItsLineServesTwoStopsOfTheStopArea() {
+        // The 341 at Péreire: each bus listed at its two stops of the same name, a minute apart, without scheduled time
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        EXTERNAL.on("/prim/stop-monitoring", request -> Response.json(SiriJson.stopMonitoring(
+            "STIF:StopArea:SP:70009:".equals(request.param("MonitoringRef")) ? List.of(
+                new SiriJson.Visit(MiniGtfs.BUS_341, "Charles de Gaulle - Étoile", null, now.plusSeconds(300), null, null, null, "Péreire Levallois"),
+                new SiriJson.Visit(MiniGtfs.BUS_341, "Charles de Gaulle - Étoile", null, now.plusSeconds(360), null, null, null, "Péreire Levallois"))
+                : List.of())));
+
+        JsonNode rides = user.get("/api/v2/lines/" + MiniGtfs.BUS_341 + "/rides?from=" + MiniGtfs.PEREIRE + "&to=" + MiniGtfs.ETOILE + "&limit=10").json();
+
+        List<Instant> departures = departures(rides);
+        assertThat(departures.getFirst()).isEqualTo(now.plusSeconds(300));
+        assertThat(departures).doesNotHaveDuplicates().doesNotContain(now.plusSeconds(360));
+        // Then the schedule: each bus once, a quarter of an hour apart, to the first stop of Étoile
+        for (int k = 2; k < departures.size(); k++) {
+            assertThat(Duration.between(departures.get(k - 1), departures.get(k))).isEqualTo(Duration.ofMinutes(15));
+        }
+        assertThat(rides.values().stream().skip(1)).isNotEmpty().allSatisfy(ride -> assertThat(rideTime(ride)).isEqualTo(Duration.ofMinutes(2)));
+    }
+
+    @Test
+    void givesEachScheduledBusOnceFromAndToTwoStopsOfAStopArea() {
+        // Back from Étoile, without real time: each bus once, from its first stop of Étoile to its first of Péreire
+        JsonNode rides = user.get("/api/v2/lines/" + MiniGtfs.BUS_341 + "/rides?from=" + MiniGtfs.ETOILE + "&to=" + MiniGtfs.PEREIRE + "&limit=10").json();
+
+        List<Instant> departures = departures(rides);
+        assertThat(departures).hasSizeGreaterThan(2).doesNotHaveDuplicates();
+        for (int k = 1; k < departures.size(); k++) {
+            assertThat(Duration.between(departures.get(k - 1), departures.get(k))).isEqualTo(Duration.ofMinutes(15));
+        }
+        assertThat(rides.values()).allSatisfy(ride -> {
+            assertThat(ride.path("arrivalSource").asString()).isEqualTo("scheduled");
+            assertThat(rideTime(ride)).isEqualTo(Duration.ofMinutes(2));
+            assertThat(stopNames(ride)).containsExactly("Charles de Gaulle - Étoile", "Charles de Gaulle - Étoile", "Péreire Levallois");
+        });
+    }
+
+    private static List<Instant> departures(JsonNode rides) {
+        return rides.values().stream().map(ride -> Instant.parse(ride.path("departure").path("time").asString())).toList();
+    }
+
+    private static Duration rideTime(JsonNode ride) {
+        return Duration.between(Instant.parse(ride.path("departure").path("time").asString()), Instant.parse(ride.path("arrivalAt").asString()));
+    }
+
     private static List<String> stopNames(JsonNode ride) {
         return ride.path("stops").values().stream().map(stop -> stop.path("name").asString()).toList();
     }
