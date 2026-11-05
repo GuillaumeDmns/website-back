@@ -52,7 +52,7 @@ public final class SiriJson {
             journey.putObject("LineRef").put("value", "STIF:Line::" + visit.lineId() + ":");
             journey.putArray("DestinationName").addObject().put("value", visit.destination());
             if (visit.journeyNote() != null) {
-                journey.putArray("JourneyNote").addObject().put("value", visit.journeyNote());
+                journey.putArray("JourneyPatternName").addObject().put("value", visit.journeyNote());
             }
             if (visit.vehicleJourneyName() != null) {
                 journey.putArray("VehicleJourneyName").addObject().put("value", visit.vehicleJourneyName());

@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "DestinationName",
     "VehicleJourneyName",
     "JourneyNote",
+    "JourneyPatternName",
     "MonitoredCall",
     "TrainNumbers",
     "VehicleFeatureRef",
@@ -48,6 +49,8 @@ public class MonitoredVehicleJourney {
     private List<VehicleJourneyName> vehicleJourneyName = null;
     @JsonProperty("JourneyNote")
     private List<JourneyNote> journeyNote = null;
+    @JsonProperty("JourneyPatternName")
+    private List<JourneyPatternName> journeyPatternName = null;
     @JsonProperty("MonitoredCall")
     private MonitoredCall monitoredCall;
     @JsonProperty("TrainNumbers")
@@ -201,6 +204,16 @@ public class MonitoredVehicleJourney {
     @JsonProperty("FirstOrLastJourney")
     public void setFirstOrLastJourney(FirstOrLastJourney firstOrLastJourney) {
         this.firstOrLastJourney = firstOrLastJourney;
+    }
+
+    @JsonProperty("JourneyPatternName")
+    public List<JourneyPatternName> getJourneyPatternName() {
+        return journeyPatternName;
+    }
+
+    @JsonProperty("JourneyPatternName")
+    public void setJourneyPatternName(List<JourneyPatternName> journeyPatternName) {
+        this.journeyPatternName = journeyPatternName;
     }
 
     @JsonAnyGetter

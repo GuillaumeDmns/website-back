@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "ArrivalStatus",
     "ArrivalProximityText",
     "ArrivalPlatformName",
-    "DepartureStatus"
+    "DepartureStatus",
+    "ArrivalBoardingActivity",
+    "DepartureBoardingActivity"
 })
 @Generated("jsonschema2pojo")
 public class EstimatedCall {
@@ -48,6 +50,11 @@ public class EstimatedCall {
     private String aimedDepartureTime;
     @JsonProperty("ArrivalProximityText")
     private ArrivalProximityText arrivalProximityText;
+
+    @JsonProperty("ArrivalBoardingActivity")
+    private String arrivalBoardingActivity;
+    @JsonProperty("DepartureBoardingActivity")
+    private String departureBoardingActivity;
 
     // Other properties for processing
     private String recordedAtTime;
@@ -155,6 +162,26 @@ public class EstimatedCall {
     @JsonProperty("ArrivalProximityText")
     public void setArrivalProximityText(ArrivalProximityText arrivalProximityText) {
         this.arrivalProximityText = arrivalProximityText;
+    }
+
+    @JsonProperty("ArrivalBoardingActivity")
+    public String getArrivalBoardingActivity() {
+        return arrivalBoardingActivity;
+    }
+
+    @JsonProperty("ArrivalBoardingActivity")
+    public void setArrivalBoardingActivity(String arrivalBoardingActivity) {
+        this.arrivalBoardingActivity = arrivalBoardingActivity;
+    }
+
+    @JsonProperty("DepartureBoardingActivity")
+    public String getDepartureBoardingActivity() {
+        return departureBoardingActivity;
+    }
+
+    @JsonProperty("DepartureBoardingActivity")
+    public void setDepartureBoardingActivity(String departureBoardingActivity) {
+        this.departureBoardingActivity = departureBoardingActivity;
     }
 
     public String getRecordedAtTime() {

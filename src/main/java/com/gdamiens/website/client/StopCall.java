@@ -5,6 +5,7 @@ import com.gdamiens.website.client.siri.DestinationDisplay;
 import com.gdamiens.website.client.siri.DestinationName;
 import com.gdamiens.website.client.siri.DirectionName;
 import com.gdamiens.website.client.siri.JourneyNote;
+import com.gdamiens.website.client.siri.JourneyPatternName;
 import com.gdamiens.website.client.siri.LineRef;
 import com.gdamiens.website.client.siri.MonitoredCall;
 import com.gdamiens.website.client.siri.MonitoredStopVisit;
@@ -29,11 +30,11 @@ import java.util.stream.Stream;
  * @param destination        destination name, else its display, else the direction
  * @param platform           null when unknown
  * @param vehicleJourneyName SNCF train number or mission code
- * @param journeyNote        SNCF mission code on some lines
+ * @param journeyPatternName SNCF mission code on some lines ({@code JourneyPatternName}, formerly {@code JourneyNote}, removed by PRIM)
  */
 public record StopCall(String lineId, String destination, Instant aimedDeparture, Instant expectedDeparture,
                        Instant aimedArrival, Instant expectedArrival, String departureStatus, String arrivalStatus,
-                       String platform, Boolean vehicleAtStop, String vehicleJourneyName, String journeyNote, String stopName) {
+                       String platform, Boolean vehicleAtStop, String vehicleJourneyName, String journeyPatternName, String stopName) {
 
     /** Expected departure, else arrival, else the aimed ones; null without any time */
     public Instant departureTime() {
@@ -78,7 +79,7 @@ public record StopCall(String lineId, String destination, Instant aimedDeparture
             monitoredCall.map(MonitoredCall::getArrivalPlatformName).map(ArrivalPlatformName::getValue).map(StopCall::platform).orElse(null),
             monitoredCall.map(MonitoredCall::getVehicleAtStop).orElse(null),
             first(journey.getVehicleJourneyName(), VehicleJourneyName::getValue),
-            first(journey.getJourneyNote(), JourneyNote::getValue),
+            firstNonBlank(first(journey.getJourneyPatternName(), JourneyPatternName::getValue), first(journey.getJourneyNote(), JourneyNote::getValue)),
             StringUtils.trimToNull(first(monitoredCall.map(MonitoredCall::getStopPointName).orElse(null), StopPointName::getValue)));
     }
 

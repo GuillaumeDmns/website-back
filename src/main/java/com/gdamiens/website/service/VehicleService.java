@@ -18,6 +18,7 @@ import com.gdamiens.website.client.siri.EstimatedCall;
 import com.gdamiens.website.client.siri.EstimatedCalls;
 import com.gdamiens.website.client.siri.EstimatedVehicleJourney;
 import com.gdamiens.website.client.siri.JourneyNote;
+import com.gdamiens.website.client.siri.JourneyPatternName;
 import com.gdamiens.website.client.siri.RecordedCall;
 import com.gdamiens.website.client.siri.RecordedCalls;
 import com.gdamiens.website.client.siri.StopPointRef;
@@ -358,15 +359,21 @@ public class VehicleService {
             : Optional.ofNullable(stopArea(destinationRef, quayStopAreas)).orElse(destinationRef);
         String name = Optional.ofNullable(journey.getVehicleJourneyName()).orElse(List.of()).stream()
             .map(VehicleJourneyName::getValue).filter(StringUtils::isNotBlank).findFirst()
-            .or(() -> Optional.ofNullable(journey.getJourneyNote()).orElse(List.of()).stream()
-                .map(JourneyNote::getValue).filter(StringUtils::isNotBlank).findFirst())
+            .or(() -> missionCodes(journey).filter(StringUtils::isNotBlank).findFirst())
             .orElse(null);
         String number = Stream.concat(
                 Optional.ofNullable(journey.getVehicleJourneyName()).orElse(List.of()).stream().map(VehicleJourneyName::getValue),
-                Optional.ofNullable(journey.getJourneyNote()).orElse(List.of()).stream().map(JourneyNote::getValue))
+                missionCodes(journey))
             .filter(DepartureService::isTrainNumber)
             .findFirst().orElse(null);
         return new Run(id, name, number, destination(journey), destinationId, calls, recorded(journey, quayStopAreas));
+    }
+
+    /** Mission code: {@code JourneyPatternName}, else the former {@code JourneyNote} (removed by PRIM) */
+    private static Stream<String> missionCodes(EstimatedVehicleJourney journey) {
+        return Stream.concat(
+            Optional.ofNullable(journey.getJourneyPatternName()).orElse(List.of()).stream().map(JourneyPatternName::getValue),
+            Optional.ofNullable(journey.getJourneyNote()).orElse(List.of()).stream().map(JourneyNote::getValue));
     }
 
     /** Every status given for the call says it is cancelled */

@@ -250,7 +250,7 @@ public class DepartureService {
             StringUtils.firstNonBlank(call.departureStatus(), call.arrivalStatus()),
             call.platform(),
             call.vehicleAtStop(),
-            Stream.of(call.vehicleJourneyName(), call.journeyNote()).filter(DepartureService::isMission).findFirst().orElse(null),
+            Stream.of(call.vehicleJourneyName(), call.journeyPatternName()).filter(DepartureService::isMission).findFirst().orElse(null),
             Optional.ofNullable(call.vehicleJourneyName()).filter(DepartureService::isTrainNumber).orElse(null));
     }
 
@@ -332,8 +332,8 @@ public class DepartureService {
     /** [later] is [earlier]'s vehicle at the next stop: 0 to 5 min after it, and not another numbered train */
     private static boolean repeats(StopCall earlier, StopCall later) {
         Duration gap = Duration.between(earlier.departureTime(), later.departureTime());
-        String earlierTrain = earlier.journeyNote() != null ? earlier.journeyNote() : earlier.vehicleJourneyName();
-        String laterTrain = later.journeyNote() != null ? later.journeyNote() : later.vehicleJourneyName();
+        String earlierTrain = earlier.journeyPatternName() != null ? earlier.journeyPatternName() : earlier.vehicleJourneyName();
+        String laterTrain = later.journeyPatternName() != null ? later.journeyPatternName() : later.vehicleJourneyName();
         boolean otherTrain = earlierTrain != null && laterTrain != null && !earlierTrain.equals(laterTrain);
         return !gap.isNegative() && gap.compareTo(NEIGHBOUR_STOP_GAP) <= 0 && !otherTrain;
     }

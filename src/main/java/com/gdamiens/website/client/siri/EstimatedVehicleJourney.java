@@ -29,6 +29,10 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "OperatorRef",
     "ProductCategoryRef",
     "JourneyNote",
+    "JourneyPatternRef",
+    "JourneyPatternName",
+    "OriginAimedDepartureTime",
+    "DestinationAimedArrivalTime",
     "FirstOrLastJourney",
     "RecordedCalls",
     "EstimatedCalls",
@@ -67,6 +71,14 @@ public class EstimatedVehicleJourney {
     private ProductCategoryRef productCategoryRef;
     @JsonProperty("JourneyNote")
     private List<JourneyNote> journeyNote = null;
+    @JsonProperty("JourneyPatternRef")
+    private JourneyPatternRef journeyPatternRef;
+    @JsonProperty("JourneyPatternName")
+    private List<JourneyPatternName> journeyPatternName = null;
+    @JsonProperty("OriginAimedDepartureTime")
+    private String originAimedDepartureTime;
+    @JsonProperty("DestinationAimedArrivalTime")
+    private String destinationAimedArrivalTime;
     @JsonProperty("FirstOrLastJourney")
     private FirstOrLastJourneyEnum firstOrLastJourney;
     @JsonProperty("RecordedCalls")
@@ -266,6 +278,46 @@ public class EstimatedVehicleJourney {
     @JsonProperty("VehicleJourneyName")
     public void setVehicleJourneyName(List<VehicleJourneyName> vehicleJourneyName) {
         this.vehicleJourneyName = vehicleJourneyName;
+    }
+
+    @JsonProperty("JourneyPatternRef")
+    public JourneyPatternRef getJourneyPatternRef() {
+        return journeyPatternRef;
+    }
+
+    @JsonProperty("JourneyPatternRef")
+    public void setJourneyPatternRef(JourneyPatternRef journeyPatternRef) {
+        this.journeyPatternRef = journeyPatternRef;
+    }
+
+    @JsonProperty("JourneyPatternName")
+    public List<JourneyPatternName> getJourneyPatternName() {
+        return journeyPatternName;
+    }
+
+    @JsonProperty("JourneyPatternName")
+    public void setJourneyPatternName(List<JourneyPatternName> journeyPatternName) {
+        this.journeyPatternName = journeyPatternName;
+    }
+
+    @JsonProperty("OriginAimedDepartureTime")
+    public String getOriginAimedDepartureTime() {
+        return originAimedDepartureTime;
+    }
+
+    @JsonProperty("OriginAimedDepartureTime")
+    public void setOriginAimedDepartureTime(String originAimedDepartureTime) {
+        this.originAimedDepartureTime = originAimedDepartureTime;
+    }
+
+    @JsonProperty("DestinationAimedArrivalTime")
+    public String getDestinationAimedArrivalTime() {
+        return destinationAimedArrivalTime;
+    }
+
+    @JsonProperty("DestinationAimedArrivalTime")
+    public void setDestinationAimedArrivalTime(String destinationAimedArrivalTime) {
+        this.destinationAimedArrivalTime = destinationAimedArrivalTime;
     }
 
     @JsonAnyGetter
