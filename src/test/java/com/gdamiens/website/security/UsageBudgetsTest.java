@@ -23,6 +23,7 @@ class UsageBudgetsTest {
         properties.getBudget().setUserJourneysPerDay(10);
         properties.getBudget().setUserJourneysPerHour(5);
         properties.getBudget().setGuestTokensPerIpPerHour(2);
+        properties.getBudget().setGuestJourneysPerIpPerDay(4);
         budgets = new UsageBudgets(new RateLimiter(), properties);
     }
 
@@ -30,26 +31,41 @@ class UsageBudgetsTest {
     void guestsGetAFewJourneysADay() {
         Authentication guest = guest("guest:1");
         for (int i = 0; i < 3; i++) {
-            budgets.consumeJourney(guest);
+            budgets.consumeJourney(guest, "203.0.113.1");
         }
 
-        assertThatThrownBy(() -> budgets.consumeJourney(guest))
+        assertThatThrownBy(() -> budgets.consumeJourney(guest, "203.0.113.1"))
             .isInstanceOfSatisfying(CustomException.class, e -> {
                 assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
                 assertThat(e.getCode()).isEqualTo(UsageBudgets.GUEST_JOURNEY_LIMIT);
             });
         // Another device has its own budget
-        assertThatNoException().isThrownBy(() -> budgets.consumeJourney(guest("guest:2")));
+        assertThatNoException().isThrownBy(() -> budgets.consumeJourney(guest("guest:2"), "203.0.113.1"));
+    }
+
+    @Test
+    void theGuestDevicesOfAnAddressShareABudget() {
+        // A new guest token for every search: each device is within its own budget, their address is not
+        for (int i = 0; i < 4; i++) {
+            budgets.consumeJourney(guest("guest:new-" + i), "203.0.113.7");
+        }
+
+        assertThatThrownBy(() -> budgets.consumeJourney(guest("guest:new-4"), "203.0.113.7"))
+            .isInstanceOfSatisfying(CustomException.class, e -> assertThat(e.getCode()).isEqualTo(UsageBudgets.GUEST_JOURNEY_LIMIT));
+        // Elsewhere, and for the accounts there, nothing changes
+        assertThatNoException().isThrownBy(() -> budgets.consumeJourney(guest("guest:new-5"), "203.0.113.8"));
+        assertThatNoException().isThrownBy(
+            () -> budgets.consumeJourney(new TestingAuthenticationToken("ada", null, Role.ROLE_USER.name()), "203.0.113.7"));
     }
 
     @Test
     void accountsAreLimitedPerHour() {
         Authentication user = new TestingAuthenticationToken("ada", null, Role.ROLE_USER.name());
         for (int i = 0; i < 5; i++) {
-            budgets.consumeJourney(user);
+            budgets.consumeJourney(user, "203.0.113.1");
         }
 
-        assertThatThrownBy(() -> budgets.consumeJourney(user))
+        assertThatThrownBy(() -> budgets.consumeJourney(user, "203.0.113.1"))
             .isInstanceOfSatisfying(CustomException.class, e -> assertThat(e.getCode()).isEqualTo(UsageBudgets.JOURNEY_LIMIT));
     }
 

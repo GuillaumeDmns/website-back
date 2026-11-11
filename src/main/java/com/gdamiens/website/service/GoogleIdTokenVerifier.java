@@ -4,6 +4,8 @@ import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.configuration.HttpClientConfig;
 import com.gdamiens.website.exceptions.CustomException;
 import org.apache.hc.client5.http.classic.HttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -26,6 +28,8 @@ import java.util.Set;
  */
 @Service
 public class GoogleIdTokenVerifier {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GoogleIdTokenVerifier.class);
 
     private static final Set<String> ISSUERS = Set.of("accounts.google.com", "https://accounts.google.com");
 
@@ -70,7 +74,9 @@ public class GoogleIdTokenVerifier {
         try {
             token = decoder.decode(idToken);
         } catch (JwtException e) {
-            throw new CustomException("Invalid Google ID token: " + e.getMessage(), HttpStatus.UNAUTHORIZED);
+            // Why stays in the logs: it tells a forger what to fix
+            LOGGER.info("Google ID token refused: {}", e.getMessage());
+            throw new CustomException("Invalid Google ID token", HttpStatus.UNAUTHORIZED);
         }
         String firstName = token.getClaimAsString("given_name");
         return new GoogleAccount(token.getSubject(), token.getClaimAsString("email"),

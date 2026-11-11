@@ -39,7 +39,8 @@ public class NavitiaClient extends PrimClient {
      * Places matching a text (stop areas, addresses, points of interest...)
      */
     public JsonNode getPlaces(String query, List<String> types, Integer count) {
-        log.info("Getting places for query {}", query);
+        // Never what was typed nor a position in the logs (nginx leaves the query strings out for the same reason)
+        log.debug("Getting places");
         UriComponentsBuilder builder = navitia("places")
             .queryParam("q", query)
             .queryParamIfPresent("count", Optional.ofNullable(count));
@@ -56,7 +57,7 @@ public class NavitiaClient extends PrimClient {
      */
     public JsonNode planJourneys(String from, String to, String datetime, boolean arriveBy, List<String> forbiddenUris,
                                  boolean wheelchair, Double walkingSpeed, Integer maxTransfers) {
-        log.info("Planning journeys from {} to {}", from, to);
+        log.debug("Planning journeys");
         UriComponentsBuilder builder = navitia("journeys")
             .queryParam("from", from)
             .queryParam("to", to)
@@ -80,7 +81,7 @@ public class NavitiaClient extends PrimClient {
      * @param walkingSpeed meters per second
      */
     public JsonNode planWalkingPath(String from, String to, String datetime, Double walkingSpeed) {
-        log.info("Planning a walking path from {} to {}", from, to);
+        log.debug("Planning a walking path");
         UriComponentsBuilder builder = navitia("journeys")
             .queryParam("from", from)
             .queryParam("to", to)

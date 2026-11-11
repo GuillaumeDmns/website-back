@@ -39,7 +39,7 @@ public class GeoplateformeClient {
      * Addresses and places matching a text being typed, those around [lat], [lon] first when given
      */
     public JsonNode search(String query, Double lat, Double lon, int limit) {
-        log.info("Geocoding '{}'", query);
+        log.debug("Geocoding");
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(applicationProperties.getUrls().getGeoplateforme()).path("/search")
             .queryParam("q", query)
             .queryParam("index", "address,poi")

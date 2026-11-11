@@ -64,7 +64,10 @@ class GoogleSignInIT extends IntegrationTest {
 
     @Test
     void refusesInvalidTokens() {
-        assertThat(api.post("/api/auth/google", Map.of("idToken", GOOGLE.forgedIdToken("1", "x@example.com"))).status()).isEqualTo(401);
+        Api.Response forged = api.post("/api/auth/google", Map.of("idToken", GOOGLE.forgedIdToken("1", "x@example.com")));
+        assertThat(forged.status()).isEqualTo(401);
+        // Not why: that is for the logs
+        assertThat(forged.json().path("detail").asString()).isEqualTo("Invalid Google ID token");
         assertThat(api.post("/api/auth/google", Map.of("idToken", GOOGLE.idToken("1", "x@example.com", "X",
             claims -> claims.audience("another-app")))).status()).isEqualTo(401);
         assertThat(api.post("/api/auth/google", Map.of("idToken", "")).status()).isEqualTo(400);

@@ -74,7 +74,8 @@ public class UserService {
 
     /**
      * Signs in with a Google ID token: the account of this Google user, created at the first sign-in. Its email and
-     * first name follow Google's; an email listed in {@code application.admin-emails} gets {@link Role#ROLE_ADMIN}.
+     * first name follow Google's; an email listed in {@code application.admin-emails} is {@link Role#ROLE_ADMIN}, any
+     * other one {@link Role#ROLE_USER}: an admin taken off the list is one no more.
      *
      * @throws CustomException 401 if the token is invalid, 503 if Google sign-in is not configured
      */
@@ -99,10 +100,26 @@ public class UserService {
         }
         user.setDisplayName(google.firstName());
         user.setLastLoginAt(OffsetDateTime.now());
-        if (google.email() != null && adminEmails.contains(google.email().toLowerCase(Locale.ROOT))) {
-            user.setRole(Role.ROLE_ADMIN);
-        }
+        user.setRole(isAdmin(google.email()) ? Role.ROLE_ADMIN : Role.ROLE_USER);
         return createTokens(userRepository.save(user));
+    }
+
+    private boolean isAdmin(String email) {
+        return email != null && adminEmails.contains(email.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * The account without the admin role once its email is off {@code application.admin-emails}: checked each time
+     * tokens are given without Google (refresh, API token), so that a former admin stops being one within the hour its
+     * access token lasts, not at its next sign-in (a refresh token lasts 60 days, an API token a year). An account
+     * holding no email (its address is another account's) keeps its role until it signs in again.
+     */
+    private User withoutFormerAdminRole(User user) {
+        if (user.getRole() == Role.ROLE_ADMIN && user.getEmail() != null && !isAdmin(user.getEmail())) {
+            user.setRole(Role.ROLE_USER);
+            return userRepository.save(user);
+        }
+        return user;
     }
 
     public Account getAccount(String login) {
@@ -131,7 +148,7 @@ public class UserService {
      */
     @Transactional
     public Optional<JwtDTO> refresh(String refreshToken) {
-        return refreshTokenService.consume(refreshToken).map(this::createTokens);
+        return refreshTokenService.consume(refreshToken).map(this::withoutFormerAdminRole).map(this::createTokens);
     }
 
     /**
@@ -156,6 +173,9 @@ public class UserService {
     public Optional<JwtDTO> signInWithApiToken(String apiToken) {
         return apiTokenService.use(apiToken)
             .flatMap(userRepository::findById)
+            .map(this::withoutFormerAdminRole)
+            // API tokens are the admins' only (ApiTokenController): one left behind by a former admin opens nothing
+            .filter(user -> user.getRole() == Role.ROLE_ADMIN)
             .map(user -> new JwtDTO(createAccessToken(user), null, tokenValidityMs / 1000));
     }
 

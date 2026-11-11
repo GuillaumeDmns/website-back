@@ -52,6 +52,14 @@ public class UsageRecorder {
 
     private static final int MEMBER_BYTES = 8;
 
+    /**
+     * What a day's counts may hold at most: the metrics are few (kinds of callers, sites, the app's platforms and
+     * versions, which any caller names as it likes) and no day sees this many devices or visitors. Beyond, a caller
+     * making up versions or browsers would fill the memory and the tables.
+     */
+    static final int MAX_METRICS = 300;
+    static final int MAX_MEMBERS = 200_000;
+
     public enum Caller { ACCOUNT, GUEST, ANONYMOUS }
 
     record HourKey(Instant hour, String endpoint, Caller caller, String status) {
@@ -118,8 +126,12 @@ public class UsageRecorder {
         if (day.isBefore(today().minusDays(1))) {
             return; // Its day is closed
         }
-        String hash = HexFormat.of().formatHex(hash(salt(day), identity));
         MemberKey key = new MemberKey(day, metric);
+        Set<String> members = seen.get(key);
+        if (members == null ? seen.size() >= MAX_METRICS : members.size() >= MAX_MEMBERS) {
+            return;
+        }
+        String hash = HexFormat.of().formatHex(hash(salt(day), identity));
         if (seen.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(hash)) {
             pending.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(hash);
         }

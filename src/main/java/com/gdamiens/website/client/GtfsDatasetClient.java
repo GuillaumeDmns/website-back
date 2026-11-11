@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import tools.jackson.databind.JsonNode;
 
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -79,12 +80,27 @@ public class GtfsDatasetClient {
         return url;
     }
 
-    /** Downloads the GTFS zip into [target] */
+    /** Downloads the GTFS zip into [target]; the API key only goes to the dataset's own host, wherever its link leads */
     public void download(String url, Path target) {
-        downloadTemplate.execute(url, HttpMethod.GET, request -> request.getHeaders().addAll(authorization()), response -> {
+        boolean keyed = sameHost(url, datasetUrl());
+        downloadTemplate.execute(url, HttpMethod.GET, request -> {
+            if (keyed) {
+                request.getHeaders().addAll(authorization());
+            }
+        }, response -> {
             Files.copy(response.getBody(), target, StandardCopyOption.REPLACE_EXISTING);
             return null;
         });
+    }
+
+    static boolean sameHost(String url, String other) {
+        try {
+            URI one = URI.create(url);
+            URI two = URI.create(other);
+            return one.getHost() != null && one.getHost().equalsIgnoreCase(two.getHost()) && one.getPort() == two.getPort();
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private String datasetUrl() {

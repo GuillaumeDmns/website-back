@@ -72,6 +72,8 @@ application:
     user-journeys-per-day: 150
     user-journeys-per-hour: 60
     guest-tokens-per-ip-per-hour: 30
+    # All the guest devices of an address together (a new guest token costs nothing)
+    guest-journeys-per-ip-per-day: 100
   # Sign-in with Google (POST /api/auth/google): accepted OAuth client ids (web, iOS, desktop), none = disabled.
   # Verified emails given ROLE_ADMIN at sign-in. Both set in application-prod.yml / application-dev.yml
   google:

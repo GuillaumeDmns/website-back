@@ -21,7 +21,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns(applicationProperties.getCorsAllowedOrigins().toArray(String[]::new))
                 .allowedMethods("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(true)
+                // Tokens travel in the Authorization header: no cookie, no credentials to allow
                 .maxAge(3600);
     }
 }

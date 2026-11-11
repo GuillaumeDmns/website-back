@@ -298,6 +298,12 @@ public class ApplicationProperties {
         /** Guest tokens given to an IP address (mobile networks share their addresses between many devices) */
         private int guestTokensPerIpPerHour = 30;
 
+        /**
+         * Journey searches of the guest devices of one IP address: without it, an address asking for a new guest token
+         * for every ten searches would use up the guests' share of the Navitia quota alone
+         */
+        private int guestJourneysPerIpPerDay = 100;
+
         public int getGuestJourneysPerDay() {
             return guestJourneysPerDay;
         }
@@ -320,6 +326,14 @@ public class ApplicationProperties {
 
         public void setUserJourneysPerHour(int userJourneysPerHour) {
             this.userJourneysPerHour = userJourneysPerHour;
+        }
+
+        public int getGuestJourneysPerIpPerDay() {
+            return guestJourneysPerIpPerDay;
+        }
+
+        public void setGuestJourneysPerIpPerDay(int guestJourneysPerIpPerDay) {
+            this.guestJourneysPerIpPerDay = guestJourneysPerIpPerDay;
         }
 
         public int getGuestTokensPerIpPerHour() {
