@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/> </parent>
     <groupId>com.gdamiens</groupId>
     <artifactId>website</artifactId>
@@ -18,8 +18,8 @@
              In META-INF/build-info.properties (build.app.version), served by /api/health -->
         <app.version>dev</app.version>
         <java.version>25</java.version>
-        <springdoc-openapi-starter-webmvc-ui.version>3.0.0</springdoc-openapi-starter-webmvc-ui.version>
-        <bucket4j.version>8.21.0</bucket4j.version>
+        <springdoc-openapi-starter-webmvc-ui.version>3.2.0</springdoc-openapi-starter-webmvc-ui.version>
+        <bucket4j.version>8.22.0</bucket4j.version>
 
     </properties>
 
