@@ -103,6 +103,12 @@ class AdminIT extends IntegrationTest {
         Api.Response user = newUser().api().get("/api/admin/status");
         assertThat(user.status()).isEqualTo(403);
         assertThat(user.json().path("detail").asString()).isEqualTo("Access denied");
+        // Closed as a whole, whatever its controllers say: a path with no controller is refused before being not found
+        Api.Response nowhere = newUser().api().get("/api/admin/not-there-yet");
+        assertThat(nowhere.status()).isEqualTo(403);
+        assertThat(nowhere.header("Content-Type")).startsWith("application/problem+json");
+        assertThat(nowhere.json().path("detail").asString()).isEqualTo("Access denied");
+        assertThat(guest().post("/api/gtfs/anything").status()).isEqualTo(403);
     }
 
     private static int stopMonitoringUsed(Api admin) {

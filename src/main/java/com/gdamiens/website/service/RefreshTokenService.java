@@ -58,13 +58,14 @@ public class RefreshTokenService {
         }
 
         User user = token.get().getUser();
-        if (token.get().isRevoked()) {
+        // Revoked in the database, not on the entity read above: two requests using the same token at once would both
+        // find it valid, and each get a new one
+        if (token.get().isRevoked() || refreshTokenRepository.revokeIfActive(token.get().getId(), now) == 0) {
             LOGGER.warn("Revoked refresh token reused for user {}, revoking all its tokens", user.getId());
             refreshTokenRepository.revokeAllForUser(user.getId(), now);
             return Optional.empty();
         }
 
-        token.get().setRevokedAt(now);
         return Optional.of(user);
     }
 

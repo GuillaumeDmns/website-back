@@ -229,6 +229,18 @@ class SearchServiceTest {
     }
 
     @Test
+    void logsWhatFailedWithoutWhatWasTypedNorWhere() {
+        // A RestTemplate failure's message quotes the address called: the text typed and the position
+        RuntimeException noAnswer = new org.springframework.web.client.ResourceAccessException(
+            "I/O error on GET request for \"https://photon.komoot.io/api?q=12 rue de la paix&lat=48.87&lon=2.33\"");
+        RuntimeException refused = org.springframework.web.client.HttpClientErrorException.create(
+            org.springframework.http.HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", new org.springframework.http.HttpHeaders(), new byte[0], null);
+
+        assertThat(SearchService.failure(noAnswer)).isEqualTo("ResourceAccessException");
+        assertThat(SearchService.failure(refused)).isEqualTo("TooManyRequests 429");
+    }
+
+    @Test
     void namesAPositionAfterItsAddress() {
         when(geoplateformeClient.reverse(48.8584, 2.347)).thenReturn(Fixtures.json("geoplateforme/reverse.json"));
 

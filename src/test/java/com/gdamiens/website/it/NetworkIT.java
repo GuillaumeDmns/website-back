@@ -43,6 +43,10 @@ class NetworkIT extends IntegrationTest {
         assertThat(notANumber.status()).isEqualTo(400);
         assertThat(notANumber.header("Content-Type")).startsWith("application/problem+json");
         assertThat(user.get("/api/v2/nearby?lat=48.85").status()).isEqualTo(400);
+        // "NaN" is a number for the parser, and neither above nor below any bound
+        assertThat(user.get("/api/v2/nearby?lat=NaN&lon=2.3").status()).isEqualTo(400);
+        assertThat(user.get("/api/v2/places/reverse?lat=NaN&lon=NaN").status()).isEqualTo(400);
+        assertThat(user.get("/api/v2/bikes/nearby?lat=48.85&lon=Infinity").status()).isEqualTo(400);
     }
 
     @Test

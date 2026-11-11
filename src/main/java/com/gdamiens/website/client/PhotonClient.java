@@ -49,7 +49,7 @@ public class PhotonClient {
      * Places matching a text being typed in Île-de-France, those around [lat], [lon] first when given
      */
     public JsonNode search(String query, Double lat, Double lon, int limit) {
-        log.info("Photon search '{}'", query);
+        log.debug("Photon search");
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(applicationProperties.getUrls().getPhoton()).path("/api")
             .queryParam("q", query)
             .queryParam("limit", limit)

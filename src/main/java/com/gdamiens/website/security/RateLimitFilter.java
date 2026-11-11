@@ -78,7 +78,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setHeader("Retry-After", String.valueOf(retryAfterSeconds));
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        // The path as the caller sent it goes into JSON written by hand: only what needs no escaping
         response.getWriter().write("{\"title\":\"Too Many Requests\",\"status\":429,\"detail\":\"Rate limit exceeded, retry in "
-            + retryAfterSeconds + " s\",\"instance\":\"" + request.getRequestURI().replace("\"", "") + "\"}");
+            + retryAfterSeconds + " s\",\"instance\":\"" + request.getRequestURI().replaceAll("[^A-Za-z0-9/._~:-]", "") + "\"}");
     }
 }

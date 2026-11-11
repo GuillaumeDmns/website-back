@@ -35,6 +35,7 @@ import com.gdamiens.website.service.VehicleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -103,6 +104,7 @@ public class MobilityController {
         security = @SecurityRequirement(name = "Auth. Token"))
     public JourneyPlan getJourneys(
         @Parameter(hidden = true) Authentication authentication,
+        @Parameter(hidden = true) HttpServletRequest request,
         @Parameter(description = "lat,lon or stop area id", example = "48.8443,2.3730") @RequestParam String from,
         @Parameter(description = "lat,lon or stop area id", example = "IDFM:71264") @RequestParam String to,
         @Parameter(description = "ISO-8601 instant (e.g. 2026-10-03T08:30:00Z), now when absent") @RequestParam(required = false) Instant datetime,
@@ -112,7 +114,7 @@ public class MobilityController {
         @RequestParam(defaultValue = "NORMAL") WalkingSpeed walkingSpeed,
         @Parameter(description = "At most this many transfers") @RequestParam(required = false) Integer maxTransfers,
         @Parameter(description = "Vélib allowed before and after public transport") @RequestParam(defaultValue = "false") boolean bikeShare) {
-        usageBudgets.consumeJourney(authentication);
+        usageBudgets.consumeJourney(authentication, request.getRemoteAddr());
         return journeyService.plan(new JourneyQuery(from, to, datetime, arriveBy, modes, wheelchair, walkingSpeed, maxTransfers, bikeShare));
     }
 
@@ -131,6 +133,7 @@ public class MobilityController {
     @Operation(summary = "The position named after its closest address (within 250 m), 404 when there is none",
         security = @SecurityRequirement(name = "Auth. Token"))
     public ResponseEntity<PlaceResult> reverse(@RequestParam double lat, @RequestParam double lon) {
+        checkPosition(lat, lon);
         return ResponseEntity.of(searchService.reverse(lat, lon));
     }
 
@@ -291,7 +294,8 @@ public class MobilityController {
     }
 
     private static void checkPosition(double lat, double lon) {
-        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        // Written so that NaN, which "nan" parses to and which is neither above nor below anything, is refused too
+        if (!(lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)) {
             throw new CustomException("Invalid position", HttpStatus.BAD_REQUEST);
         }
     }

@@ -11,7 +11,8 @@ spring:
 security:
   jwt:
     token:
-      # Same secret as production for now (decision of October 2026): a development token is valid in production
+      # Its own, never production's (a token signed here would be valid there): openssl rand -base64 48
+      # At least 32 characters, the application refuses to start otherwise
       secret-key: change-me-dev-only-0123456789abcdef0123456789abcdef
 
 application:

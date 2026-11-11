@@ -34,15 +34,19 @@ public class UsageBudgets {
     }
 
     /**
-     * Counts a journey search of the caller
+     * Counts a journey search of the caller, at the address [ip]: a guest device has its own budget, and the guest
+     * devices of an address share another (a device is only a token, and an address gets many)
      *
      * @throws CustomException 429 ({@link #JOURNEY_LIMIT} or {@link #GUEST_JOURNEY_LIMIT}) when its budget is used up
      */
-    public void consumeJourney(Authentication authentication) {
+    public void consumeJourney(Authentication authentication, String ip) {
         boolean guest = Role.isGuest(authentication);
         boolean consumed = guest
             ? rateLimiter.tryConsume("journeys:" + authentication.getName(), DAY, () -> Bucket.builder()
                 .addLimit(limit -> limit.capacity(budget.getGuestJourneysPerDay()).refillGreedy(budget.getGuestJourneysPerDay(), DAY))
+                .build()).isConsumed()
+            && rateLimiter.tryConsume("guest-journeys:" + ip, DAY, () -> Bucket.builder()
+                .addLimit(limit -> limit.capacity(budget.getGuestJourneysPerIpPerDay()).refillGreedy(budget.getGuestJourneysPerIpPerDay(), DAY))
                 .build()).isConsumed()
             : rateLimiter.tryConsume("journeys:" + authentication.getName(), DAY, () -> Bucket.builder()
                 .addLimit(limit -> limit.capacity(budget.getUserJourneysPerDay()).refillGreedy(budget.getUserJourneysPerDay(), DAY))

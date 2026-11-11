@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
@@ -300,7 +301,7 @@ public class SearchService {
             return geoCache.get(normalized + "|" + limit + "|" + areaLat + "|" + areaLon,
                 k -> toGeoPlaces(geoplateformeClient.search(normalized, areaLat, areaLon, limit + 5)));
         } catch (RuntimeException e) {
-            LOGGER.warn("Géoplateforme search failed for '{}': {}", normalized, e.getMessage());
+            LOGGER.warn("Géoplateforme search failed: {}", failure(e));
             return null;
         }
     }
@@ -364,7 +365,7 @@ public class SearchService {
             return photonCache.get("search|" + normalized + "|" + limit + "|" + areaLat + "|" + areaLon,
                 k -> toOsmPlaces(photonClient.search(normalized, areaLat, areaLon, limit + 5)));
         } catch (RuntimeException e) {
-            LOGGER.warn("Photon search failed for '{}': {}", normalized, e.getMessage());
+            LOGGER.warn("Photon search failed: {}", failure(e));
             return null;
         }
     }
@@ -378,7 +379,7 @@ public class SearchService {
             return photonCache.get("closest|" + String.join(",", tags) + "|" + limit + "|" + areaLat + "|" + areaLon,
                 k -> toOsmPlaces(photonClient.closest(tags, areaLat, areaLon, limit, CLOSEST_RADIUS_KM)));
         } catch (RuntimeException e) {
-            LOGGER.warn("Photon closest '{}' failed: {}", normalized, e.getMessage());
+            LOGGER.warn("Photon closest {} failed: {}", tags, failure(e));
             return null;
         }
     }
@@ -436,6 +437,16 @@ public class SearchService {
         return city;
     }
 
+    /**
+     * What went wrong with a geocoder, for the logs: the kind of failure and the status answered, never its message,
+     * which quotes the address called with what the user typed and where they are
+     */
+    static String failure(RuntimeException e) {
+        return e instanceof RestClientResponseException answered
+            ? e.getClass().getSimpleName() + " " + answered.getStatusCode().value()
+            : e.getClass().getSimpleName();
+    }
+
     /** A text, or a list of texts (the Géoplateforme gives both) */
     private static List<String> strings(JsonNode value) {
         if (value.isArray()) {
@@ -464,7 +475,7 @@ public class SearchService {
                     label, roundedLat, roundedLon, null));
             });
         } catch (RuntimeException e) {
-            LOGGER.warn("Géoplateforme reverse geocoding failed: {}", e.getMessage());
+            LOGGER.warn("Géoplateforme reverse geocoding failed: {}", failure(e));
             return Optional.empty();
         }
     }
@@ -477,7 +488,7 @@ public class SearchService {
             places = navitiaCache.get(normalized + "|" + limit + "|" + withStopAreas,
                 k -> toPlaces(navitiaClient.getPlaces(normalized, types, limit)));
         } catch (RuntimeException e) {
-            LOGGER.warn("Navitia places search failed for '{}': {}", normalized, e.getMessage());
+            LOGGER.warn("Navitia places search failed: {}", failure(e));
             return List.of();
         }
 

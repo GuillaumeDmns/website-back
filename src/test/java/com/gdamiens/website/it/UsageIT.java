@@ -64,6 +64,21 @@ class UsageIT extends IntegrationTest {
     }
 
     @Test
+    void madeUpPathsAreCountedTogetherAndARefusedRequestUnderItsRoute() {
+        String madeUp = "scan-" + UUID.randomUUID();
+        api.get("/api/" + madeUp);
+        api.get("/api/v2/" + madeUp + "/again");
+        api.get("/api/v2/traffic");
+
+        JsonNode usage = admin().api().get("/api/admin/stats/usage?days=1").json();
+
+        assertThat(endpoint(usage, "GET (unknown)").path("requests").asInt()).isGreaterThanOrEqualTo(2);
+        assertThat(usage.path("endpoints").toString()).doesNotContain(madeUp);
+        // Without a token: refused before its controller, still its route
+        assertThat(endpoint(usage, "GET /api/v2/traffic").path("clientErrors").asInt()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
     void countsTheRateLimitingsRefusals() {
         Api api = this.api.from("198.51.100." + (int) (Math.random() * 200));
         for (int i = 0; i < 15; i++) {

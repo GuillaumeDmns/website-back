@@ -1,23 +1,39 @@
 package com.gdamiens.website.usage;
 
+import org.springframework.web.util.pattern.PathPattern;
+
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class UsageFilterTest {
 
+    private static final List<PathPattern> ROUTES = UsageFilter.parse(List.of("/api/v2/stops/{stopAreaId}",
+        "/api/v2/stops/{stopAreaId}/departures", "/api/v2/lines/{lineId}/vehicles", "/api/auth/guest", "/api/v2/me/favorites/{id}"));
+
     @Test
     void namesTheRouteAsSpringMatchedIt() {
-        assertThat(UsageFilter.endpoint("GET", "/api/v2/stops/{stopAreaId}/departures", "/api/v2/stops/IDFM:71264/departures"))
+        assertThat(UsageFilter.endpoint("GET", "/api/v2/stops/{stopAreaId}/departures", "/api/v2/stops/IDFM:71264/departures", ROUTES))
             .isEqualTo("GET /api/v2/stops/{stopAreaId}/departures");
     }
 
     @Test
-    void hidesTheIdsOfARequestThatReachedNoController() {
-        assertThat(UsageFilter.endpoint("GET", null, "/api/v2/stops/IDFM:71264/departures")).isEqualTo("GET /api/v2/stops/{id}/departures");
-        assertThat(UsageFilter.endpoint("GET", null, "/api/v2/lines/C01371/vehicles")).isEqualTo("GET /api/v2/lines/{id}/vehicles");
-        assertThat(UsageFilter.endpoint("POST", null, "/api/auth/guest")).isEqualTo("POST /api/auth/guest");
-        assertThat(UsageFilter.endpoint("GET", null, "/api/" + "x".repeat(300))).hasSize(120);
+    void namesARequestThatReachedNoControllerAfterItsRoute() {
+        assertThat(UsageFilter.endpoint("GET", null, "/api/v2/stops/IDFM:71264/departures", ROUTES))
+            .isEqualTo("GET /api/v2/stops/{stopAreaId}/departures");
+        assertThat(UsageFilter.endpoint("GET", null, "/api/v2/lines/C01371/vehicles", ROUTES)).isEqualTo("GET /api/v2/lines/{lineId}/vehicles");
+        assertThat(UsageFilter.endpoint("POST", null, "/api/auth/guest", ROUTES)).isEqualTo("POST /api/auth/guest");
+    }
+
+    @Test
+    void countsMadeUpPathsTogether() {
+        // Anyone can ask for as many paths as they like: none becomes a row of the statistics
+        assertThat(UsageFilter.endpoint("GET", null, "/api/" + "x".repeat(300), ROUTES)).isEqualTo("GET (unknown)");
+        assertThat(UsageFilter.endpoint("GET", null, "/api/v2/stops/IDFM:71264/made-up-" + System.nanoTime(), ROUTES)).isEqualTo("GET (unknown)");
+        assertThat(UsageFilter.endpoint("GET", null, "/api/wp-login.php", ROUTES)).isEqualTo("GET (unknown)");
+        assertThat(UsageFilter.endpoint("GET", null, "/api/%zz/..//", ROUTES)).isEqualTo("GET (unknown)");
     }
 
     @Test
