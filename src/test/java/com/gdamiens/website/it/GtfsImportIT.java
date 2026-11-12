@@ -60,6 +60,8 @@ class GtfsImportIT extends IntegrationTest {
         assertThat(EXTERNAL.requests("/gtfs/files/IDFM_gtfs.zip")).singleElement()
             .satisfies(request -> assertThat(request.header("Authorization")).isEqualTo("apikey test-opendatasoft-key"));
         assertThat(user.get("/api/v2/lines/C01371").json().path("line").path("longName").asString()).isEqualTo("Métro 1 nouveau");
+        // The zip went to the configured directory, created by the application, and is gone
+        assertThat(GTFS_DOWNLOADS).isEmptyDirectory();
     }
 
     @Test
@@ -73,6 +75,7 @@ class GtfsImportIT extends IntegrationTest {
             assertThat(last.status()).isEqualTo(GtfsImport.FAILED);
             assertThat(last.error()).contains("looks truncated");
         });
+        assertThat(GTFS_DOWNLOADS).isEmptyDirectory();
         assertThat(newUser().api().get("/api/v2/lines/C01742").status()).isEqualTo(200);
     }
 

@@ -80,7 +80,9 @@ application:
     client-ids: []
   admin-emails: []
   gtfs:
-    # The new schema (about the size of the current one, 3.6 GB in October 2026) is built next to it
+    # The new schema (about the size of the current one, 3.6 GB in October 2026) is built next to it. Measured where
+    # download-dir is: the directory the zip is downloaded to (created when missing), the JVM's temporary directory
+    # unless set; production sets it below
     min-free-disk-gb: 6
 
 ---
@@ -114,3 +116,8 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+# The GTFS zip goes to the disk: /tmp is too small on the VPS. The service's user must be able to write there (README)
+application:
+  gtfs:
+    download-dir: /root/gtfs

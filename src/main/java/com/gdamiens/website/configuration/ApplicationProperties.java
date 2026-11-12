@@ -254,8 +254,17 @@ public class ApplicationProperties {
      */
     public static class Gtfs {
 
-        /** An import doesn't start below this much free disk: the new schema sits next to the current one until the swap */
+        /**
+         * An import doesn't start below this much free disk where {@link #downloadDir} is: the new schema sits next to
+         * the current one until the swap
+         */
         private int minFreeDiskGb = 6;
+
+        /**
+         * Directory the GTFS zip is downloaded to and read from during an import, created when missing; the JVM's
+         * temporary directory when empty. Meant to be on the database's disk, since the free disk is measured there
+         */
+        private String downloadDir = "";
 
         public int getMinFreeDiskGb() {
             return minFreeDiskGb;
@@ -263,6 +272,14 @@ public class ApplicationProperties {
 
         public void setMinFreeDiskGb(int minFreeDiskGb) {
             this.minFreeDiskGb = minFreeDiskGb;
+        }
+
+        public String getDownloadDir() {
+            return downloadDir;
+        }
+
+        public void setDownloadDir(String downloadDir) {
+            this.downloadDir = downloadDir;
         }
     }
 

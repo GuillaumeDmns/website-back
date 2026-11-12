@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -28,6 +29,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
@@ -74,6 +76,13 @@ public class GtfsImportService {
     // A new import must keep at least this ratio of the current rows, otherwise the feed is considered truncated
     private static final double MIN_ROW_RATIO = 0.5;
 
+    private static final String ZIP_PREFIX = "gtfs-";
+
+    private static final String ZIP_SUFFIX = ".zip";
+
+    // A zip this old in the download directory was left by an import the application didn't survive, never by a running one
+    private static final Duration LEFTOVER_AGE = Duration.ofHours(1);
+
     private final DataSource dataSource;
 
     private final GtfsDatasetClient gtfsDatasetClient;
@@ -88,6 +97,8 @@ public class GtfsImportService {
 
     private final long minFreeDiskBytes;
 
+    private final Path downloadDir;
+
     public GtfsImportService(DataSource dataSource, GtfsDatasetClient gtfsDatasetClient, @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
                              GtfsImportRepository gtfsImportRepository, ApplicationEventPublisher eventPublisher,
                              ApplicationProperties applicationProperties) {
@@ -97,6 +108,8 @@ public class GtfsImportService {
         this.gtfsImportRepository = gtfsImportRepository;
         this.eventPublisher = eventPublisher;
         this.minFreeDiskBytes = applicationProperties.getGtfs().getMinFreeDiskGb() * 1024L * 1024 * 1024;
+        this.downloadDir = Path.of(StringUtils.defaultIfBlank(applicationProperties.getGtfs().getDownloadDir(), System.getProperty("java.io.tmpdir")))
+            .toAbsolutePath();
     }
 
     /**
@@ -144,12 +157,15 @@ public class GtfsImportService {
             long start = System.currentTimeMillis();
             log.info("Start GTFS import ({}, version {})", source, feedDate);
             importId = this.gtfsImportRepository.start(source, feedDate);
+            this.prepareDownloadDir();
             this.checkFreeDisk();
 
             String gtfsLink = this.gtfsDatasetClient.getFileUrl()
                 .orElseThrow(() -> new IllegalStateException("No GTFS link found in the dataset"));
 
-            zipPath = this.download(gtfsLink);
+            // Created here, so that a download that fails halfway is deleted too
+            zipPath = Files.createTempFile(this.downloadDir, ZIP_PREFIX, ZIP_SUFFIX);
+            this.download(gtfsLink, zipPath);
             Map<String, Long> rowsByTable = this.load(zipPath);
             this.gtfsImportRepository.finish(importId, GtfsImport.SUCCESS, describe(rowsByTable), null);
             this.eventPublisher.publishEvent(new GtfsImportedEvent());
@@ -172,12 +188,36 @@ public class GtfsImportService {
         }
     }
 
-    /** The new schema is built next to the current one, and the zip waits in the temporary directory (same disk) */
+    /** Creates the download directory when missing and deletes the zips left there by imports that were killed */
+    private void prepareDownloadDir() {
+        try {
+            Files.createDirectories(this.downloadDir);
+        } catch (IOException e) {
+            throw new IllegalStateException("GTFS download directory " + this.downloadDir + " (application.gtfs.download-dir) can't be created: " + e, e);
+        }
+        if (!Files.isWritable(this.downloadDir)) {
+            throw new IllegalStateException("GTFS download directory " + this.downloadDir + " (application.gtfs.download-dir) can't be written by the application's user");
+        }
+
+        Instant old = Instant.now().minus(LEFTOVER_AGE);
+        try (DirectoryStream<Path> leftovers = Files.newDirectoryStream(this.downloadDir, ZIP_PREFIX + "*" + ZIP_SUFFIX)) {
+            for (Path leftover : leftovers) {
+                if (Files.isRegularFile(leftover) && Files.getLastModifiedTime(leftover).toInstant().isBefore(old)) {
+                    Files.deleteIfExists(leftover);
+                    log.warn("GTFS zip {} left by an interrupted import deleted", leftover);
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Unable to delete the GTFS zips left in {}", this.downloadDir, e);
+        }
+    }
+
+    /** The new schema is built next to the current one, and the zip waits in the download directory (same disk) */
     private void checkFreeDisk() throws IOException {
-        long free = Files.getFileStore(Path.of(System.getProperty("java.io.tmpdir"))).getUsableSpace();
+        long free = Files.getFileStore(this.downloadDir).getUsableSpace();
         if (free < this.minFreeDiskBytes) {
-            throw new IllegalStateException("Not enough free disk for a GTFS import: " + free / (1024 * 1024) + " MB, at least "
-                + this.minFreeDiskBytes / (1024 * 1024) + " MB needed");
+            throw new IllegalStateException("Not enough free disk for a GTFS import in " + this.downloadDir + ": " + free / (1024 * 1024)
+                + " MB, at least " + this.minFreeDiskBytes / (1024 * 1024) + " MB needed");
         }
     }
 
@@ -188,12 +228,10 @@ public class GtfsImportService {
             .collect(Collectors.joining(", "));
     }
 
-    private Path download(String link) throws IOException {
-        Path zipPath = Files.createTempFile("gtfs-", ".zip");
+    private void download(String link, Path zipPath) throws IOException {
         long start = System.currentTimeMillis();
         this.gtfsDatasetClient.download(link, zipPath);
-        log.info("GTFS downloaded: {} MB (took {}ms)", Files.size(zipPath) / (1024 * 1024), System.currentTimeMillis() - start);
-        return zipPath;
+        log.info("GTFS downloaded to {}: {} MB (took {}ms)", zipPath, Files.size(zipPath) / (1024 * 1024), System.currentTimeMillis() - start);
     }
 
     /** @return rows loaded per table */
