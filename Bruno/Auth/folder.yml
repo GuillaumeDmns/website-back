@@ -9,5 +9,5 @@ request:
 docs:
   content: |-
     Le JWT est obtenu et renouvelé automatiquement par le script de la collection, à partir du jeton d'API `apiToken`.
-    Connexion des utilisateurs : Google uniquement (`Sign in with Google`, avec un ID token Google).
+    Connexion des utilisateurs : Google uniquement (`Sign in with Google`, avec un ID token Google ; `Desktop sign-in`, par le navigateur, pour les apps Linux et Windows).
   type: text/markdown

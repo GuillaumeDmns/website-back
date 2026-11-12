@@ -116,6 +116,30 @@ class GoogleIdTokenVerifierTest {
             .isInstanceOfSatisfying(CustomException.class, e -> assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
     }
 
+    @Test
+    void anIdTokenAskedForByTheServerMustCarryItsNonce() {
+        String token = TOKENS.idToken("123", "ada@example.com", "Ada", claims -> claims.claim("nonce", "this-sign-in"));
+
+        assertThat(verifier.verify(token, "this-sign-in").sub()).isEqualTo("123");
+        // The apps' own tokens are not asked for one
+        assertThat(verifier.verify(token).sub()).isEqualTo("123");
+        assertThatThrownBy(() -> verifier.verify(token, "another-sign-in"))
+            .isInstanceOfSatisfying(CustomException.class, e -> assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+        assertThatThrownBy(() -> verifier.verify(TOKENS.idToken("123", "ada@example.com", "Ada"), "this-sign-in"))
+            .isInstanceOfSatisfying(CustomException.class, e -> assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+    }
+
+    @Test
+    void acceptsTheWebClientOfTheDesktopSignInWithoutListingIt() {
+        ApplicationProperties properties = new ApplicationProperties();
+        properties.getGoogle().getDesktop().setClientId(GoogleTokens.CLIENT_ID);
+        properties.getGoogle().setJwkSetUri(GOOGLE.url() + "/certs");
+        GoogleIdTokenVerifier desktopOnly = new GoogleIdTokenVerifier(properties, httpClient);
+
+        assertThat(desktopOnly.isEnabled()).isTrue();
+        assertThat(desktopOnly.verify(TOKENS.idToken("123", "ada@example.com", "Ada")).sub()).isEqualTo("123");
+    }
+
     private void assertUnauthorized(String token) {
         assertThatThrownBy(() -> verifier.verify(token))
             .isInstanceOfSatisfying(CustomException.class, e -> assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));

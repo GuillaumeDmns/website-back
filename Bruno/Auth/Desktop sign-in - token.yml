@@ -1,0 +1,27 @@
+info:
+  name: "Desktop sign-in - token"
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/google/desktop/token"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "",
+        "verifier": "{{desktopVerifier}}"
+      }
+
+docs:
+  content: |-
+    Public. Étape 3 : l'app échange le code à usage unique reçu sur son port, avec le `verifier` de l'étape 1, contre le JWT d'accès et le refresh token habituels (même compte qu'avec `Sign in with Google`). Le code vaut une minute et une seule tentative : 401 s'il est inconnu, expiré, déjà utilisé, ou si le `verifier` est celui d'une autre connexion.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

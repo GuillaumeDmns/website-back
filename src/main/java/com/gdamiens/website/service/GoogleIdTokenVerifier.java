@@ -20,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Checks the ID tokens of "Sign in with Google" (OpenID Connect): signature with Google's public keys (fetched and
@@ -43,7 +44,11 @@ public class GoogleIdTokenVerifier {
 
     public GoogleIdTokenVerifier(ApplicationProperties applicationProperties, HttpClient httpClient) {
         ApplicationProperties.Google google = applicationProperties.getGoogle();
-        this.clientIds = List.copyOf(google.getClientIds());
+        // The web client of the desktop apps' sign-in is accepted without being listed twice
+        this.clientIds = Stream.concat(google.getClientIds().stream(), Stream.of(google.getDesktop().getClientId()))
+            .filter(clientId -> clientId != null && !clientId.isBlank())
+            .distinct()
+            .toList();
         this.decoder = NimbusJwtDecoder.withJwkSetUri(google.getJwkSetUri())
             .jwsAlgorithm(SignatureAlgorithm.RS256)
             .restOperations(new RestTemplate(HttpClientConfig.requestFactory(httpClient, HttpClientConfig.DEFAULT_READ_TIMEOUT)))
@@ -64,6 +69,15 @@ public class GoogleIdTokenVerifier {
      * @throws CustomException 503 when no client id is configured, 401 when the token is not a valid Google ID token
      */
     public GoogleAccount verify(String idToken) {
+        return verify(idToken, null);
+    }
+
+    /**
+     * @param nonce what the ID token must have been issued for (the sign-in this server started at Google); null when
+     *              the app got the token itself
+     * @throws CustomException 503 when no client id is configured, 401 when the token is not a valid Google ID token
+     */
+    public GoogleAccount verify(String idToken, String nonce) {
         if (!isEnabled()) {
             throw new CustomException("Sign-in with Google is not configured", HttpStatus.SERVICE_UNAVAILABLE);
         }
@@ -76,6 +90,10 @@ public class GoogleIdTokenVerifier {
         } catch (JwtException e) {
             // Why stays in the logs: it tells a forger what to fix
             LOGGER.info("Google ID token refused: {}", e.getMessage());
+            throw new CustomException("Invalid Google ID token", HttpStatus.UNAUTHORIZED);
+        }
+        if (nonce != null && !nonce.equals(token.getClaimAsString("nonce"))) {
+            LOGGER.info("Google ID token refused: issued for another sign-in (nonce)");
             throw new CustomException("Invalid Google ID token", HttpStatus.UNAUTHORIZED);
         }
         String firstName = token.getClaimAsString("given_name");

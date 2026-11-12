@@ -1,0 +1,37 @@
+info:
+  name: "Desktop sign-in - start"
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/google/desktop"
+  body:
+    type: json
+    data: |-
+      {
+        "port": 51234
+      }
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        if (body?.verifier) {
+          bru.setVar("desktopVerifier", body.verifier);
+        }
+
+docs:
+  content: |-
+    Public. Étape 1 de la connexion Google des apps desktop (Linux, Windows) : l'app écoute sur `http://127.0.0.1:<port>/` (1024 à 65535) et ouvre `authorizationUrl` dans le navigateur du système. `state` reviendra sur ce port, `verifier` (rangé dans `desktopVerifier`) est le secret à renvoyer à l'étape 3 : le navigateur ne le voit jamais. Une connexion commencée attend 10 minutes. 503 sans secret du client web (`application.google.desktop`).
+
+    À la main : ouvrir `authorizationUrl`, choisir un compte, puis copier le `code` de l'adresse `http://127.0.0.1:51234/?code=…` où le navigateur finit (page introuvable si rien n'écoute) dans `Desktop sign-in - token`, dans la minute.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -145,6 +145,75 @@ public class ApplicationProperties {
         public void setJwkSetUri(String jwkSetUri) {
             this.jwkSetUri = jwkSetUri;
         }
+
+        /** Google's sign-in page and token endpoint (authorization code flow of the desktop apps), configurable for local checks */
+        private String authorizationUri = "https://accounts.google.com/o/oauth2/v2/auth";
+
+        private String tokenUri = "https://oauth2.googleapis.com/token";
+
+        private Desktop desktop = new Desktop();
+
+        public String getAuthorizationUri() {
+            return authorizationUri;
+        }
+
+        public void setAuthorizationUri(String authorizationUri) {
+            this.authorizationUri = authorizationUri;
+        }
+
+        public String getTokenUri() {
+            return tokenUri;
+        }
+
+        public void setTokenUri(String tokenUri) {
+            this.tokenUri = tokenUri;
+        }
+
+        public Desktop getDesktop() {
+            return desktop;
+        }
+
+        public void setDesktop(Desktop desktop) {
+            this.desktop = desktop;
+        }
+
+        /**
+         * Sign-in of the desktop apps (Linux, Windows) through the system browser: Google comes back to this server,
+         * which holds the secret of an OAuth client of type "Web application". Without secret: disabled
+         */
+        public static class Desktop {
+            /** The web client; its ID tokens are accepted like those of {@code client-ids} */
+            private String clientId = "";
+
+            private String clientSecret = "";
+
+            /** {@code <public URL of this API>/api/auth/google/desktop/callback}, as registered for the client at Google */
+            private String redirectUri = "";
+
+            public String getClientId() {
+                return clientId;
+            }
+
+            public void setClientId(String clientId) {
+                this.clientId = clientId;
+            }
+
+            public String getClientSecret() {
+                return clientSecret;
+            }
+
+            public void setClientSecret(String clientSecret) {
+                this.clientSecret = clientSecret;
+            }
+
+            public String getRedirectUri() {
+                return redirectUri;
+            }
+
+            public void setRedirectUri(String redirectUri) {
+                this.redirectUri = redirectUri;
+            }
+        }
     }
 
     /**
