@@ -15,6 +15,9 @@ import java.util.List;
  * @param delay            seconds late compared with the schedule (real time only, negative if early)
  * @param length           meters walked or ridden, when known
  * @param shape            {@code [lon, lat]} points of the path
+ * @param accesses         ways in and out of stations the walk goes through, in walking order (Navitia's access
+ *                         points: their ids are the GTFS entrances'), so that the apps name the exit or entrance the
+ *                         path really takes ({@link Kind#WALK} only)
  */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public record JourneySection(
@@ -32,7 +35,8 @@ public record JourneySection(
     Boolean realtime,
     Integer delay,
     Integer length,
-    List<double[]> shape) {
+    List<double[]> shape,
+    List<Entrance> accesses) {
 
     public enum Kind { WALK, TRANSIT, TRANSFER, WAIT, BIKE, CAR, OTHER }
 }

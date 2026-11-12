@@ -25,6 +25,11 @@
             {"instruction": "", "length": 20, "duration": 17, "direction": 0, "name": "Rue de Rivoli"},
             {"instruction": "Tournez à gauche sur Rue des Halles", "length": 30, "duration": 33, "direction": -90, "name": "Rue des Halles"}
           ],
+          "vias": [
+            {"id": "access_point:IDFM:StopPlaceEntrance:3", "name": "r. des Halles", "is_entrance": true, "is_exit": true, "length": 31, "traversal_time": 33,
+             "access_point": {"id": "access_point:IDFM:StopPlaceEntrance:3", "name": "r. des Halles", "access_point_code": "3", "coord": {"lat": "48.8586", "lon": "2.3468"}, "embedded_type": "pt_access_point"}},
+            {"id": "access_point:IDFM:StopPlaceEntrance:9", "name": "No position", "access_point": {"id": "access_point:IDFM:StopPlaceEntrance:9"}}
+          ],
           "geojson": {"type": "LineString", "coordinates": [[2.34, 48.86], [2.347, 48.8584]], "properties": [{"length": 350}]}
         },
         {

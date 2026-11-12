@@ -30,6 +30,11 @@ class JourneysIT extends IntegrationTest {
         assertThat(best.path("sections").values().stream().map(section -> section.path("kind").asString())).containsExactly("WALK", "TRANSIT");
         assertThat(best.path("sections").path(1).path("line").path("id").asString()).isEqualTo("C01371");
         assertThat(best.path("sections").path(1).path("line").path("longName").asString()).isEqualTo("Métro 1");
+        // The station entrance the walk goes in by, under its GTFS id
+        JsonNode access = best.path("sections").path(0).path("accesses").path(0);
+        assertThat(access.path("id").asString()).isEqualTo("IDFM:StopPlaceEntrance:3");
+        assertThat(access.path("code").asString()).isEqualTo("3");
+        assertThat(best.path("sections").path(1).has("accesses")).isFalse();
         assertThat(plan.path("earlier").path("arriveBy").asBoolean()).isTrue();
         assertThat(plan.path("later").path("arriveBy").asBoolean()).isFalse();
 
@@ -39,6 +44,7 @@ class JourneysIT extends IntegrationTest {
         assertThat(request.param("to")).isEqualTo("stop_area:IDFM:70002");
         assertThat(request.param("data_freshness")).isEqualTo("realtime");
         assertThat(request.param("datetime_represents")).isEqualTo("departure");
+        assertThat(request.param("_access_points")).isEqualTo("true");
         assertThat(request.params("forbidden_uris[]")).isEmpty();
     }
 

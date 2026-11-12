@@ -64,6 +64,8 @@ public class NavitiaClient extends PrimClient {
             .queryParam("data_freshness", "realtime")
             .queryParam("min_nb_journeys", 4)
             .queryParam("datetime_represents", arriveBy ? "arrival" : "departure")
+            // The station entrances walked through (sections' vias), the exit the walking path starts from
+            .queryParam("_access_points", true)
             .queryParamIfPresent("datetime", Optional.ofNullable(datetime))
             .queryParamIfPresent("walking_speed", Optional.ofNullable(walkingSpeed))
             .queryParamIfPresent("max_nb_transfers", Optional.ofNullable(maxTransfers));

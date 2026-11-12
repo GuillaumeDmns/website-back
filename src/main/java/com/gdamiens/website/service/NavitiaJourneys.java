@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.controller.object.v2.Entrance;
 import com.gdamiens.website.controller.object.v2.JourneyOption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan.PageCursor;
 import com.gdamiens.website.controller.object.v2.JourneyPoint;
@@ -24,6 +25,9 @@ import java.util.Map;
  * Navitia {@code journeys} responses (raw snake_case JSON) turned into the compact v2 model, with the GTFS lines
  */
 final class NavitiaJourneys {
+
+    /** Navitia access point ids are the GTFS entrances' ({@code IDFM:StopPlaceEntrance:50147905}) behind this */
+    private static final String ACCESS_POINT_PREFIX = "access_point:";
 
     private NavitiaJourneys() {
     }
@@ -129,7 +133,24 @@ final class NavitiaJourneys {
 
         return new JourneySection(kind, departure, arrival, section.path("duration").asInt(0),
             toPoint(section.path("from")), toPoint(section.path("to")),
-            line, headsign, boardingPositions, stops, steps, realtime, delay, length, shape);
+            line, headsign, boardingPositions, stops, steps, realtime, delay, length, shape, accesses(section));
+    }
+
+    /** Station entrances the section walks through ({@code vias}, asked with {@code _access_points}), GTFS ids */
+    private static List<Entrance> accesses(JsonNode section) {
+        List<Entrance> accesses = new ArrayList<>();
+        for (JsonNode via : section.path("vias").values()) {
+            JsonNode point = via.path("access_point");
+            JsonNode coord = point.path("coord");
+            String id = StringUtils.removeStart(point.path("id").asString(via.path("id").asString("")), ACCESS_POINT_PREFIX);
+            if (StringUtils.isEmpty(id) || !coord.has("lat") || !coord.has("lon")) {
+                continue;
+            }
+            accesses.add(new Entrance(id, StringUtils.trimToNull(point.path("access_point_code").asString(null)),
+                point.path("name").asString(via.path("name").asString("")),
+                coord.path("lat").asDouble(0), coord.path("lon").asDouble(0), null));
+        }
+        return accesses;
     }
 
     /** GTFS line of the section (consistent badges with the rest of the app), else built from Navitia's display */
