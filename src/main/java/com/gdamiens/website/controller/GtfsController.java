@@ -2,6 +2,7 @@ package com.gdamiens.website.controller;
 
 import com.gdamiens.website.model.GtfsImport;
 import com.gdamiens.website.repository.GtfsImportRepository;
+import com.gdamiens.website.security.SecurityEvents;
 import com.gdamiens.website.service.GtfsImportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -24,7 +26,10 @@ public class GtfsController {
 
     private final GtfsImportRepository gtfsImportRepository;
 
-    public GtfsController(GtfsImportService gtfsImportService, GtfsImportRepository gtfsImportRepository) {
+    private final SecurityEvents securityEvents;
+
+    public GtfsController(GtfsImportService gtfsImportService, GtfsImportRepository gtfsImportRepository, SecurityEvents securityEvents) {
+        this.securityEvents = securityEvents;
         this.gtfsImportService = gtfsImportService;
         this.gtfsImportRepository = gtfsImportRepository;
     }
@@ -32,10 +37,13 @@ public class GtfsController {
     @PostMapping("/gtfs")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Launch the GTFS import in background, whatever the version already imported", security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<Void> updateGTFS() {
+    public ResponseEntity<Void> updateGTFS(Principal principal) {
         if (!this.gtfsImportService.importGtfsAsync()) {
+            securityEvents.adminAction(principal.getName(), "gtfs-import", null, "AlreadyRunning");
             return new ResponseEntity<>(HttpStatus.CONFLICT);
         }
+        // Started: its outcome is the import's own record (GET /api/gtfs/imports)
+        securityEvents.adminAction(principal.getName(), "gtfs-import", null, null);
 
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
     }

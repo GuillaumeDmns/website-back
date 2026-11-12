@@ -1,0 +1,21 @@
+info:
+  name: "Account - sign out everywhere"
+  type: http
+  seq: 24
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/v2/me/sessions"
+  auth: inherit
+
+docs:
+  content: |-
+    Compte. Ferme toutes les sessions du compte, celle-ci comprise (leurs jetons d'accès finissent dans l'heure). Les jetons d'API ne sont pas touchés.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

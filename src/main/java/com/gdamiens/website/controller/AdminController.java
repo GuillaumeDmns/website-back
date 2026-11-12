@@ -4,6 +4,7 @@ import com.gdamiens.website.model.GtfsImport;
 import com.gdamiens.website.repository.GtfsImportRepository;
 import com.gdamiens.website.client.ApiQuota;
 import com.gdamiens.website.client.PrimCircuitBreaker;
+import com.gdamiens.website.security.SecurityEvents;
 import com.gdamiens.website.service.RefreshTokenService;
 import com.gdamiens.website.service.StopSearch;
 import com.gdamiens.website.service.TrafficService;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.lang.management.ManagementFactory;
+import java.security.Principal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Supplier;
 
 /** State of the service for its administrator: what to watch (supervision, alerts), and what to do by hand */
 @RestController
@@ -40,8 +43,12 @@ public class AdminController {
 
     private final RefreshTokenService refreshTokenService;
 
+    private final SecurityEvents securityEvents;
+
     public AdminController(ApiQuota apiQuota, PrimCircuitBreaker circuitBreaker, GtfsImportRepository gtfsImportRepository,
-                           TrafficService trafficService, StopSearch stopSearch, RefreshTokenService refreshTokenService) {
+                           TrafficService trafficService, StopSearch stopSearch, RefreshTokenService refreshTokenService,
+                           SecurityEvents securityEvents) {
+        this.securityEvents = securityEvents;
         this.apiQuota = apiQuota;
         this.circuitBreaker = circuitBreaker;
         this.gtfsImportRepository = gtfsImportRepository;
@@ -86,33 +93,33 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Fetches the traffic now (one disruptions_bulk call) instead of waiting for its 3 min refresh",
         security = @SecurityRequirement(name = "Auth. Token"))
-    public ActionResult reloadTraffic() {
-        return new ActionResult(trafficService.reloadTraffic(), null);
+    public ActionResult reloadTraffic(Principal principal) {
+        return run(principal, "traffic", () -> new ActionResult(trafficService.reloadTraffic(), null));
     }
 
     @PostMapping("/actions/elevators")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Fetches the elevator status now (open data) instead of waiting for its hourly refresh",
         security = @SecurityRequirement(name = "Auth. Token"))
-    public ActionResult reloadElevators() {
-        return new ActionResult(trafficService.reloadElevators(), null);
+    public ActionResult reloadElevators(Principal principal) {
+        return run(principal, "elevators", () -> new ActionResult(trafficService.reloadElevators(), null));
     }
 
     @PostMapping("/actions/search-index")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Builds the stop search index again (stop areas, their towns and lines; about 3 s)",
         security = @SecurityRequirement(name = "Auth. Token"))
-    public ActionResult rebuildSearchIndex() {
-        int stopAreas = stopSearch.rebuild();
-        return new ActionResult(Instant.now(), stopAreas);
+    public ActionResult rebuildSearchIndex(Principal principal) {
+        return run(principal, "search-index", () -> new ActionResult(Instant.now(), stopSearch.rebuild()));
     }
 
     @PostMapping("/actions/prim-circuits")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Closes the PRIM circuit breakers: the next calls go through even if PRIM failed lately",
         security = @SecurityRequirement(name = "Auth. Token"))
-    public List<PrimCircuitBreaker.Status> resetPrimCircuits() {
+    public List<PrimCircuitBreaker.Status> resetPrimCircuits(Principal principal) {
         circuitBreaker.reset();
+        securityEvents.adminAction(principal.getName(), "prim-circuits", null, null);
         return circuitBreaker.status();
     }
 
@@ -120,8 +127,19 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Deletes the expired sessions and the ones revoked over 7 days ago now (done every night at 4 h)",
         security = @SecurityRequirement(name = "Auth. Token"))
-    public ActionResult cleanUpSessions() {
-        int deleted = refreshTokenService.deleteObsoleteTokens();
-        return new ActionResult(Instant.now(), deleted);
+    public ActionResult cleanUpSessions(Principal principal) {
+        return run(principal, "sessions-cleanup", () -> new ActionResult(Instant.now(), refreshTokenService.deleteObsoleteTokens()));
+    }
+
+    /** Runs an action, recorded in the server's journal of admin actions whatever its outcome */
+    private ActionResult run(Principal principal, String action, Supplier<ActionResult> body) {
+        try {
+            ActionResult result = body.get();
+            securityEvents.adminAction(principal.getName(), action, result.count(), null);
+            return result;
+        } catch (RuntimeException e) {
+            securityEvents.adminAction(principal.getName(), action, null, e.getClass().getSimpleName());
+            throw e;
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.gdamiens.website.controller;
 
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.security.SecurityEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,12 @@ public class ApiExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    private final SecurityEvents securityEvents;
+
+    public ApiExceptionHandler(SecurityEvents securityEvents) {
+        this.securityEvents = securityEvents;
+    }
+
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ProblemDetail> handleCustomException(CustomException e) {
         return ResponseEntity.status(e.getHttpStatus()).body(e.toProblemDetail());
@@ -41,6 +48,7 @@ public class ApiExceptionHandler {
     /** {@code @PreAuthorize} refusal (an admin endpoint called by a user) */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException e) {
+        securityEvents.record(SecurityEvents.Kind.ACCESS_DENIED);
         return problem(HttpStatus.FORBIDDEN, "Access denied");
     }
 

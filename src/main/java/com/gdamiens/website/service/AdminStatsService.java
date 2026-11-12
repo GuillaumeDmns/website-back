@@ -17,6 +17,7 @@ import com.gdamiens.website.repository.AdminStatsRepository.QuotaDay;
 import com.gdamiens.website.repository.AdminStatsRepository.TableSize;
 import com.gdamiens.website.repository.GtfsImportRepository;
 import com.gdamiens.website.repository.NetworkRepository;
+import com.gdamiens.website.security.SecurityEvents;
 import com.gdamiens.website.usage.UsageRecorder;
 import com.gdamiens.website.utils.ParisTime;
 import org.springframework.beans.factory.ObjectProvider;
@@ -86,6 +87,8 @@ public class AdminStatsService {
 
     private final Clock clock;
 
+    private final SecurityEvents securityEvents;
+
     private final HttpClient httpClient = HttpClient.newBuilder()
         .connectTimeout(SITE_TIMEOUT)
         .followRedirects(HttpClient.Redirect.NEVER)
@@ -96,7 +99,8 @@ public class AdminStatsService {
     public AdminStatsService(AdminStatsRepository repository, NetworkRepository networkRepository, NetworkService networkService,
                              GtfsImportRepository gtfsImportRepository, GtfsImportService gtfsImportService, ApiQuota apiQuota,
                              ApplicationProperties applicationProperties, ObjectProvider<BuildProperties> buildProperties,
-                             UsageRecorder usageRecorder, AppVersion appVersion, Clock clock) {
+                             UsageRecorder usageRecorder, AppVersion appVersion, Clock clock, SecurityEvents securityEvents) {
+        this.securityEvents = securityEvents;
         this.repository = repository;
         this.networkRepository = networkRepository;
         this.networkService = networkService;
@@ -189,6 +193,23 @@ public class AdminStatsService {
     public record Audience(List<AdminStatsRepository.MetricCount> metrics, List<AdminStatsRepository.HostViews> viewsPerDay,
                            List<AdminStatsRepository.PageViews> pages, List<AdminStatsRepository.ReferrerViews> referrers,
                            Instant pagesReadAt) {
+    }
+
+    /**
+     * Security of the service: refused credentials and access since the start (memory only), who can get in, the last
+     * admin actions
+     *
+     * @param since       when the counts started: the start of the service
+     * @param adminEmails addresses that get the admin role (application.admin-emails): more admin accounts than these
+     *                    is worth a look
+     */
+    public record Security(Instant since, List<SecurityEvents.Count> events, AdminStatsRepository.AccessCounts access,
+                           int adminEmails, List<SecurityEvents.AdminAction> actions) {
+    }
+
+    public Security security() {
+        return new Security(Instant.ofEpochMilli(ManagementFactory.getRuntimeMXBean().getStartTime()), securityEvents.counts(),
+            repository.accessCounts(), applicationProperties.getAdminEmails().size(), securityEvents.adminActions());
     }
 
     public Usage usage(int days) {

@@ -11,7 +11,7 @@ http:
 
 docs:
   content: |-
-    Compte (`ROLE_USER` ou `ROLE_ADMIN`). Supprime définitivement le compte, ses favoris et ses sessions (refresh tokens).
+    Compte (`ROLE_USER` ou `ROLE_ADMIN`). Supprime définitivement le compte, ses favoris et ses sessions (refresh tokens). Refusé avec un jeton d'API (403 `api_token_session`).
   type: text/markdown
 
 settings:

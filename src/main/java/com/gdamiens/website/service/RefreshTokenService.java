@@ -3,6 +3,7 @@ package com.gdamiens.website.service;
 import com.gdamiens.website.model.RefreshToken;
 import com.gdamiens.website.model.User;
 import com.gdamiens.website.repository.RefreshTokenRepository;
+import com.gdamiens.website.security.SecurityEvents;
 import com.gdamiens.website.utils.OpaqueTokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,11 @@ public class RefreshTokenService {
     @Value("${security.jwt.refresh-token.expire-days:60}")
     private long expireDays;
 
-    public RefreshTokenService(RefreshTokenRepository refreshTokenRepository) {
+    private final SecurityEvents securityEvents;
+
+    public RefreshTokenService(RefreshTokenRepository refreshTokenRepository, SecurityEvents securityEvents) {
         this.refreshTokenRepository = refreshTokenRepository;
+        this.securityEvents = securityEvents;
     }
 
     /**
@@ -63,6 +67,7 @@ public class RefreshTokenService {
         if (token.get().isRevoked() || refreshTokenRepository.revokeIfActive(token.get().getId(), now) == 0) {
             LOGGER.warn("Revoked refresh token reused for user {}, revoking all its tokens", user.getId());
             refreshTokenRepository.revokeAllForUser(user.getId(), now);
+            securityEvents.record(SecurityEvents.Kind.REFRESH_TOKEN_REUSED);
             return Optional.empty();
         }
 
@@ -74,6 +79,22 @@ public class RefreshTokenService {
         refreshTokenRepository.findByTokenHash(OpaqueTokens.hash(rawToken))
             .filter(token -> !token.isRevoked())
             .ifPresent(token -> token.setRevokedAt(OffsetDateTime.now()));
+    }
+
+    /** Sessions of the user still usable (not revoked, not expired): one per device signed in */
+    public long countActive(User user) {
+        return refreshTokenRepository.countActiveForUser(user.getId(), OffsetDateTime.now());
+    }
+
+    /**
+     * Closes every session of the user (all its devices): their refresh tokens no longer renew anything, and their
+     * access tokens end within the hour
+     *
+     * @return sessions closed
+     */
+    @Transactional
+    public int revokeAll(User user) {
+        return refreshTokenRepository.revokeAllForUser(user.getId(), OffsetDateTime.now());
     }
 
     @Scheduled(cron = "0 0 4 * * *", zone = "Europe/Paris")

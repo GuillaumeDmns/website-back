@@ -3,6 +3,7 @@ package com.gdamiens.website.controller.v2;
 import com.gdamiens.website.controller.object.v2.ApiToken;
 import com.gdamiens.website.controller.object.v2.ApiTokenCreation;
 import com.gdamiens.website.controller.object.v2.NewApiToken;
+import com.gdamiens.website.security.ApiTokenSessions;
 import com.gdamiens.website.service.ApiTokenService;
 import com.gdamiens.website.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,10 +45,11 @@ public class ApiTokenController {
     }
 
     @PostMapping
-    @Operation(summary = "Create an API token: its value is only given in this answer (at most 10 tokens, 365 days)",
+    @Operation(summary = "Create an API token: its value is only given in this answer (at most 10 tokens, 365 days); not with an API token (403 api_token_session): a leaked one must not be able to make others",
         security = @SecurityRequirement(name = "Auth. Token"))
-    public ResponseEntity<NewApiToken> create(Principal principal, @RequestBody ApiTokenCreation request) {
-        return new ResponseEntity<>(apiTokenService.create(userService.user(principal.getName()), request.name(), request.validDays()),
+    public ResponseEntity<NewApiToken> create(Authentication authentication, @RequestBody ApiTokenCreation request) {
+        ApiTokenSessions.requireOwnSession(authentication);
+        return new ResponseEntity<>(apiTokenService.create(userService.user(authentication.getName()), request.name(), request.validDays()),
             HttpStatus.CREATED);
     }
 

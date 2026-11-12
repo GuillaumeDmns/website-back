@@ -26,6 +26,10 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -45,8 +49,10 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, RateLimiter rateLimiter,
                                            ApplicationProperties applicationProperties, UsageRecorder usageRecorder,
+                                           SecurityEvents securityEvents,
                                            @Qualifier("requestMappingHandlerMapping") ObjectProvider<RequestMappingHandlerMapping> controllers)
         throws Exception {
+        BearerTokenAuthenticationEntryPoint bearerEntryPoint = new BearerTokenAuthenticationEntryPoint();
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
@@ -81,9 +87,17 @@ public class WebSecurityConfig {
                 )
                 // Refused by the rules above: the same problem detail as a controller's @PreAuthorize (ApiExceptionHandler)
                 .accessDeniedHandler((request, response, denied) -> {
+                    securityEvents.record(SecurityEvents.Kind.ACCESS_DENIED);
                     response.setStatus(HttpStatus.FORBIDDEN.value());
                     response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
                     response.getWriter().write("{\"title\":\"Forbidden\",\"status\":403,\"detail\":\"Access denied\"}");
+                })
+                // A refused access token: counted unless it merely expired (the apps renew theirs on a 401)
+                .authenticationEntryPoint((request, response, failure) -> {
+                    if (isForgedOrMalformed(failure)) {
+                        securityEvents.record(SecurityEvents.Kind.JWT_REFUSED);
+                    }
+                    bearerEntryPoint.commence(request, response, failure);
                 })
             )
             .cors(Customizer.withDefaults())
@@ -91,9 +105,23 @@ public class WebSecurityConfig {
             // in): usage counts first, so that the rate limiting's refusals are counted too
             .addFilterAfter(new UsageFilter(usageRecorder, () -> controllers.getObject().getHandlerMethods().keySet().stream()
                 .flatMap(route -> route.getPatternValues().stream()).toList()), BearerTokenAuthenticationFilter.class)
-            .addFilterAfter(new RateLimitFilter(rateLimiter, applicationProperties.getRateLimit()), BearerTokenAuthenticationFilter.class);
+            .addFilterAfter(new RateLimitFilter(rateLimiter, applicationProperties.getRateLimit(), securityEvents), BearerTokenAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /** An invalid bearer token whose only fault isn't its expiry: a bad signature, a token of another server, garbage */
+    static boolean isForgedOrMalformed(AuthenticationException failure) {
+        if (!(failure instanceof InvalidBearerTokenException)) {
+            return false;
+        }
+        for (Throwable cause = failure.getCause(); cause != null; cause = cause.getCause()) {
+            if (cause instanceof JwtValidationException invalid) {
+                return invalid.getErrors().stream().anyMatch(error -> error.getDescription() == null
+                    || !error.getDescription().contains("expired"));
+            }
+        }
+        return true;
     }
 
     @Bean

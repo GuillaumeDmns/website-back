@@ -121,6 +121,11 @@ spring:
 
 # Secrets (datasource, security.jwt.token.secret-key, application.idfm-key, application.idfm-static-key) come from
 # environment variables. Logs go to the standard output (journald). No API docs in production.
+# Only nginx, on the same machine, calls the service: never reachable from outside, whatever the firewall (its rate
+# limits and logs would be bypassed)
+server:
+  address: 127.0.0.1
+
 springdoc:
   api-docs:
     enabled: false
