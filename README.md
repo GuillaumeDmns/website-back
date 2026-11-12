@@ -134,7 +134,20 @@ Dans `/etc/guillaumedamiens/application-prod.yml`, sous `application:` :
       - ton.adresse@gmail.com
 ```
 
-Sans client id, `POST /api/auth/google` répond 503. Aucun secret Google n'est nécessaire sur le serveur.
+Sans client id, `POST /api/auth/google` répond 503. Les apps Android, iOS et web obtiennent elles-mêmes leur ID token : elles n'ont besoin d'aucun secret Google sur le serveur.
+
+Les apps **Linux et Windows** n'ont pas de SDK Google : elles se connectent par le navigateur du système, et c'est le serveur qui termine l'échange avec Google (`POST /api/auth/google/desktop`, détail dans `CLAUDE.md`). Il lui faut le secret du client web :
+
+1. Dans la console Google Cloud (API et services → Identifiants → le client OAuth de type « Application Web »), ajouter aux **URI de redirection autorisés** `https://guillaumedamiens.com/api/auth/google/desktop/callback` (et `http://localhost:8080/api/auth/google/desktop/callback` pour le développement), puis copier le **code secret du client**.
+2. Sous `application: google:` de `/etc/guillaumedamiens/application-prod.yml` (et de l'`application-dev.yml` local) :
+
+```yaml
+    desktop:
+      client-id: 1234-web.apps.googleusercontent.com
+      client-secret: GOCSPX-…        # secret : jamais dans le dépôt
+```
+
+Sans secret, `POST /api/auth/google/desktop` répond 503 et l'app desktop continue sans compte.
 
 La connexion se fait **uniquement avec Google** : il n'y a plus de comptes à mot de passe. Pour Bruno et les scripts, un admin crée un **jeton d'API personnel** (`gdpat_…`, 365 jours au plus) dans « Mon compte » de l'app, puis le met dans la variable secrète `apiToken` de l'environnement Bruno : la collection l'échange toute seule contre un JWT (`POST /api/auth/api-token`). On le révoque au même endroit.
 

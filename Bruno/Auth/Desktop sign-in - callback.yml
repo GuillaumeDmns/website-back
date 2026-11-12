@@ -1,0 +1,27 @@
+info:
+  name: "Desktop sign-in - callback"
+  type: http
+  seq: 8
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/auth/google/desktop/callback?code=&state="
+  params:
+    - name: code
+      value: ""
+      type: query
+    - name: state
+      value: ""
+      type: query
+
+docs:
+  content: |-
+    Public. Étape 2, appelée par le navigateur que Google renvoie ici (`code` et `state`, ou `error`) : le backend échange le code chez Google avec le secret du client web, vérifie l'ID token (et son `nonce`), puis redirige (302) vers le port de l'app, `http://127.0.0.1:<port>/?code=<code à usage unique>&state=…`, ou `?error=access_denied|failed&state=…`. 400 si la connexion est inconnue, expirée ou déjà revenue. Le code de Google ne sert qu'une fois : cette requête ne se rejoue pas à la main.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: false
+  maxRedirects: 0
+  forwardAuthorizationHeader: false

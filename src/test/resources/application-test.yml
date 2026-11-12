@@ -12,6 +12,10 @@ application:
   google:
     client-ids:
       - test-client.apps.googleusercontent.com
+    desktop:
+      client-id: test-client.apps.googleusercontent.com
+      client-secret: test-google-secret
+      redirect-uri: https://api.example.com/api/auth/google/desktop/callback
   admin-emails:
     - admin@example.com
   gtfs:

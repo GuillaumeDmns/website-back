@@ -81,7 +81,15 @@ public class UserService {
      */
     @Transactional
     public JwtDTO signInWithGoogle(String idToken) {
-        GoogleIdTokenVerifier.GoogleAccount google = googleIdTokenVerifier.verify(idToken);
+        return signInWithGoogle(googleIdTokenVerifier.verify(idToken));
+    }
+
+    /**
+     * Signs in the Google account of a verified ID token (the desktop apps' sign-in, {@link GoogleDesktopSignIn}, has
+     * it verified before the app comes for its tokens)
+     */
+    @Transactional
+    public JwtDTO signInWithGoogle(GoogleIdTokenVerifier.GoogleAccount google) {
         User user = userRepository.getByGoogleSub(google.sub()).orElseGet(() -> {
             User created = new User();
             created.setLogin(GOOGLE_LOGIN_PREFIX + google.sub());

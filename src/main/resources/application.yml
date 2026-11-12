@@ -74,10 +74,17 @@ application:
     guest-tokens-per-ip-per-hour: 30
     # All the guest devices of an address together (a new guest token costs nothing)
     guest-journeys-per-ip-per-day: 100
-  # Sign-in with Google (POST /api/auth/google): accepted OAuth client ids (web, iOS, desktop), none = disabled.
+  # Sign-in with Google (POST /api/auth/google): accepted OAuth client ids (web, iOS), none = disabled.
   # Verified emails given ROLE_ADMIN at sign-in. Both set in application-prod.yml / application-dev.yml
   google:
     client-ids: []
+    # Desktop apps (Linux, Windows), signing in through the system browser (POST /api/auth/google/desktop): the web
+    # client, its secret (application-prod.yml / application-dev.yml; none = disabled) and where Google sends the
+    # browser back, registered among the client's authorized redirect URIs
+    desktop:
+      client-id: ""
+      client-secret: ""
+      redirect-uri: https://guillaumedamiens.com/api/auth/google/desktop/callback
   admin-emails: []
   gtfs:
     # The new schema (about the size of the current one, 3.6 GB in October 2026) is built next to it. Measured where
@@ -102,6 +109,9 @@ application:
   cors-allowed-origins:
     - http://localhost:[*]
     - http://127.0.0.1:[*]
+  google:
+    desktop:
+      redirect-uri: http://localhost:8080/api/auth/google/desktop/callback
 
 ---
 spring:

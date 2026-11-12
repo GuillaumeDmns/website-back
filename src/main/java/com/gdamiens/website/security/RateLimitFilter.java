@@ -25,7 +25,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final Set<String> AUTH_PATHS = Set.of("/api/auth/guest", "/api/auth/google", "/api/auth/api-token", "/api/token/refresh", "/api/logout");
+    private static final Set<String> AUTH_PATHS = Set.of("/api/auth/guest", "/api/auth/google", "/api/auth/google/desktop",
+        "/api/auth/google/desktop/callback", "/api/auth/google/desktop/token", "/api/auth/api-token", "/api/token/refresh", "/api/logout");
 
     private final RateLimiter rateLimiter;
 

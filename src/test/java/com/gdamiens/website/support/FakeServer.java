@@ -25,10 +25,17 @@ import java.util.function.Function;
  */
 public final class FakeServer implements AutoCloseable {
 
-    public record Request(String method, String path, Map<String, List<String>> query, Map<String, List<String>> headers) {
+    /** @param form fields of a form body ({@code application/x-www-form-urlencoded}), empty for any other one */
+    public record Request(String method, String path, Map<String, List<String>> query, Map<String, List<String>> headers,
+                          Map<String, List<String>> form) {
 
         public String param(String name) {
             List<String> values = query.get(name);
+            return values == null || values.isEmpty() ? null : values.getFirst();
+        }
+
+        public String field(String name) {
+            List<String> values = form.get(name);
             return values == null || values.isEmpty() ? null : values.getFirst();
         }
 
@@ -128,10 +135,12 @@ public final class FakeServer implements AutoCloseable {
 
     private void handle(HttpExchange exchange) throws IOException {
         try (exchange; InputStream body = exchange.getRequestBody()) {
-            body.readAllBytes();
+            String sent = new String(body.readAllBytes(), StandardCharsets.UTF_8);
+            String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
+            boolean form = contentType != null && contentType.startsWith("application/x-www-form-urlencoded");
             URI uri = exchange.getRequestURI();
             Request request = new Request(exchange.getRequestMethod(), uri.getPath(), Query.parse(uri.getRawQuery()),
-                Map.copyOf(exchange.getRequestHeaders()));
+                Map.copyOf(exchange.getRequestHeaders()), form ? Query.parse(sent) : Map.of());
             requests.add(request);
 
             Function<Request, Response> handler = route(uri.getPath());
