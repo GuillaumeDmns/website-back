@@ -53,17 +53,17 @@ Logs : `journalctl -u guillaumedamiens -f`. Santé : `curl http://127.0.0.1:8080
 
 ### Répertoire de téléchargement du GTFS
 
-Pendant un import, le zip du GTFS est téléchargé dans `application.gtfs.download-dir`, puis supprimé (import réussi ou non). L'import ne démarre pas sous `application.gtfs.min-free-disk-gb` (6 Go) d'espace libre sur le disque de ce répertoire, qui doit donc être celui de la base. Par défaut c'est le répertoire temporaire de la JVM (`/tmp`) ; le profil `prod` le fixe à `/root/gtfs`, le `/tmp` du VPS étant trop petit (« Not enough free disk for a GTFS import »).
+Pendant un import, le zip du GTFS est téléchargé dans `application.gtfs.download-dir`, puis supprimé (import réussi ou non). L'import ne démarre pas sous `application.gtfs.min-free-disk-gb` (6 Go) d'espace libre sur le disque de ce répertoire, qui doit donc être celui de la base. Par défaut c'est le répertoire temporaire de la JVM (`/tmp`) ; le profil `prod` le fixe à `/var/lib/guillaumedamiens/gtfs`, le `/tmp` du VPS étant trop petit (« Not enough free disk for a GTFS import »).
 
-Le service tourne sous l'utilisateur `guillaumedamiens`, qui n'a aucun droit dans `/root` (700, `root`). À faire une fois sur le VPS, en `root`, sans quoi l'import échoue (« GTFS download directory /root/gtfs … can't be created », visible dans l'administration) et les données actuelles restent en place :
+Le service tourne sous l'utilisateur `guillaumedamiens`, qui ne peut rien créer dans `/var/lib`. À faire une fois sur le VPS, en `root`, sans quoi l'import échoue (« GTFS download directory /var/lib/guillaumedamiens/gtfs … can't be created », visible dans l'administration) et les données actuelles restent en place :
 
 ```bash
-install -d -o guillaumedamiens -g guillaumedamiens -m 700 /root/gtfs
-chmod 711 /root   # traverser /root sans pouvoir le lister ; ou, plus fin : setfacl -m u:guillaumedamiens:--x /root
-sudo -u guillaumedamiens sh -c 'touch /root/gtfs/essai && rm /root/gtfs/essai' && df -h /root/gtfs
+install -d -o guillaumedamiens -g guillaumedamiens -m 750 /var/lib/guillaumedamiens/gtfs
+sudo -u guillaumedamiens sh -c 'touch /var/lib/guillaumedamiens/gtfs/essai && rm /var/lib/guillaumedamiens/gtfs/essai'
+df -h /var/lib/guillaumedamiens/gtfs /var/lib/postgresql   # le même disque, avec au moins 6 Go libres
 ```
 
-L'unité systemd ne doit pas avoir `ProtectHome` (ni `ProtectSystem=strict` sans `ReadWritePaths=/root/gtfs`) : ils cachent `/root` au service. Pour un autre emplacement, sans rebuild : `application.gtfs.download-dir` dans `/etc/guillaumedamiens/application-prod.yml` (par exemple `/var/lib/guillaumedamiens/gtfs`, créé pour `guillaumedamiens`, qui évite d'ouvrir `/root`), puis redémarrer le service.
+Si l'unité systemd reçoit un jour `ProtectSystem=strict`, lui ajouter `ReadWritePaths=/var/lib/guillaumedamiens`. Pour un autre emplacement, sans rebuild : `application.gtfs.download-dir` dans `/etc/guillaumedamiens/application-prod.yml`, puis redémarrer le service.
 
 ### Déployer
 

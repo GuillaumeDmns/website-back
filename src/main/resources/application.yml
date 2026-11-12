@@ -117,7 +117,8 @@ springdoc:
   swagger-ui:
     enabled: false
 
-# The GTFS zip goes to the disk: /tmp is too small on the VPS. The service's user must be able to write there (README)
+# The GTFS zip goes to the disk, next to the database: /tmp is too small on the VPS. The directory belongs to the
+# service's user (created once on the VPS, README)
 application:
   gtfs:
-    download-dir: /root/gtfs
+    download-dir: /var/lib/guillaumedamiens/gtfs
