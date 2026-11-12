@@ -18,7 +18,7 @@ http:
 
 docs:
   content: |-
-    Admin. Crée un jeton d'API (au plus 10, 365 jours au plus) : sa valeur `token` n'est donnée que dans cette réponse, à copier dans `apiToken` de l'environnement.
+    Admin. Crée un jeton d'API (au plus 10, 365 jours au plus) : sa valeur `token` n'est donnée que dans cette réponse, à copier dans `apiToken` de l'environnement. Refusé avec un accès obtenu par un jeton d'API (403 `api_token_session`) : à faire depuis l'administration (page Sécurité), ou avec le `jwt` d'une session Google.
   type: text/markdown
 
 settings:

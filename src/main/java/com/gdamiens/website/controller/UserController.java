@@ -8,6 +8,7 @@ import com.gdamiens.website.controller.object.GoogleSignInRequest;
 import com.gdamiens.website.controller.object.JwtDTO;
 import com.gdamiens.website.controller.object.RefreshTokenRequest;
 import com.gdamiens.website.exceptions.CustomException;
+import com.gdamiens.website.security.SecurityEvents;
 import com.gdamiens.website.security.UsageBudgets;
 import com.gdamiens.website.service.GoogleDesktopSignIn;
 import com.gdamiens.website.service.UserService;
@@ -33,10 +34,14 @@ public class UserController {
 
     private final GoogleDesktopSignIn googleDesktopSignIn;
 
-    public UserController(UserService userService, UsageBudgets usageBudgets, GoogleDesktopSignIn googleDesktopSignIn) {
+    private final SecurityEvents securityEvents;
+
+    public UserController(UserService userService, UsageBudgets usageBudgets, GoogleDesktopSignIn googleDesktopSignIn,
+                          SecurityEvents securityEvents) {
         this.userService = userService;
         this.usageBudgets = usageBudgets;
         this.googleDesktopSignIn = googleDesktopSignIn;
+        this.securityEvents = securityEvents;
     }
 
     @PostMapping("/auth/api-token")
@@ -46,7 +51,7 @@ public class UserController {
         @ApiResponse(responseCode = "401", description = "Unknown or expired API token")})
     public JwtDTO signInWithApiToken(@RequestBody ApiTokenRequest request) {
         return userService.signInWithApiToken(request.token())
-            .orElseThrow(() -> new CustomException("Unknown or expired API token", HttpStatus.UNAUTHORIZED));
+            .orElseThrow(() -> refused(SecurityEvents.Kind.API_TOKEN_REFUSED, "Unknown or expired API token"));
     }
 
     @PostMapping("/auth/google")
@@ -57,7 +62,14 @@ public class UserController {
         @ApiResponse(responseCode = "401", description = "Invalid Google ID token (signature, issuer, audience, expiry, unverified email)"),
         @ApiResponse(responseCode = "503", description = "Sign-in with Google is not configured")})
     public ResponseEntity<JwtDTO> signInWithGoogle(@RequestBody GoogleSignInRequest request) {
-        return ResponseEntity.ok(userService.signInWithGoogle(request.idToken()));
+        try {
+            return ResponseEntity.ok(userService.signInWithGoogle(request.idToken()));
+        } catch (CustomException e) {
+            if (e.getHttpStatus() == HttpStatus.UNAUTHORIZED) {
+                securityEvents.record(SecurityEvents.Kind.GOOGLE_TOKEN_REFUSED);
+            }
+            throw e;
+        }
     }
 
     @PostMapping("/auth/google/desktop")
@@ -109,7 +121,7 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Server error")})
     public JwtDTO refreshToken(@RequestBody RefreshTokenRequest request) {
         return userService.refresh(requireRefreshToken(request))
-            .orElseThrow(() -> new CustomException("Invalid, expired or revoked refresh token", HttpStatus.UNAUTHORIZED));
+            .orElseThrow(() -> refused(SecurityEvents.Kind.REFRESH_TOKEN_REFUSED, "Invalid, expired or revoked refresh token"));
     }
 
     @PostMapping("/logout")
@@ -120,6 +132,12 @@ public class UserController {
     public ResponseEntity<Void> logout(@RequestBody RefreshTokenRequest request) {
         userService.signOut(requireRefreshToken(request));
         return ResponseEntity.noContent().build();
+    }
+
+    /** A 401 for refused credentials, counted for the administration's security page */
+    private CustomException refused(SecurityEvents.Kind kind, String message) {
+        securityEvents.record(kind);
+        return new CustomException(message, HttpStatus.UNAUTHORIZED);
     }
 
     private static String requireRefreshToken(RefreshTokenRequest request) {

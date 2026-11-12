@@ -1,0 +1,21 @@
+info:
+  name: "Account - sessions"
+  type: http
+  seq: 23
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/me/sessions"
+  auth: inherit
+
+docs:
+  content: |-
+    Compte (`ROLE_USER` ou `ROLE_ADMIN`). Sessions encore utilisables du compte (appareils connectés).
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

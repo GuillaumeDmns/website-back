@@ -55,7 +55,7 @@ jobs:
           java -jar target/website-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod > app.log 2>&1 &
           for _ in $(seq 1 60); do
             sleep 3
-            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/health)" = 200 ]; then
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/health)" = 200 ]; then
               echo "Started"
               exit 0
             fi

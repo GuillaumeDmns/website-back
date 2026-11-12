@@ -7,6 +7,7 @@ import com.gdamiens.website.controller.object.v2.AccountExport;
 import com.gdamiens.website.exceptions.CustomException;
 import com.gdamiens.website.model.User;
 import com.gdamiens.website.repository.UserRepository;
+import com.gdamiens.website.security.ApiTokenSessions;
 import com.gdamiens.website.security.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -184,7 +186,8 @@ public class UserService {
             .map(this::withoutFormerAdminRole)
             // API tokens are the admins' only (ApiTokenController): one left behind by a former admin opens nothing
             .filter(user -> user.getRole() == Role.ROLE_ADMIN)
-            .map(user -> new JwtDTO(createAccessToken(user), null, tokenValidityMs / 1000));
+            .map(user -> new JwtDTO(createJwt(user.getLogin(), user.getRole(), Duration.ofMillis(tokenValidityMs),
+                Map.of(ApiTokenSessions.CLAIM, ApiTokenSessions.API_TOKEN)), null, tokenValidityMs / 1000));
     }
 
     /**
@@ -205,13 +208,18 @@ public class UserService {
     }
 
     private String createJwt(String subject, Role role, Duration validity) {
+        return createJwt(subject, role, validity, Map.of());
+    }
+
+    private String createJwt(String subject, Role role, Duration validity, Map<String, String> extraClaims) {
         Instant now = Instant.now();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder builder = JwtClaimsSet.builder()
             .subject(subject)
             .issuedAt(now)
             .expiresAt(now.plus(validity))
-            .claim("auth", List.of(role.getAuthority()))
-            .build();
+            .claim("auth", List.of(role.getAuthority()));
+        extraClaims.forEach(builder::claim);
+        JwtClaimsSet claims = builder.build();
 
         return jwtEncoder.encode(JwtEncoderParameters.from(
             JwsHeader.with(MacAlgorithm.HS256).build(), claims

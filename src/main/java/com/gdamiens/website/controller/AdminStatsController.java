@@ -63,6 +63,13 @@ public class AdminStatsController {
         return adminStatsService.sites();
     }
 
+    @GetMapping("/security")
+    @Operation(summary = "Refused credentials and access since the start (per kind, today and in all), admin accounts, sessions and API tokens, last admin actions",
+        security = @SecurityRequirement(name = "Auth. Token"))
+    public AdminStatsService.Security getSecurity() {
+        return adminStatsService.security();
+    }
+
     @GetMapping("/usage")
     @Operation(summary = "API requests per hour, per route (errors, rate limiting, time) and per day and kind of caller over [days]",
         security = @SecurityRequirement(name = "Auth. Token"))

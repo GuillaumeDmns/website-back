@@ -26,6 +26,15 @@ public class AdminStatsRepository {
     public record AccountCounts(int total, int admins, int activeToday, int active7Days, int active30Days, int new7Days,
                                 int new30Days, int withSession, int apiTokens, int apiTokensUsed7Days) {}
 
+    /**
+     * Who can get in, counted: admin accounts, sessions still usable, personal API tokens
+     *
+     * @param apiTokensExpiringSoon valid tokens ending within 30 days
+     * @param apiTokensIdle         valid tokens unused for 90 days (or never used and created that long ago): worth revoking
+     */
+    public record AccessCounts(int admins, int sessions, int accountsWithSession, int apiTokens, int apiTokensExpiringSoon,
+                               int apiTokensIdle) {}
+
     public record QuotaDay(LocalDate day, String feature, String api, int calls, int guestCalls) {}
 
     public record FavoriteTarget(String id, int count) {}
@@ -81,6 +90,20 @@ public class AdminStatsRepository {
             params, (rs, row) -> new AccountCounts(rs.getInt("total"), rs.getInt("admins"), rs.getInt("active_today"), rs.getInt("active_7"),
                 rs.getInt("active_30"), rs.getInt("new_7"), rs.getInt("new_30"), rs.getInt("with_session"), rs.getInt("api_tokens"),
                 rs.getInt("api_tokens_used")));
+    }
+
+    public AccessCounts accessCounts() {
+        return jdbc.queryForObject("""
+            SELECT (SELECT count(*) FROM public."user" WHERE role = 'ROLE_ADMIN') AS admins,
+                   count(*) AS sessions,
+                   count(DISTINCT user_id) AS accounts,
+                   (SELECT count(*) FROM public.api_token WHERE expires_at > now()) AS api_tokens,
+                   (SELECT count(*) FROM public.api_token WHERE expires_at > now() AND expires_at < now() + interval '30 days') AS expiring,
+                   (SELECT count(*) FROM public.api_token WHERE expires_at > now()
+                       AND coalesce(last_used_at, created_at) < now() - interval '90 days') AS idle
+            FROM public.refresh_token WHERE revoked_at IS NULL AND expires_at > now()
+            """, new MapSqlParameterSource(), (rs, row) -> new AccessCounts(rs.getInt("admins"), rs.getInt("sessions"),
+            rs.getInt("accounts"), rs.getInt("api_tokens"), rs.getInt("expiring"), rs.getInt("idle")));
     }
 
     /** Accounts created per day since [from] (days without one left out) */

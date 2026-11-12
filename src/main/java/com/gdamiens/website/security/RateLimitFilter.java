@@ -32,9 +32,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final ApplicationProperties.RateLimit limits;
 
-    public RateLimitFilter(RateLimiter rateLimiter, ApplicationProperties.RateLimit limits) {
+    private final SecurityEvents securityEvents;
+
+    public RateLimitFilter(RateLimiter rateLimiter, ApplicationProperties.RateLimit limits, SecurityEvents securityEvents) {
         this.rateLimiter = rateLimiter;
         this.limits = limits;
+        this.securityEvents = securityEvents;
     }
 
     @Override
@@ -50,10 +53,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String key;
         int perMinute;
+        boolean auth = false;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (AUTH_PATHS.contains(request.getRequestURI())) {
             key = "auth:" + request.getRemoteAddr();
+            auth = true;
             perMinute = limits.getAuthPerMinute();
         } else if (Role.isGuest(authentication)) {
             // The subject is already "guest:<id>"
@@ -75,6 +80,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
+        if (auth) {
+            // Trying credentials one after the other
+            securityEvents.record(SecurityEvents.Kind.AUTH_RATE_LIMITED);
+        }
         long retryAfterSeconds = Math.max(1, TimeUnit.NANOSECONDS.toSeconds(probe.getNanosToWaitForRefill()));
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setHeader("Retry-After", String.valueOf(retryAfterSeconds));
