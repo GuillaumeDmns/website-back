@@ -83,6 +83,11 @@ chmod 440 "$sudoers.tmp"
 visudo -cf "$sudoers.tmp" >/dev/null || fail "invalid sudoers file"
 mv "$sudoers.tmp" "$sudoers"
 
+echo "== Log retention"
+install -d -m 755 /etc/systemd/journald.conf.d
+install -m 644 "$SCRIPT_DIR/journald-retention.conf" /etc/systemd/journald.conf.d/retention.conf
+systemctl restart systemd-journald
+
 echo "== Service"
 backup=""
 if [[ -f $UNIT ]]; then
