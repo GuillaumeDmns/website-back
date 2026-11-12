@@ -260,7 +260,7 @@ public class JourneyService {
         List<JourneySection> parts = List.of(
             walk(origin, stationPoint(take), walkingSpeed),
             new JourneySection(Kind.BIKE, null, null, rideDuration, stationPoint(take), stationPoint(leave), null, null, List.of(),
-                List.of(), List.of(), null, null, ridePath.length(), ridePath.shape()),
+                List.of(), List.of(), null, null, ridePath.length(), ridePath.shape(), List.of()),
             walk(stationPoint(leave), destination, walkingSpeed));
 
         // One after the other, from the time asked (or to it, for an arrival time)
@@ -282,7 +282,7 @@ public class JourneyService {
             }
             Instant end = cursor.plusSeconds(part.duration());
             sections.add(new JourneySection(part.kind(), cursor, end, part.duration(),
-                part.from(), part.to(), null, null, List.of(), List.of(), part.steps(), null, null, part.length(), part.shape()));
+                part.from(), part.to(), null, null, List.of(), List.of(), part.steps(), null, null, part.length(), part.shape(), List.of()));
             cursor = bike ? end.plus(BIKE_HANDLING) : end;
         }
         return Optional.of(new JourneyOption("bike_share", List.of("bike_share"), departure, cursor,
@@ -316,7 +316,7 @@ public class JourneyService {
     private static JourneySection walk(JourneyPoint from, JourneyPoint to, double metersPerSecond) {
         int length = walkingLength(from.lat(), from.lon(), to.lat(), to.lon());
         return new JourneySection(Kind.WALK, null, null, (int) Math.round(length / metersPerSecond), from, to, null, null, List.of(),
-            List.of(), List.of(), null, null, length, List.of(new double[]{from.lon(), from.lat()}, new double[]{to.lon(), to.lat()}));
+            List.of(), List.of(), null, null, length, List.of(new double[]{from.lon(), from.lat()}, new double[]{to.lon(), to.lat()}), List.of());
     }
 
     /** Streets are about 30 % longer than the straight line */
@@ -394,7 +394,7 @@ public class JourneyService {
                 return shape == null ? section : new JourneySection(section.kind(), section.departure(), section.arrival(),
                     section.duration(), section.from(), section.to(), section.line(), section.headsign(),
                     section.boardingPositions(), section.stops(), section.steps(), section.realtime(), section.delay(),
-                    section.length(), shape);
+                    section.length(), shape, section.accesses());
             }).toList())).toList();
     }
 

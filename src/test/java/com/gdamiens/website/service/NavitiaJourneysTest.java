@@ -1,5 +1,6 @@
 package com.gdamiens.website.service;
 
+import com.gdamiens.website.controller.object.v2.Entrance;
 import com.gdamiens.website.controller.object.v2.JourneyOption;
 import com.gdamiens.website.controller.object.v2.JourneyPlan.PageCursor;
 import com.gdamiens.website.controller.object.v2.JourneySection;
@@ -65,6 +66,16 @@ class NavitiaJourneysTest {
         assertThat(walk.steps().getLast().name()).isEqualTo("Rue des Halles");
         assertThat(walk.length()).isEqualTo(350);
         assertThat(walk.shape()).hasSize(2);
+    }
+
+    @Test
+    void readsTheStationEntrancesWalkedThrough() {
+        JourneySection walk = journeys.getFirst().sections().getFirst();
+
+        // GTFS ids, without the access point that has no position
+        assertThat(walk.accesses()).containsExactly(
+            new Entrance("IDFM:StopPlaceEntrance:3", "3", "r. des Halles", 48.8586, 2.3468, null));
+        assertThat(journeys.getFirst().sections().getLast().accesses()).isEmpty();
     }
 
     @Test
