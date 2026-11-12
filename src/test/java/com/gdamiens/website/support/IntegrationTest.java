@@ -17,6 +17,10 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -43,10 +47,26 @@ public abstract class IntegrationTest {
     /** Version of the GTFS dataset served by default */
     protected static final Instant GTFS_VERSION = Instant.parse("2026-10-10T06:00:00Z");
 
+    /** Where the application downloads the GTFS zip (application.gtfs.download-dir): created by the first import */
+    protected static final Path GTFS_DOWNLOADS = newGtfsDownloads();
+
     private static boolean gtfsImported;
 
     static {
         POSTGRES.start();
+    }
+
+    private static Path newGtfsDownloads() {
+        try {
+            Path parent = Files.createTempDirectory("website-it-");
+            Path directory = parent.resolve("gtfs");
+            // Deleted in reverse order when the tests end
+            parent.toFile().deleteOnExit();
+            directory.toFile().deleteOnExit();
+            return directory;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @DynamicPropertySource
@@ -56,6 +76,7 @@ public abstract class IntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("application.urls.prim", () -> EXTERNAL.url() + "/prim");
         registry.add("application.urls.gtfs-dataset", () -> EXTERNAL.url() + "/gtfs");
+        registry.add("application.gtfs.download-dir", GTFS_DOWNLOADS::toString);
         registry.add("application.urls.velib-gbfs", () -> EXTERNAL.url() + "/velib");
         registry.add("application.urls.elevators", () -> EXTERNAL.url() + "/elevators");
         registry.add("application.urls.stop-zones", () -> EXTERNAL.url() + "/stop-zones");
