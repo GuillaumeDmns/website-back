@@ -21,8 +21,14 @@ server {
     # Flutter's file names (main.dart.js, canvaskit/...) don't change between builds: always revalidate (ETag)
     add_header Cache-Control "no-cache" always;
 
-    # assetlinks.json (Android App Links): never the app's index.html
+    # assetlinks.json (Android App Links), apple-app-site-association (iOS Universal Links): never the app's index.html
     location /.well-known/ {
+        try_files $uri =404;
+    }
+
+    # No extension: served as JSON, as Apple asks
+    location = /.well-known/apple-app-site-association {
+        default_type application/json;
         try_files $uri =404;
     }
 
