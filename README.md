@@ -55,15 +55,17 @@ Logs : `journalctl -u guillaumedamiens -f`. Santé : `curl http://127.0.0.1:8080
 
 Pendant un import, le zip du GTFS est téléchargé dans `application.gtfs.download-dir`, puis supprimé (import réussi ou non). L'import ne démarre pas sous `application.gtfs.min-free-disk-gb` (6 Go) d'espace libre sur le disque de ce répertoire, qui doit donc être celui de la base. Par défaut c'est le répertoire temporaire de la JVM (`/tmp`) ; le profil `prod` le fixe à `/var/lib/guillaumedamiens/gtfs`, le `/tmp` du VPS étant trop petit (« Not enough free disk for a GTFS import »).
 
-Le service tourne sous l'utilisateur `guillaumedamiens`, qui ne peut rien créer dans `/var/lib`. À faire une fois sur le VPS, en `root`, sans quoi l'import échoue (« GTFS download directory /var/lib/guillaumedamiens/gtfs … can't be created », visible dans l'administration) et les données actuelles restent en place :
+L'unité systemd (`ProtectSystem=strict`) ne laisse le service écrire que dans son `/tmp` privé et dans `/var/lib/guillaumedamiens`, son `StateDirectory`, que systemd crée pour l'utilisateur `guillaumedamiens` à chaque démarrage ; l'application y crée `gtfs`. Rien à préparer à la main. Un import qui échoue avec « GTFS download directory … can't be written by the application's user » ou « … can't be created » signale une unité installée sans `StateDirectory`, ou un autre répertoire configuré sans `ReadWritePaths` : les données actuelles restent en place.
+
+Après une modification de `deploy/guillaumedamiens.service`, l'installer sur le VPS (le déploiement par tag ne livre que le jar) :
 
 ```bash
-install -d -o guillaumedamiens -g guillaumedamiens -m 750 /var/lib/guillaumedamiens/gtfs
-sudo -u guillaumedamiens sh -c 'touch /var/lib/guillaumedamiens/gtfs/essai && rm /var/lib/guillaumedamiens/gtfs/essai'
-df -h /var/lib/guillaumedamiens/gtfs /var/lib/postgresql   # le même disque, avec au moins 6 Go libres
+scp deploy/guillaumedamiens.service root@<vps>:/etc/systemd/system/guillaumedamiens.service
+ssh root@<vps> 'systemctl daemon-reload && systemctl restart guillaumedamiens && systemctl show guillaumedamiens -p StateDirectory -p ProtectSystem'
+ssh root@<vps> df -h /var/lib/guillaumedamiens /var/lib/postgresql   # le même disque, avec au moins 6 Go libres
 ```
 
-Si l'unité systemd reçoit un jour `ProtectSystem=strict`, lui ajouter `ReadWritePaths=/var/lib/guillaumedamiens`. Pour un autre emplacement, sans rebuild : `application.gtfs.download-dir` dans `/etc/guillaumedamiens/application-prod.yml`, puis redémarrer le service.
+Pour un autre emplacement : `application.gtfs.download-dir` dans `/etc/guillaumedamiens/application-prod.yml` et `ReadWritePaths=` dans l'unité, puis redémarrer le service.
 
 ### Déployer
 

@@ -15,7 +15,10 @@ Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
 
-# Hardening. The application runs as its own unprivileged user and writes to /tmp only (GTFS zip, Tomcat work directory).
+# Hardening. The application runs as its own unprivileged user. ProtectSystem=strict leaves it the whole file system
+# read-only, but its private /tmp (Tomcat work directory) and its state directory /var/lib/guillaumedamiens, created
+# for its user by systemd: the GTFS zip is downloaded there (application.gtfs.download-dir), /tmp being too small.
+StateDirectory=guillaumedamiens
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
