@@ -15,9 +15,12 @@ Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
 
-# Hardening. The VPS is an LXC container: systemd can't create mount namespaces there, so PrivateTmp, ProtectSystem,
-# ProtectHome, ProtectKernelTunables and ProtectControlGroups make the service fail (status 226/NAMESPACE). The
-# application runs as its own unprivileged user and writes to /tmp only (GTFS zip, Tomcat work directory).
+# Hardening. The application runs as its own unprivileged user and writes to /tmp only (GTFS zip, Tomcat work directory).
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
 NoNewPrivileges=yes
 RestrictSUIDSGID=yes
 
