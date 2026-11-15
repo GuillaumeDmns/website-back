@@ -60,6 +60,12 @@ application:
     - https://app.guillaumedamiens.com/
     - https://admin.guillaumedamiens.com/
     - https://guillaumedamiens.com/api/health
+  # What the apps are told at start-up (GET /api/v2/app-config). In production, set in application-prod.yml and
+  # restart: e.g. min-versions: { android: 0.14.0 }, disabled-features: [vehicles], notice: { fr: "…", en: "…" }
+  apps:
+    min-versions: {}
+    disabled-features: []
+    notice: {}
   rate-limit:
     auth-per-minute: 10
     user-per-minute: 120
