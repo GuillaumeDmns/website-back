@@ -29,6 +29,18 @@ class TtlCacheTest {
     }
 
     @Test
+    void aCallMayAcceptAnOlderValueThanAnother() throws InterruptedException {
+        TtlCache<String, Integer> cache = new TtlCache<>(Duration.ofMinutes(1), 10);
+        AtomicInteger loads = new AtomicInteger();
+
+        cache.get("a", key -> loads.incrementAndGet(), Duration.ofMillis(20));
+        Thread.sleep(40);
+
+        assertThat(cache.get("a", key -> loads.incrementAndGet(), Duration.ofMinutes(1))).isEqualTo(1);
+        assertThat(cache.get("a", key -> loads.incrementAndGet(), Duration.ofMillis(20))).isEqualTo(2);
+    }
+
+    @Test
     void reloadsOnceExpired() throws InterruptedException {
         TtlCache<String, Integer> cache = new TtlCache<>(Duration.ofMillis(20), 10);
         AtomicInteger loads = new AtomicInteger();
