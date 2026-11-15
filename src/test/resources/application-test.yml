@@ -16,6 +16,14 @@ application:
       client-id: test-client.apps.googleusercontent.com
       client-secret: test-google-secret
       redirect-uri: https://api.example.com/api/auth/google/desktop/callback
+  apps:
+    min-versions:
+      android: 0.9.0
+    disabled-features:
+      - vehicles
+    notice:
+      fr: "  Grève mardi : trafic très perturbé  "
+      en: ""
   admin-emails:
     - admin@example.com
   gtfs:

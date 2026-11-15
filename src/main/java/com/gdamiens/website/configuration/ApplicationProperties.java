@@ -4,7 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @ConfigurationProperties(prefix = "application", ignoreUnknownFields = false)
 @Component
@@ -31,6 +33,8 @@ public class ApplicationProperties {
     private final Urls urls = new Urls();
 
     private final Scheduling scheduling = new Scheduling();
+
+    private final Apps apps = new Apps();
 
     /** Verified emails (Google) given {@code ROLE_ADMIN} when they sign in */
     private List<String> adminEmails = new ArrayList<>();
@@ -66,6 +70,10 @@ public class ApplicationProperties {
 
     public void setCorsAllowedOrigins(List<String> corsAllowedOrigins) {
         this.corsAllowedOrigins = corsAllowedOrigins;
+    }
+
+    public Apps getApps() {
+        return apps;
     }
 
     public RateLimit getRateLimit() {
@@ -299,6 +307,53 @@ public class ApplicationProperties {
 
         public void setVelibGbfs(String velibGbfs) {
             this.velibGbfs = velibGbfs;
+        }
+    }
+
+    /**
+     * What the apps are told at start-up ({@code GET /api/v2/app-config}): a published app can't be taken back, this is
+     * how an outdated one is asked to update, a feature switched off, a message shown to everyone
+     */
+    public static class Apps {
+
+        /**
+         * Oldest version still supported per platform ({@code X-App-Platform}: {@code android}, {@code ios},
+         * {@code web}, {@code linux}, {@code windows}, {@code macos}), as {@code X.Y.Z}; older apps ask to be updated.
+         * A platform without one supports every version.
+         */
+        private Map<String, String> minVersions = new LinkedHashMap<>();
+
+        /**
+         * Features the apps switch off (e.g. {@code vehicles} when its quota is in danger); names unknown to an app
+         * are ignored by it
+         */
+        private List<String> disabledFeatures = new ArrayList<>();
+
+        /** Message shown on the apps' home page (strike, major outage, maintenance), per language; empty: none */
+        private Map<String, String> notice = new LinkedHashMap<>();
+
+        public Map<String, String> getMinVersions() {
+            return minVersions;
+        }
+
+        public void setMinVersions(Map<String, String> minVersions) {
+            this.minVersions = minVersions;
+        }
+
+        public List<String> getDisabledFeatures() {
+            return disabledFeatures;
+        }
+
+        public void setDisabledFeatures(List<String> disabledFeatures) {
+            this.disabledFeatures = disabledFeatures;
+        }
+
+        public Map<String, String> getNotice() {
+            return notice;
+        }
+
+        public void setNotice(Map<String, String> notice) {
+            this.notice = notice;
         }
     }
 
