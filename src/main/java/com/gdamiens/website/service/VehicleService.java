@@ -127,11 +127,17 @@ public class VehicleService {
     /** Vehicles of each line's last load, to keep the ones missing for a while and their ids */
     private final Map<String, Previous> previous = new ConcurrentHashMap<>();
 
-    /** A minute: the estimated-timetable has a small daily quota (see {@link ApiQuota}) */
-    private final TtlCache<String, List<Vehicle>> cache = new TtlCache<>(Duration.ofSeconds(60), 500);
+    /**
+     * A minute, longer when the day's estimated-timetable quota goes too fast ({@link VehiclePacing}, which gives each
+     * call how old the vehicles may be)
+     */
+    private final TtlCache<String, List<Vehicle>> cache = new TtlCache<>(VehiclePacing.LONGEST, 500);
+
+    private final VehiclePacing pacing;
 
     public VehicleService(PrimRealtimeClient primRealtimeClient, NetworkService networkService, NetworkRepository networkRepository,
-                          TrafficService trafficService) {
+                          TrafficService trafficService, VehiclePacing pacing) {
+        this.pacing = pacing;
         this.primRealtimeClient = primRealtimeClient;
         this.networkService = networkService;
         this.networkRepository = networkRepository;
@@ -150,7 +156,7 @@ public class VehicleService {
      */
     public List<Vehicle> getVehicles(String lineId) {
         try {
-            return cache.get(lineId, this::load);
+            return cache.get(lineId, this::load, pacing.interval(lineId));
         } catch (QuotaExceededException e) {
             // The guests' share is used up: no vehicles for this caller, not cached so that accounts keep them
             return List.of();

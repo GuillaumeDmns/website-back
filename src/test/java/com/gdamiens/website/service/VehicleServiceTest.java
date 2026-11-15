@@ -1,5 +1,8 @@
 package com.gdamiens.website.service;
 
+import java.time.Clock;
+import com.gdamiens.website.configuration.ApplicationProperties;
+import com.gdamiens.website.client.ApiQuota;
 import com.gdamiens.website.client.PrimRealtimeClient;
 import com.gdamiens.website.client.siri.EstimatedVehicleJourney;
 import com.gdamiens.website.client.siri.IDFMResponse;
@@ -85,7 +88,8 @@ class VehicleServiceTest {
 
     private final List<ScheduledCallRow> schedule = new ArrayList<>();
 
-    private final VehicleService service = new VehicleService(prim, networkService, networkRepository, trafficService);
+    private final VehicleService service = new VehicleService(prim, networkService, networkRepository, trafficService,
+        new VehiclePacing(new ApiQuota(new ApplicationProperties(), Clock.systemUTC()), Clock.systemUTC()));
 
     @BeforeEach
     void network() {

@@ -26,6 +26,14 @@ public class TtlCache<K, V> {
     }
 
     public V get(K key, Function<K, V> loader) {
+        return get(key, loader, ttl);
+    }
+
+    /**
+     * @param ttl how long a value loaded earlier is still good for this call, at most the cache's own duration (a
+     *            value older than that may already be gone)
+     */
+    public V get(K key, Function<K, V> loader, Duration ttl) {
         long now = System.nanoTime();
         Entry<V> entry = entries.compute(key, (k, existing) ->
             existing != null && !existing.isExpired(now, ttl) ? existing : new Entry<>(new CompletableFuture<>(), now));
