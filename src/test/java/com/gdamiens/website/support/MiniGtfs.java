@@ -133,8 +133,9 @@ public final class MiniGtfs {
         quay("IDFM:8001", SAINT_LAZARE, "1", "1", "");
         quay("IDFM:9001", PEREIRE, "1", "1", "");
         quay("IDFM:9002", PEREIRE, "1", "1", "");
-        quay("IDFM:10001", ETOILE, "1", "1", "");
-        quay("IDFM:10002", ETOILE, "1", "1", "");
+        // Named after their streets, like the bus 21's two stops of Gare Saint-Lazare
+        quay("IDFM:10001", ETOILE, "Charles de Gaulle - Étoile - Wagram", "1", "1", "");
+        quay("IDFM:10002", ETOILE, "Charles de Gaulle - Étoile - Carnot", "1", "1", "");
         // Nation's ways out: numbered ones (2 before 10), then one without a number
         entrance("IDFM:StopPlaceEntrance:3", NATION, "", "Place de la Nation", 0.0006, 0.0004, "0");
         entrance("IDFM:StopPlaceEntrance:1", NATION, "10", "av. Dorian", -0.0004, -0.0011, "0");
@@ -180,8 +181,13 @@ public final class MiniGtfs {
     }
 
     private void quay(String id, String stopArea, String zone, String wheelchair, String platform) {
+        quay(id, stopArea, STOP_AREAS.get(stopArea).name(), zone, wheelchair, platform);
+    }
+
+    /** A quay named otherwise than its stop area */
+    private void quay(String id, String stopArea, String name, String zone, String wheelchair, String platform) {
         Stop parent = STOP_AREAS.get(stopArea);
-        row("stops.txt", id, "", parent.name(), "", coordinate(parent.lat() + 0.0001), coordinate(parent.lon() + 0.0001), zone, "", "0",
+        row("stops.txt", id, "", name, "", coordinate(parent.lat() + 0.0001), coordinate(parent.lon() + 0.0001), zone, "", "0",
             stopArea, wheelchair, platform);
     }
 

@@ -295,7 +295,9 @@ class RealtimeIT extends IntegrationTest {
         assertThat(rides.values()).allSatisfy(ride -> {
             assertThat(ride.path("arrivalSource").asString()).isEqualTo("scheduled");
             assertThat(rideTime(ride)).isEqualTo(Duration.ofMinutes(2));
-            assertThat(stopNames(ride)).containsExactly("Charles de Gaulle - Étoile", "Charles de Gaulle - Étoile", "Péreire Levallois");
+            // Each stop under its own name, as Navitia's journeys name them, not twice the stop area's
+            assertThat(stopNames(ride)).containsExactly("Charles de Gaulle - Étoile - Carnot", "Charles de Gaulle - Étoile - Wagram",
+                "Péreire Levallois");
         });
     }
 
