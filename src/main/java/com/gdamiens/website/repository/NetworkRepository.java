@@ -45,7 +45,11 @@ public class NetworkRepository {
     public record ScheduledRideRow(String headsign, String tripShortName, String terminus, LocalDate serviceDate, int departureSeconds, int arrivalSeconds,
                                    List<RideStopRow> stops) {}
 
-    /** A stop of a scheduled ride: its stop area's name, its quay's position, its time (seconds of the service day, null when not given) */
+    /**
+     * A stop of a scheduled ride: its quay's name and position, its time (seconds of the service day, null when not
+     * given). The quay's name, as Navitia's journeys give it, not its stop area's: two stops of a stop area in a row keep
+     * their own ("Gare Saint-Lazare - Budapest" then "Gare Saint-Lazare - Havre" for the bus 21).
+     */
     public record RideStopRow(String name, double lat, double lon, Integer seconds) {}
 
     /** A call of a trip at a stop area, in the order of the trip; [pickup]: passengers can board there */
@@ -369,11 +373,11 @@ public class NetworkRepository {
         String stopColumns = withStops ? ", stops.names, stops.lats, stops.lons, stops.times" : "";
         String stops = !withStops ? "" : """
                 CROSS JOIN LATERAL (
-                  SELECT array_agg(coalesce(p.stop_name, q.stop_name) ORDER BY s.stop_sequence) AS names,
+                  SELECT array_agg(q.stop_name ORDER BY s.stop_sequence) AS names,
                          array_agg(q.stop_lat ORDER BY s.stop_sequence) AS lats, array_agg(q.stop_lon ORDER BY s.stop_sequence) AS lons,
                          array_agg(extract(epoch FROM CASE WHEN s.stop_sequence = c.to_sequence THEN coalesce(s.arrival_time, s.departure_time)
                                                            ELSE coalesce(s.departure_time, s.arrival_time) END)::int ORDER BY s.stop_sequence) AS times
-                  FROM gtfs.stop_times s JOIN gtfs.stops q ON q.stop_id = s.stop_id LEFT JOIN gtfs.stops p ON p.stop_id = q.parent_station
+                  FROM gtfs.stop_times s JOIN gtfs.stops q ON q.stop_id = s.stop_id
                   WHERE s.trip_id = c.trip_id AND s.stop_sequence BETWEEN c.stop_sequence AND c.to_sequence
                     AND (coalesce(s.pickup_type, 0) <> 1 OR coalesce(s.drop_off_type, 0) <> 1)
                 ) stops""";
