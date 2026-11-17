@@ -20,7 +20,7 @@ http:
     - name: "limit"
       value: "20"
       type: query
-      description: "50 max"
+      description: "200 max"
   auth: inherit
 
 docs:

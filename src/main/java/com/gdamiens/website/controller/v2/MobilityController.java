@@ -59,6 +59,8 @@ import java.util.List;
 public class MobilityController {
 
     private static final int MAX_RADIUS = 2000;
+    /** Stop areas a nearby search gives at most: the apps' map shows every stop of a part of the town as a dot (about 2 km around in Paris) */
+    private static final int MAX_NEARBY = 200;
 
     private final NetworkService networkService;
 
@@ -141,9 +143,9 @@ public class MobilityController {
     @Operation(summary = "Stop areas around a position with their lines, closest first", security = @SecurityRequirement(name = "Auth. Token"))
     public List<StopAreaSummary> getNearby(@RequestParam double lat, @RequestParam double lon,
                                            @Parameter(description = "Meters, at most 2000") @RequestParam(defaultValue = "500") int radius,
-                                           @Parameter(description = "At most 50") @RequestParam(defaultValue = "20") int limit) {
+                                           @Parameter(description = "At most 200") @RequestParam(defaultValue = "20") int limit) {
         checkPosition(lat, lon);
-        return networkService.getNearbyStopAreas(lat, lon, Math.clamp(radius, 1, MAX_RADIUS), Math.clamp(limit, 1, 50));
+        return networkService.getNearbyStopAreas(lat, lon, Math.clamp(radius, 1, MAX_RADIUS), Math.clamp(limit, 1, MAX_NEARBY));
     }
 
     @GetMapping("/nearby/departures")

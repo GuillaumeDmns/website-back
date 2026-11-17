@@ -34,6 +34,8 @@ class NetworkIT extends IntegrationTest {
         // At most 2 km: Gare de Lyon (2.4 km) stays out
         assertThat(names(user.get("/api/v2/nearby?lat=48.8584&lon=2.3470&radius=5000").json())).containsExactly("Châtelet", "Les Halles");
         assertThat(user.get("/api/v2/nearby?lat=48.8584&lon=2.3470&radius=500&limit=1").json()).hasSize(1);
+        // A limit above 200 is brought back to it, not refused
+        assertThat(user.get("/api/v2/nearby?lat=48.8584&lon=2.3470&radius=500&limit=1000").json()).hasSize(2);
     }
 
     @Test
