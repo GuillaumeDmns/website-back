@@ -11,7 +11,7 @@ http:
 
 docs:
   content: |-
-    État du trafic : toutes les lignes de métro, RER, Transilien et tram (`severity` null si trafic normal) et toute autre ligne perturbée, avec les titres des perturbations en cours. PRIM `disruptions_bulk` partagé, rechargé en arrière-plan au plus toutes les 3 min quand on le demande.
+    État du trafic : toutes les lignes de métro, RER, Transilien et tram (`severity` null si trafic normal) et toute autre ligne perturbée, avec les titres des perturbations en cours ; `works` vrai quand des travaux touchent la ligne ou ses arrêts maintenant et que rien de pire qu'une information ne la perturbe (pictogramme travaux des apps). PRIM `disruptions_bulk` partagé, rechargé en arrière-plan au plus toutes les 3 min quand on le demande.
   type: text/markdown
 
 settings:
