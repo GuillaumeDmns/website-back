@@ -135,11 +135,23 @@ public class TrafficService {
                     .filter(Disruption::active)
                     .toList();
                 Severity severity = active.stream().map(Disruption::severity).max(Comparator.naturalOrder()).orElse(null);
-                return new LineTraffic(line, severity, active.stream().map(Disruption::title).filter(Objects::nonNull).distinct().toList());
+                return new LineTraffic(line, severity, active.stream().map(Disruption::title).filter(Objects::nonNull).distinct().toList(),
+                    hasWorksOnly(active, current.forLineStops(line.id())));
             })
             .filter(traffic -> MAIN_MODES.contains(traffic.line().mode()) || traffic.severity() != null)
             .sorted(Comparator.comparing(LineTraffic::line, NetworkService.LINE_ORDER))
             .toList();
+    }
+
+    /**
+     * Works going on now on the line or at its stops (a station closed for renovation is one of its stops'), and
+     * nothing else on the line worse than an information
+     */
+    static boolean hasWorksOnly(List<Disruption> activeOnLine, List<Disruption> onStops) {
+        boolean works = Stream.concat(activeOnLine.stream(), onStops.stream())
+            .anyMatch(disruption -> disruption.active() && disruption.category() == Category.WORKS);
+        return works && activeOnLine.stream()
+            .noneMatch(disruption -> disruption.category() != Category.WORKS && disruption.severity() != Severity.INFO);
     }
 
     /**

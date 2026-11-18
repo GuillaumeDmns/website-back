@@ -110,6 +110,21 @@ class TrafficServiceTest {
     }
 
     @Test
+    void worksAreMarkedWhenNothingWorseGoesOn() {
+        // A station of the line in works, the line itself fine: works
+        assertThat(TrafficService.hasWorksOnly(snapshot.forLine("C01742").stream().filter(Disruption::active).toList(),
+            snapshot.forLineStops("C01742"))).isTrue();
+        // Upcoming works only: not now
+        assertThat(TrafficService.hasWorksOnly(List.of(), snapshot.forLine("C01742"))).isFalse();
+        // The metro 1 interrupted: its trouble is no works
+        Disruption works = snapshot.forLineStops("C01742").getFirst();
+        assertThat(TrafficService.hasWorksOnly(snapshot.forLine("C01371"), List.of(works))).isFalse();
+        // An information on the line doesn't hide the works
+        Disruption info = snapshot.forLine("C02000").stream().filter(d -> d.severity() == Severity.INFO).findFirst().orElseThrow();
+        assertThat(TrafficService.hasWorksOnly(List.of(info), List.of(works))).isTrue();
+    }
+
+    @Test
     void theLinePageListsTheDisruptionsOfItsStops() {
         DisruptionsClient disruptionsClient = mock(DisruptionsClient.class);
         when(disruptionsClient.getDisruptions()).thenReturn(Fixtures.json("prim/disruptions_bulk.json"));
@@ -135,7 +150,7 @@ class TrafficServiceTest {
 
     @Test
     void countsTheKeptDisruptions() {
-        assertThat(snapshot.disruptionCount()).isEqualTo(6);
+        assertThat(snapshot.disruptionCount()).isEqualTo(7);
     }
 
     @Test

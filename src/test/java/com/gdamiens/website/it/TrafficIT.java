@@ -28,6 +28,9 @@ class TrafficIT extends IntegrationTest {
         assertThat(traffic.path(0).path("severity").asString()).isEqualTo("BLOCKING");
         assertThat(traffic.path(0).path("titles").values().stream().map(JsonNode::asString)).containsExactly("Métro 1 : trafic interrompu");
         assertThat(traffic.path(2).path("severity").asString()).isEqualTo("DISRUPTED");
+        // Works at a station of the RER A, nothing else there; the metro 1 is interrupted, the bus late
+        assertThat(traffic.values().stream().map(line -> line.path("works").asBoolean())).containsExactly(false, true, false);
+        assertThat(traffic.path(1).path("severity").isNull()).isTrue();
     }
 
     @Test
