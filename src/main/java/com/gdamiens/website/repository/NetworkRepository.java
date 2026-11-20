@@ -133,6 +133,25 @@ public class NetworkRepository {
             (rs, i) -> new StopAreaRow(rs.getString(1), rs.getString(2), rs.getDouble(3), rs.getDouble(4), rs.getInt(5)));
     }
 
+    /**
+     * Stop areas inside a box, at most {@code limit}: the closest to its center when there are more (the GiST index
+     * filters the box and orders them)
+     */
+    public List<StopAreaRow> findStopAreasInBox(double minLat, double minLon, double maxLat, double maxLon, int limit) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("minLat", minLat).addValue("minLon", minLon).addValue("maxLat", maxLat).addValue("maxLon", maxLon)
+            .addValue("lat", (minLat + maxLat) / 2).addValue("lon", (minLon + maxLon) / 2).addValue("limit", limit);
+
+        return jdbc.query("""
+                SELECT %s
+                FROM gtfs.stops p
+                WHERE p.location_type = 1 AND p.geom && ST_MakeEnvelope(:minLon, :minLat, :maxLon, :maxLat, 4326)
+                ORDER BY p.geom <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)
+                LIMIT :limit""".formatted(STOP_AREA_COLUMNS),
+            params,
+            (rs, i) -> new StopAreaRow(rs.getString(1), rs.getString(2), rs.getDouble(3), rs.getDouble(4), null));
+    }
+
     public Optional<StopAreaRow> findStopArea(String id) {
         return jdbc.query("SELECT %s FROM gtfs.stops p WHERE p.stop_id = :id AND p.location_type = 1".formatted(STOP_AREA_COLUMNS),
                 Map.of("id", id),

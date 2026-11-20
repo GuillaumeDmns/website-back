@@ -90,7 +90,17 @@ public class NetworkService {
     }
 
     public List<StopAreaSummary> getNearbyStopAreas(double lat, double lon, int radius, int limit) {
-        List<StopAreaRow> rows = networkRepository.findNearbyStopAreas(lat, lon, radius, limit);
+        return withLines(networkRepository.findNearbyStopAreas(lat, lon, radius, limit));
+    }
+
+    /**
+     * Stop areas inside a box with their lines, at most {@code limit} (the closest to its center): the apps' map
+     */
+    public List<StopAreaSummary> getStopAreasInBox(double minLat, double minLon, double maxLat, double maxLon, int limit) {
+        return withLines(networkRepository.findStopAreasInBox(minLat, minLon, maxLat, maxLon, limit));
+    }
+
+    private List<StopAreaSummary> withLines(List<StopAreaRow> rows) {
         Map<String, List<String>> routeIds = networkRepository.findRouteIdsByStopAreas(rows.stream().map(StopAreaRow::id).toList());
 
         return rows.stream()
