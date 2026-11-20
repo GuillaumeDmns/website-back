@@ -39,6 +39,26 @@ class NetworkIT extends IntegrationTest {
     }
 
     @Test
+    void findsTheStopAreasInsideABox() {
+        // The part of the town a map shows: Nation (further east) and Gare Saint-Lazare (further north) stay out
+        JsonNode box = user.get("/api/v2/stops?minLat=48.84&minLon=2.34&maxLat=48.87&maxLon=2.38").json();
+
+        // The closest to its center first, with their lines, no distance
+        assertThat(names(box)).containsExactly("Châtelet", "Les Halles", "Gare de Lyon");
+        assertThat(box.path(0).path("lines").values().stream().map(line -> line.path("name").asString()))
+            .containsExactly("1", "A", "38", "N11");
+        assertThat(box.path(0).has("distance")).isFalse();
+        // More than the limit: those closest to its center
+        assertThat(names(user.get("/api/v2/stops?minLat=48.84&minLon=2.34&maxLat=48.87&maxLon=2.38&limit=1").json()))
+            .containsExactly("Châtelet");
+
+        // Upside down, or wider than a part of the town
+        assertThat(user.get("/api/v2/stops?minLat=48.87&minLon=2.34&maxLat=48.84&maxLon=2.38").status()).isEqualTo(400);
+        assertThat(user.get("/api/v2/stops?minLat=48.0&minLon=2.0&maxLat=49.0&maxLon=3.0").status()).isEqualTo(400);
+        assertThat(user.get("/api/v2/stops?minLat=NaN&minLon=2.34&maxLat=48.87&maxLon=2.38").status()).isEqualTo(400);
+    }
+
+    @Test
     void refusesInvalidPositions() {
         assertThat(user.get("/api/v2/nearby?lat=100&lon=2.3").status()).isEqualTo(400);
         Api.Response notANumber = user.get("/api/v2/nearby?lat=abc&lon=2.3");

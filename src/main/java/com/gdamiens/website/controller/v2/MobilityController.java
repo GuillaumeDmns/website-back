@@ -59,8 +59,15 @@ import java.util.List;
 public class MobilityController {
 
     private static final int MAX_RADIUS = 2000;
-    /** Stop areas a nearby search gives at most: the apps' map shows every stop of a part of the town as a dot (about 2 km around in Paris) */
+    /** Stop areas a nearby search gives at most */
     private static final int MAX_NEARBY = 200;
+    /**
+     * Stop areas a box gives at most: the apps' map shows every stop of the part of the town on the screen as a dot,
+     * about 950 in the middle of Paris on a 1920 px wide window (10 × 6.5 km), 1650 on a 2560 px one
+     */
+    private static final int MAX_IN_BOX = 1500;
+    /** The widest box asked for, in degrees (about 35 km across in Paris): the map shows stops only from a part of the town */
+    private static final double MAX_BOX_DEGREES = 0.5;
 
     private final NetworkService networkService;
 
@@ -146,6 +153,20 @@ public class MobilityController {
                                            @Parameter(description = "At most 200") @RequestParam(defaultValue = "20") int limit) {
         checkPosition(lat, lon);
         return networkService.getNearbyStopAreas(lat, lon, Math.clamp(radius, 1, MAX_RADIUS), Math.clamp(limit, 1, MAX_NEARBY));
+    }
+
+    @GetMapping("/stops")
+    @Operation(summary = "Stop areas inside a box with their lines, the closest to its center when there are more than the limit",
+        security = @SecurityRequirement(name = "Auth. Token"))
+    public List<StopAreaSummary> getStopAreasInBox(@RequestParam double minLat, @RequestParam double minLon,
+                                                   @RequestParam double maxLat, @RequestParam double maxLon,
+                                                   @Parameter(description = "At most 1500") @RequestParam(defaultValue = "500") int limit) {
+        checkPosition(minLat, minLon);
+        checkPosition(maxLat, maxLon);
+        if (!(minLat <= maxLat && minLon <= maxLon && maxLat - minLat <= MAX_BOX_DEGREES && maxLon - minLon <= MAX_BOX_DEGREES)) {
+            throw new CustomException("Invalid box", HttpStatus.BAD_REQUEST);
+        }
+        return networkService.getStopAreasInBox(minLat, minLon, maxLat, maxLon, Math.clamp(limit, 1, MAX_IN_BOX));
     }
 
     @GetMapping("/nearby/departures")

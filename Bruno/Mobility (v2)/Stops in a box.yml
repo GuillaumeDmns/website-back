@@ -1,0 +1,38 @@
+info:
+  name: "Stops in a box"
+  type: http
+  seq: 29
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v2/stops?minLat=48.85&minLon=2.33&maxLat=48.87&maxLon=2.36&limit=500"
+  params:
+    - name: "minLat"
+      value: "48.85"
+      type: query
+    - name: "minLon"
+      value: "2.33"
+      type: query
+    - name: "maxLat"
+      value: "48.87"
+      type: query
+    - name: "maxLon"
+      value: "2.36"
+      type: query
+    - name: "limit"
+      value: "500"
+      type: query
+      description: "1500 max"
+  auth: inherit
+
+docs:
+  content: |-
+    Zones d'arrêt dans un rectangle avec leurs lignes (ce que la carte des apps montre), les plus proches du centre d'abord quand il y en a plus que la limite (1500 max). Rectangle de 0,5° de côté au plus.
+  type: text/markdown
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
