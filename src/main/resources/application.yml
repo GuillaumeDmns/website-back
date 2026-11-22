@@ -118,6 +118,9 @@ application:
   google:
     desktop:
       redirect-uri: http://localhost:8080/api/auth/google/desktop/callback
+  # Same PRIM key as production: the network-wide vehicle feed stays there, each line is asked alone here
+  vehicles:
+    network-feed: false
 
 ---
 spring:

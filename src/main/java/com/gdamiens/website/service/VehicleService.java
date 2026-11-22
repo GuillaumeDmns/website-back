@@ -50,10 +50,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
- * Vehicles of a line on its map, estimated from the PRIM estimated-timetable. Cached 60 s per line.
+ * Vehicles of a line on its map, estimated from the PRIM estimated-timetable: the line's journeys in the whole
+ * network's snapshot ({@link NetworkVehicleFeed}, placed once per snapshot), else, when the snapshot lacks the line or
+ * is too old, the line's own estimated-timetable, cached 60 s per line.
  * <p>
  * Two shapes of data come out of it:
  * <ul>
@@ -133,11 +136,20 @@ public class VehicleService {
      */
     private final TtlCache<String, List<Vehicle>> cache = new TtlCache<>(VehiclePacing.LONGEST, 500);
 
+    /** Vehicles placed from a network snapshot: once per line and snapshot */
+    private final TtlCache<NetworkKey, List<Vehicle>> networkCache = new TtlCache<>(Duration.ofMinutes(3), 1000);
+
+    private record NetworkKey(String lineId, Instant at) {
+    }
+
     private final VehiclePacing pacing;
 
+    private final NetworkVehicleFeed networkFeed;
+
     public VehicleService(PrimRealtimeClient primRealtimeClient, NetworkService networkService, NetworkRepository networkRepository,
-                          TrafficService trafficService, VehiclePacing pacing) {
+                          TrafficService trafficService, VehiclePacing pacing, NetworkVehicleFeed networkFeed) {
         this.pacing = pacing;
+        this.networkFeed = networkFeed;
         this.primRealtimeClient = primRealtimeClient;
         this.networkService = networkService;
         this.networkRepository = networkRepository;
@@ -149,6 +161,7 @@ public class VehicleService {
     public void onGtfsImported() {
         schedules.invalidateAll();
         cache.invalidateAll();
+        networkCache.invalidateAll();
     }
 
     /**
@@ -156,7 +169,14 @@ public class VehicleService {
      */
     public List<Vehicle> getVehicles(String lineId) {
         try {
-            return cache.get(lineId, this::load, pacing.interval(lineId));
+            Optional<NetworkVehicleFeed.Line> network = networkFeed.line(lineId);
+            if (network.isPresent()) {
+                pacing.watch(lineId);
+                NetworkVehicleFeed.Line line = network.get();
+                return networkCache.get(new NetworkKey(lineId, line.at()), key -> load(lineId, line::journeys, "network"));
+            }
+            return cache.get(lineId, id -> load(id, () -> primRealtimeClient.getEstimatedVehicleJourneys(id), "line"),
+                pacing.interval(lineId));
         } catch (QuotaExceededException e) {
             // The guests' share is used up: no vehicles for this caller, not cached so that accounts keep them
             return List.of();
@@ -215,14 +235,18 @@ public class VehicleService {
     private record Schedule(Map<String, List<TripStop>> byStop) {
     }
 
-    private List<Vehicle> load(String lineId) {
+    /**
+     * @param journeys the line's journeys, from the network snapshot or asked for the line alone
+     * @param source   where they come from, for the logs
+     */
+    private List<Vehicle> load(String lineId, Supplier<List<EstimatedVehicleJourney>> journeysSource, String source) {
         Optional<LineDetail> detail = networkService.getLineDetail(lineId);
         if (detail.isEmpty()) {
             return List.of();
         }
         List<EstimatedVehicleJourney> journeys;
         try {
-            journeys = primRealtimeClient.getEstimatedVehicleJourneys(lineId);
+            journeys = journeysSource.get();
         } catch (QuotaExceededException e) {
             if (e.isGuestShare()) {
                 throw e;
@@ -261,7 +285,8 @@ public class VehicleService {
             ? fromStops(detail.get(), runs, closed, now)
             : fromJourneys(detail.get(), runs, schedules(lineId, now), closed, now);
         vehicles = withPrevious(lineId, vehicles, perStop, now);
-        log.info("{} vehicles on line {} ({} journeys, {})", vehicles.size(), lineId, journeys.size(), perStop ? "passages per stop" : "vehicle journeys");
+        log.info("{} vehicles on line {} ({} journeys from the {} feed, {})", vehicles.size(), lineId, journeys.size(), source,
+            perStop ? "passages per stop" : "vehicle journeys");
         return vehicles;
     }
 

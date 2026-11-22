@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,5 +71,49 @@ class VehiclePacingTest {
         clock.advance(Duration.ofHours(1));
 
         assertThat(pacing.interval("C01371")).isEqualTo(Duration.ofSeconds(60));
+    }
+
+    @Test
+    void theNetworkFeedIsOneShareForAllTheLinesItGives() {
+        used(600);
+        pacing.networkRead(clock.instant(), Set.of("C01371", "C01742", "C01743"));
+        pacing.watch("C01371");
+        pacing.watch("C01742");
+
+        // The network feed alone: a request every 75 s
+        assertThat(pacing.networkInterval()).isEqualTo(Duration.ofSeconds(75));
+        // A line it lacks is a second share, for both
+        assertThat(pacing.interval("C01100")).isEqualTo(Duration.ofSeconds(151));
+        assertThat(pacing.networkInterval()).isEqualTo(Duration.ofSeconds(100));
+    }
+
+    @Test
+    void theNetworkFeedIsAskedEveryMinuteWhileTheDayIsNotAhead() {
+        used(300);
+        pacing.networkRead(clock.instant(), Set.of("C01371"));
+
+        assertThat(pacing.networkInterval()).isEqualTo(Duration.ofSeconds(60));
+    }
+
+    @Test
+    void aTooOldNetworkSnapshotNoLongerServesItsLines() {
+        used(600);
+        pacing.networkRead(clock.instant(), Set.of("C01371", "C01742"));
+        clock.advance(Duration.ofMinutes(3));
+        pacing.watch("C01742");
+
+        // Both lines asked alone again
+        assertThat(pacing.interval("C01371")).isEqualTo(Duration.ofSeconds(151));
+    }
+
+    @Test
+    void linesAreWatchedForFiveMinutes() {
+        assertThat(pacing.anyWatched()).isFalse();
+        pacing.watch("C01371");
+        assertThat(pacing.anyWatched()).isTrue();
+
+        clock.advance(Duration.ofMinutes(6));
+
+        assertThat(pacing.anyWatched()).isFalse();
     }
 }

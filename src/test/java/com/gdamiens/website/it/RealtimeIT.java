@@ -3,6 +3,7 @@ package com.gdamiens.website.it;
 import com.gdamiens.website.client.PrimRealtimeClient;
 import com.gdamiens.website.client.StopCall;
 import com.gdamiens.website.client.siri.EstimatedVehicleJourney;
+import com.gdamiens.website.service.NetworkVehicleFeed;
 import com.gdamiens.website.support.Api;
 import com.gdamiens.website.support.ExternalApis;
 import com.gdamiens.website.support.FakeServer.Response;
@@ -10,6 +11,7 @@ import com.gdamiens.website.support.IntegrationTest;
 import com.gdamiens.website.support.MiniGtfs;
 import com.gdamiens.website.support.SiriJson;
 import com.gdamiens.website.utils.ParisTime;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,11 +35,19 @@ class RealtimeIT extends IntegrationTest {
     @Autowired
     private PrimRealtimeClient primRealtimeClient;
 
+    @Autowired
+    private NetworkVehicleFeed networkVehicleFeed;
+
     private Api user;
 
     @BeforeEach
     void signIn() {
         user = newUser().api();
+    }
+
+    @AfterEach
+    void forgetTheNetworkFeed() {
+        networkVehicleFeed.clear();
     }
 
     @Test
@@ -170,6 +180,30 @@ class RealtimeIT extends IntegrationTest {
         // Cached a minute: the estimated-timetable quota is small
         user.get("/api/v2/lines/C01742/vehicles");
         assertThat(EXTERNAL.requests("/prim/estimated-timetable")).hasSize(1);
+    }
+
+    @Test
+    void takesTheVehiclesFromTheNetworkFeedAndAsksTheLinesItLacksAlone() {
+        // The whole network in one request: here the Noctilien only, the bus 341 has no real time in it (a line no other
+        // test asks the vehicles of: the last load of each line is kept)
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        EXTERNAL.on("/prim/estimated-timetable", request -> Response.json(SiriJson.estimatedTimetable("ALL".equals(request.param("LineRef"))
+            ? List.of(new SiriJson.Journey("N11-NET-1", MiniGtfs.NOCTILIEN_11, "Nation", "IDFM:3003", null,
+                List.of(new SiriJson.Call("IDFM:3003", now.plusSeconds(120), now.plusSeconds(120)))))
+            : List.of())));
+        networkVehicleFeed.read();
+
+        JsonNode night = user.get("/api/v2/lines/" + MiniGtfs.NOCTILIEN_11 + "/vehicles").json();
+        user.get("/api/v2/lines/" + MiniGtfs.BUS_341 + "/vehicles");
+
+        assertThat(night).singleElement().satisfies(vehicle -> {
+            assertThat(vehicle.path("id").asString()).isEqualTo("N11-NET-1");
+            assertThat(vehicle.path("fromStopId").asString()).isEqualTo(MiniGtfs.CHATELET);
+            assertThat(vehicle.path("toStopId").asString()).isEqualTo(MiniGtfs.NATION);
+        });
+        assertThat(EXTERNAL.requests("/prim/estimated-timetable")).extracting(request -> request.param("LineRef"))
+            .containsExactly("ALL", "STIF:Line::" + MiniGtfs.BUS_341 + ":");
+        assertThat(EXTERNAL.requests("/prim/estimated-timetable").getFirst().header("apiKey")).isEqualTo("test-prim-key");
     }
 
     @Test
