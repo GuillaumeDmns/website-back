@@ -36,6 +36,8 @@ public class ApplicationProperties {
 
     private final Apps apps = new Apps();
 
+    private final Vehicles vehicles = new Vehicles();
+
     /** Verified emails (Google) given {@code ROLE_ADMIN} when they sign in */
     private List<String> adminEmails = new ArrayList<>();
 
@@ -74,6 +76,10 @@ public class ApplicationProperties {
 
     public Apps getApps() {
         return apps;
+    }
+
+    public Vehicles getVehicles() {
+        return vehicles;
     }
 
     public RateLimit getRateLimit() {
@@ -354,6 +360,27 @@ public class ApplicationProperties {
 
         public void setNotice(Map<String, String> notice) {
             this.notice = notice;
+        }
+    }
+
+    /**
+     * Vehicles on the lines' maps ({@code VehicleService})
+     */
+    public static class Vehicles {
+
+        /**
+         * The whole network's journeys asked at once while lines are watched ({@code NetworkVehicleFeed}), each line
+         * asked alone otherwise. Off on the development machine: it shares the production's PRIM key, and two
+         * network feeds would use up the day's estimated-timetable quota
+         */
+        private boolean networkFeed = true;
+
+        public boolean isNetworkFeed() {
+            return networkFeed;
+        }
+
+        public void setNetworkFeed(boolean networkFeed) {
+            this.networkFeed = networkFeed;
         }
     }
 

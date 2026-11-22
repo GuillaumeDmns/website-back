@@ -1,6 +1,5 @@
 package com.gdamiens.website.service;
 
-import java.time.Clock;
 import com.gdamiens.website.configuration.ApplicationProperties;
 import com.gdamiens.website.client.ApiQuota;
 import com.gdamiens.website.client.PrimRealtimeClient;
@@ -16,6 +15,7 @@ import com.gdamiens.website.controller.object.v2.VehicleCall;
 import com.gdamiens.website.model.TransportMode;
 import com.gdamiens.website.repository.NetworkRepository;
 import com.gdamiens.website.repository.NetworkRepository.ScheduledCallRow;
+import com.gdamiens.website.support.MutableClock;
 import com.gdamiens.website.support.SiriJson;
 import com.gdamiens.website.support.SiriJson.Call;
 import com.gdamiens.website.support.SiriJson.Journey;
@@ -44,6 +44,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -88,8 +90,13 @@ class VehicleServiceTest {
 
     private final List<ScheduledCallRow> schedule = new ArrayList<>();
 
-    private final VehicleService service = new VehicleService(prim, networkService, networkRepository, trafficService,
-        new VehiclePacing(new ApiQuota(new ApplicationProperties(), Clock.systemUTC()), Clock.systemUTC()));
+    private final MutableClock clock = new MutableClock(Instant.now());
+
+    private final VehiclePacing pacing = new VehiclePacing(new ApiQuota(new ApplicationProperties(), clock), clock);
+
+    private final NetworkVehicleFeed networkFeed = new NetworkVehicleFeed(prim, pacing, clock, new ApplicationProperties());
+
+    private final VehicleService service = new VehicleService(prim, networkService, networkRepository, trafficService, pacing, networkFeed);
 
     @BeforeEach
     void network() {
@@ -126,6 +133,41 @@ class VehicleServiceTest {
         assertThat(vehicle.toStopId()).isEqualTo(M.id());
         // Two minutes left of the four from N2
         assertThat(vehicle.progress()).isCloseTo(0.5, within(0.02));
+    }
+
+    @Test
+    void theNetworkSnapshotServesTheLinesItHas() {
+        when(prim.getNetworkVehicleJourneys()).thenReturn(Map.of(TRAIN_LINE,
+            networkJson(train("SNCF-1", "123457", call(M, 2), call(A, 5), call(P, 9)))));
+        networkFeed.read();
+
+        Vehicle vehicle = single(service.getVehicles(TRAIN_LINE));
+        service.getVehicles(TRAIN_LINE);
+
+        assertThat(vehicle.id()).isEqualTo("SNCF-1");
+        assertThat(vehicle.fromStopId()).isEqualTo(W2.id());
+        verify(prim, never()).getEstimatedVehicleJourneys(anyString());
+    }
+
+    @Test
+    void aLineMissingFromTheNetworkSnapshotIsAskedAlone() {
+        when(prim.getNetworkVehicleJourneys()).thenReturn(Map.of(METRO_LINE, networkJson()));
+        networkFeed.read();
+        feed(train("SNCF-1", "123457", call(M, 2), call(A, 5), call(P, 9)));
+
+        assertThat(single(service.getVehicles(TRAIN_LINE)).id()).isEqualTo("SNCF-1");
+        verify(prim).getEstimatedVehicleJourneys(TRAIN_LINE);
+    }
+
+    @Test
+    void aNetworkSnapshotOverTwoMinutesOldIsNotUsed() {
+        when(prim.getNetworkVehicleJourneys()).thenReturn(Map.of(TRAIN_LINE, networkJson()));
+        networkFeed.read();
+        clock.advance(Duration.ofSeconds(121));
+        feed(train("SNCF-1", "123457", call(M, 2), call(A, 5), call(P, 9)));
+
+        assertThat(single(service.getVehicles(TRAIN_LINE)).id()).isEqualTo("SNCF-1");
+        verify(prim).getEstimatedVehicleJourneys(TRAIN_LINE);
     }
 
     @Test
@@ -345,6 +387,11 @@ class VehicleServiceTest {
 
     private void feed(String lineId, Journey... journeys) {
         when(prim.getEstimatedVehicleJourneys(lineId)).thenReturn(parse(JSON.readTree(SiriJson.estimatedTimetable(List.of(journeys)))));
+    }
+
+    /** A line's journeys as the network feed keeps them */
+    private static byte[] networkJson(Journey... journeys) {
+        return JSON.writeValueAsBytes(journeys(JSON.readTree(SiriJson.estimatedTimetable(List.of(journeys)))));
     }
 
     private static JsonNode journeys(JsonNode root) {
