@@ -5,6 +5,7 @@ import com.gdamiens.website.controller.object.v2.Entrance;
 import com.gdamiens.website.controller.object.v2.LineBranch;
 import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.LineDirection;
+import com.gdamiens.website.controller.object.v2.LineSection;
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.Quay;
 import com.gdamiens.website.controller.object.v2.StopAreaDetail;
@@ -140,38 +141,72 @@ public class NetworkService {
 
     /**
      * Line with its stops per direction. Each direction lists its branches: trips are grouped by stop pattern and a
-     * pattern included in a longer one (short turn, express service) is merged into it.
+     * pattern included in a longer one (short turn, express service) is merged into it. The line's path comes as
+     * sections between consecutive stops, from every pattern's shape ({@link LineSections}).
      */
     public Optional<LineDetail> getLineDetail(String lineId) {
         return lineDetailCache.get(lineId, id -> getLine(id).map(line -> {
-            List<TripPatternRow> patterns = networkRepository.findTripPatterns(IDFMRoute.toRouteId(id));
+            List<TripPatternRow> patterns = orientPatterns(networkRepository.findTripPatterns(IDFMRoute.toRouteId(id)));
 
-            Map<Integer, List<TripPatternRow>> branchesByDirection = orientPatterns(patterns).stream()
+            Map<Integer, List<TripPatternRow>> branchesByDirection = patterns.stream()
                 .collect(Collectors.groupingBy(TripPatternRow::directionId))
                 .entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> mergeIncludedPatterns(e.getValue())));
 
             Set<String> stopIds = new HashSet<>();
             Set<String> shapeIds = new HashSet<>();
-            branchesByDirection.values().forEach(branches -> branches.forEach(branch -> {
-                stopIds.addAll(branch.stopAreaIds());
-                if (branch.shapeId() != null) {
-                    shapeIds.add(branch.shapeId());
+            patterns.forEach(pattern -> {
+                stopIds.addAll(pattern.stopAreaIds());
+                if (pattern.shapeId() != null) {
+                    shapeIds.add(pattern.shapeId());
                 }
-            }));
+            });
 
             Map<String, StopAreaRow> stops = networkRepository.findStopAreas(stopIds);
-            Map<String, String> shapes = networkRepository.findShapesAsGeoJson(shapeIds);
+            Map<String, List<double[]>> shapes = new HashMap<>();
+            networkRepository.findShapesAsGeoJson(shapeIds).forEach((shapeId, geoJson) -> shapes.put(shapeId, GeoJson.lineStringCoordinates(geoJson)));
 
-            List<LineDirection> directions = branchesByDirection.entrySet().stream()
+            // Branches in the order of the answer, their stops those the GTFS knows
+            List<Map.Entry<Integer, List<TripPatternRow>>> sortedDirections = branchesByDirection.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .map(e -> new LineDirection(e.getKey(), e.getValue().stream()
-                    .map(branch -> toBranch(branch, stops, shapes))
-                    .toList()))
                 .toList();
+            List<LineSections.Branch> branches = new ArrayList<>();
+            sortedDirections.forEach(direction -> direction.getValue().forEach(branch -> branches.add(
+                new LineSections.Branch(direction.getKey(), branch.stopAreaIds().stream().filter(stops::containsKey).toList()))));
 
-            return new LineDetail(line, directions);
+            Map<String, double[]> positions = new HashMap<>();
+            stops.forEach((stopId, stop) -> positions.put(stopId, new double[]{stop.lon(), stop.lat()}));
+            LineSections.Result sections = LineSections.build(
+                patterns.stream()
+                    .map(pattern -> new LineSections.Pattern(pattern.directionId(), pattern.stopAreaIds(), pattern.shapeId(),
+                        pattern.shapeId() == null ? List.of() : shapes.getOrDefault(pattern.shapeId(), List.of())))
+                    .toList(),
+                branches, positions, sectionRules(line.mode()));
+
+            List<LineDirection> directions = new ArrayList<>();
+            int b = 0;
+            for (Map.Entry<Integer, List<TripPatternRow>> direction : sortedDirections) {
+                List<LineBranch> lineBranches = new ArrayList<>();
+                for (TripPatternRow branch : direction.getValue()) {
+                    lineBranches.add(toBranch(branch, stops, sections.branchShapes().get(b), sections.branchSections().get(b)));
+                    b++;
+                }
+                directions.add(new LineDirection(direction.getKey(), lineBranches));
+            }
+
+            return new LineDetail(line, directions, sections.sections().stream()
+                .map(section -> new LineSection(section.fromStopId(), section.toStopId(), section.directionIds(), section.shape()))
+                .toList());
         }));
+    }
+
+    /** Metro and trains run both ways on the same tracks, buses and some trams by other streets */
+    private static LineSections.Rules sectionRules(TransportMode mode) {
+        return switch (mode) {
+            case BUS, NOCTILIEN -> LineSections.Rules.STREETS;
+            case TRAM -> LineSections.Rules.TRAM;
+            case null, default -> LineSections.Rules.TRACKS;
+        };
     }
 
     public List<LineSummary> toLineSummaries(Collection<String> routeIds) {
@@ -188,7 +223,7 @@ public class NetworkService {
         return new StopAreaSummary(row.id(), row.name(), row.lat(), row.lon(), row.distance(), toLineSummaries(routeIds));
     }
 
-    private LineBranch toBranch(TripPatternRow pattern, Map<String, StopAreaRow> stops, Map<String, String> shapes) {
+    private LineBranch toBranch(TripPatternRow pattern, Map<String, StopAreaRow> stops, List<double[]> shape, List<Integer> sections) {
         List<StopRef> stopRefs = pattern.stopAreaIds().stream()
             .map(stops::get)
             .filter(Objects::nonNull)
@@ -196,9 +231,8 @@ public class NetworkService {
             .toList();
 
         String headsign = stopRefs.isEmpty() ? pattern.headsign() : stopRefs.getLast().name();
-        List<double[]> shape = Optional.ofNullable(pattern.shapeId()).map(shapes::get).map(GeoJson::lineStringCoordinates).orElse(List.of());
 
-        return new LineBranch(headsign, pattern.tripCount(), stopRefs, shape);
+        return new LineBranch(headsign, pattern.tripCount(), stopRefs, shape, sections);
     }
 
     /**

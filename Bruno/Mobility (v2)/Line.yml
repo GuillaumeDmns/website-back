@@ -11,7 +11,7 @@ http:
 
 docs:
   content: |-
-    Ligne avec, par sens, ses branches : arrêts ordonnés et tracé `[lon, lat]`. Les missions courtes et les directs sont fusionnés dans leur branche. Mis en cache 6 h. 404 si inconnue.
+    Ligne avec, par sens, ses branches : arrêts ordonnés et tracé `[lon, lat]`. Les missions courtes et les directs sont fusionnés dans leur branche. `sections` : le tracé de la ligne entre arrêts consécutifs, chaque tronçon une seule fois (les deux sens sur les mêmes voies ou la même rue en partagent un ; `directionIds` : les sens qui le parcourent) ; chaque branche donne dans `sections` l'index du tronçon entre chacun de ses arrêts et le suivant, et son tracé est fait de ces tronçons. Mis en cache 6 h. 404 si inconnue.
   type: text/markdown
 
 settings:

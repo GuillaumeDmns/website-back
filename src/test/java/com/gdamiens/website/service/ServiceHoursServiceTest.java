@@ -91,8 +91,8 @@ class ServiceHoursServiceTest {
     void countsEachDirectionAtItsBusiestStop() {
         // A → B → C → D one way, with short trips C → D; D → C → B → A the other way
         LineDetail detail = new LineDetail(new LineSummary("C1", "1", "Ligne 1", TransportMode.METRO, null, null), List.of(
-            new LineDirection(0, List.of(new LineBranch("D", 10, stops("A", "B", "C", "D"), List.of()))),
-            new LineDirection(1, List.of(new LineBranch("A", 10, stops("D", "C", "B", "A"), List.of())))));
+            new LineDirection(0, List.of(new LineBranch("D", 10, stops("A", "B", "C", "D"), List.of(), List.of()))),
+            new LineDirection(1, List.of(new LineBranch("A", 10, stops("D", "C", "B", "A"), List.of(), List.of())))), List.of());
         List<TripCallRow> calls = new ArrayList<>();
         trip(calls, "east-1", 6 * 3600, "A", "B", "C", "D");
         trip(calls, "east-2", 6 * 3600 + 600, "A", "B", "C", "D");

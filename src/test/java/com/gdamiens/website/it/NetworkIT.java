@@ -132,8 +132,20 @@ class NetworkIT extends IntegrationTest {
 
         // Westbound trains, also in GTFS direction 0, are oriented the other way
         assertThat(directions.path(1).path("directionId").asInt()).isEqualTo(1);
-        assertThat(stopNames(directions.path(1).path("branches").path(0)))
-            .containsExactly("Fontenay-sous-Bois", "Vincennes", "Nation", "Gare de Lyon", "Châtelet");
+        JsonNode west = directions.path(1).path("branches").path(0);
+        assertThat(stopNames(west)).containsExactly("Fontenay-sous-Bois", "Vincennes", "Nation", "Gare de Lyon", "Châtelet");
+
+        // The path drawn once: the trunk's sections run both ways, Joinville's own one way; each branch runs its own
+        JsonNode sections = line.path("sections");
+        assertThat(sections).hasSize(5);
+        assertThat(ints(east.path(0).path("sections"))).hasSize(4);
+        assertThat(ints(west.path("sections"))).isEqualTo(ints(east.path(0).path("sections")).reversed());
+        int joinville = ints(east.path(1).path("sections")).getLast();
+        assertThat(ints(sections.path(joinville).path("directionIds"))).containsExactly(0);
+        assertThat(ints(sections.path(ints(west.path("sections")).getFirst()).path("directionIds"))).containsExactly(0, 1);
+        assertThat(List.of(sections.path(joinville).path("fromStopId").asString(), sections.path(joinville).path("toStopId").asString()))
+            .containsExactlyInAnyOrder(east.path(1).path("stops").path(3).path("id").asString(), east.path(1).path("stops").path(4).path("id").asString());
+        assertThat(sections.path(joinville).path("shape").size()).isGreaterThan(2);
     }
 
     @Test
@@ -343,6 +355,10 @@ class NetworkIT extends IntegrationTest {
 
     private static List<String> names(JsonNode array) {
         return array.values().stream().map(item -> item.path("name").asString()).toList();
+    }
+
+    private static List<Integer> ints(JsonNode array) {
+        return array.values().stream().map(JsonNode::asInt).toList();
     }
 
     private static List<String> stopNames(JsonNode branch) {

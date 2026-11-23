@@ -35,7 +35,7 @@ class RideServiceTest {
     void findsAStopAreaServedAtTwoStopsInARow() {
         // Like the bus 341 around Péreire: two stops of the stop area, one after the other
         LineDetail line = new LineDetail(null, List.of(new LineDirection(0, List.of(new LineBranch("Charles de Gaulle - Étoile", 10, List.of(
-            stop("IDFM:71453"), stop("IDFM:71453"), stop("IDFM:71470"), stop("IDFM:71347"), stop("IDFM:71347")), List.of())))));
+            stop("IDFM:71453"), stop("IDFM:71453"), stop("IDFM:71470"), stop("IDFM:71347"), stop("IDFM:71347")), List.of(), List.of())))), List.of());
 
         assertThat(RideService.servesTwiceInARow(line, "IDFM:71453")).isTrue();
         assertThat(RideService.servesTwiceInARow(line, "IDFM:71347")).isTrue();

@@ -101,9 +101,9 @@ class VehicleServiceTest {
     @BeforeEach
     void network() {
         when(networkService.getLineDetail(TRAIN_LINE)).thenReturn(Optional.of(new LineDetail(line(TRAIN_LINE, TransportMode.TRANSILIEN), List.of(
-            new LineDirection(0, List.of(branch(W1, W2, M, A, P), branch(N1, N2, M, A, P)))))));
+            new LineDirection(0, List.of(branch(W1, W2, M, A, P), branch(N1, N2, M, A, P)))), List.of())));
         when(networkService.getLineDetail(METRO_LINE)).thenReturn(Optional.of(new LineDetail(line(METRO_LINE, TransportMode.METRO), List.of(
-            new LineDirection(0, List.of(branch(S1, S2, S3, S4, S5))), new LineDirection(1, List.of(branch(S5, S4, S3, S2, S1)))))));
+            new LineDirection(0, List.of(branch(S1, S2, S3, S4, S5))), new LineDirection(1, List.of(branch(S5, S4, S3, S2, S1)))), List.of())));
         when(networkRepository.findStopAreasOfQuays(any())).thenAnswer(invocation -> {
             Map<String, String> stopAreas = new HashMap<>();
             for (Object quayId : (Iterable<?>) invocation.getArgument(0)) {
@@ -344,7 +344,7 @@ class VehicleServiceTest {
     }
 
     private static LineBranch branch(StopRef... stops) {
-        return new LineBranch(stops[stops.length - 1].name(), 10, List.of(stops), List.of());
+        return new LineBranch(stops[stops.length - 1].name(), 10, List.of(stops), List.of(), List.of());
     }
 
     private Instant at(int minutes) {
