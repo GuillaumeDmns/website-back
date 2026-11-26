@@ -53,7 +53,7 @@ class DepartureServiceTest {
 
     private static StopCall call(String line, String destination, String stop, int minutes, int seconds, String train) {
         Instant time = SEVEN_PM.plusSeconds(minutes * 60L + seconds);
-        return new StopCall(line, destination, null, time, null, null, "onTime", null, null, false, null, train, stop);
+        return new StopCall(line, destination, null, time, null, null, "onTime", null, null, false, null, train, stop, null);
     }
 
     @Test

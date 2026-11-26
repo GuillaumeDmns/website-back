@@ -22,9 +22,15 @@ public final class SiriJson {
      *
      * @param lineId             IDFM line id ({@code C01742})
      * @param vehicleJourneyName train number or mission code, may be null
+     * @param quayId             quay of the visit ({@code IDFM:12001}), given as its {@code MonitoringRef}; may be null
      */
     public record Visit(String lineId, String destination, Instant aimed, Instant expected, String platform, String journeyNote,
-                        String vehicleJourneyName, String stopName) {
+                        String vehicleJourneyName, String stopName, String quayId) {
+
+        public Visit(String lineId, String destination, Instant aimed, Instant expected, String platform, String journeyNote,
+                     String vehicleJourneyName, String stopName) {
+            this(lineId, destination, aimed, expected, platform, journeyNote, vehicleJourneyName, stopName, null);
+        }
 
         public Visit(String lineId, String destination, Instant aimed, Instant expected, String platform, String journeyNote,
                      String vehicleJourneyName) {
@@ -48,7 +54,11 @@ public final class SiriJson {
         delivery.put("Status", "true");
         ArrayNode stopVisits = delivery.putArray("MonitoredStopVisit");
         for (Visit visit : visits) {
-            ObjectNode journey = stopVisits.addObject().putObject("MonitoredVehicleJourney");
+            ObjectNode stopVisit = stopVisits.addObject();
+            if (visit.quayId() != null) {
+                stopVisit.putObject("MonitoringRef").put("value", siriQuay(visit.quayId()));
+            }
+            ObjectNode journey = stopVisit.putObject("MonitoredVehicleJourney");
             journey.putObject("LineRef").put("value", "STIF:Line::" + visit.lineId() + ":");
             journey.putArray("DestinationName").addObject().put("value", visit.destination());
             if (visit.journeyNote() != null) {

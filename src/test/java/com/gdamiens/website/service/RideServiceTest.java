@@ -5,12 +5,14 @@ import com.gdamiens.website.controller.object.v2.LineBranch;
 import com.gdamiens.website.controller.object.v2.LineDetail;
 import com.gdamiens.website.controller.object.v2.LineDirection;
 import com.gdamiens.website.controller.object.v2.StopRef;
+import com.gdamiens.website.repository.NetworkRepository.ScheduledRideRow;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,11 +60,31 @@ class RideServiceTest {
         assertThat(RideService.onceEach(List.of(departure(now, null), departure(now.plus(Duration.ofMinutes(4)), null)))).hasSize(2);
     }
 
+    @Test
+    void findsTheQuaysNoRideLeavesFrom() {
+        // The 412 at Marcel Maillard: boarded on its way back (12274), its way out (12273) only a detour to Théâtre - Mairie
+        List<String> maillard = List.of("IDFM:12273", "IDFM:12274");
+        List<ScheduledRideRow> rows = List.of(row("IDFM:12273", true), row("IDFM:12274", false), row("IDFM:12273", true));
+        assertThat(RideService.otherQuays(rows, maillard)).containsExactly("IDFM:12273");
+        // To Châtenay, only the way out
+        assertThat(RideService.otherQuays(List.of(row("IDFM:12273", false)), maillard)).containsExactly("IDFM:12274");
+        // A quay that some trips leave from is one, whatever the others do (a short trip starting there)
+        assertThat(RideService.otherQuays(List.of(row("IDFM:12273", true), row("IDFM:12273", false), row("IDFM:12274", false)), maillard)).isEmpty();
+        // No ride known: no quay left out
+        assertThat(RideService.otherQuays(List.of(), maillard)).isEmpty();
+        assertThat(RideService.otherQuays(List.of(row("IDFM:12273", true)), maillard)).isEmpty();
+    }
+
+    private static ScheduledRideRow row(String quayId, boolean detour) {
+        return new ScheduledRideRow("Gare de la Croix de Berny", null, "Gare de la Croix de Berny", LocalDate.of(2026, 11, 26), 28_000, 28_240,
+            quayId, detour, List.of());
+    }
+
     private static StopRef stop(String id) {
         return new StopRef(id, "Stop " + id, 48.88, 2.29);
     }
 
     private static Departure departure(Instant time, String trainNumber) {
-        return new Departure(time, null, true, null, null, null, null, trainNumber);
+        return new Departure(time, null, true, null, null, null, null, trainNumber, null);
     }
 }

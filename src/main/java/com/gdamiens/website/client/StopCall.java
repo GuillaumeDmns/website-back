@@ -9,6 +9,7 @@ import com.gdamiens.website.client.siri.LineRef;
 import com.gdamiens.website.client.siri.MonitoredCall;
 import com.gdamiens.website.client.siri.MonitoredStopVisit;
 import com.gdamiens.website.client.siri.MonitoredVehicleJourney;
+import com.gdamiens.website.client.siri.MonitoringRef;
 import com.gdamiens.website.client.siri.StopPointName;
 import com.gdamiens.website.client.siri.VehicleJourneyName;
 import org.apache.commons.lang3.StringUtils;
@@ -30,10 +31,13 @@ import java.util.stream.Stream;
  * @param platform           null when unknown
  * @param vehicleJourneyName SNCF train number or mission code
  * @param journeyNote        SNCF mission code on some lines
+ * @param quayId             GTFS quay of the visit ({@code IDFM:12274} from {@code STIF:StopPoint:Q:12274:}), null when
+ *                           not a quay
  */
 public record StopCall(String lineId, String destination, Instant aimedDeparture, Instant expectedDeparture,
                        Instant aimedArrival, Instant expectedArrival, String departureStatus, String arrivalStatus,
-                       String platform, Boolean vehicleAtStop, String vehicleJourneyName, String journeyNote, String stopName) {
+                       String platform, Boolean vehicleAtStop, String vehicleJourneyName, String journeyNote, String stopName,
+                       String quayId) {
 
     /** Expected departure, else arrival, else the aimed ones; null without any time */
     public Instant departureTime() {
@@ -79,7 +83,15 @@ public record StopCall(String lineId, String destination, Instant aimedDeparture
             monitoredCall.map(MonitoredCall::getVehicleAtStop).orElse(null),
             first(journey.getVehicleJourneyName(), VehicleJourneyName::getValue),
             first(journey.getJourneyNote(), JourneyNote::getValue),
-            StringUtils.trimToNull(first(monitoredCall.map(MonitoredCall::getStopPointName).orElse(null), StopPointName::getValue)));
+            StringUtils.trimToNull(first(monitoredCall.map(MonitoredCall::getStopPointName).orElse(null), StopPointName::getValue)),
+            quayId(Optional.ofNullable(visit.getMonitoringRef()).map(MonitoringRef::getValue).orElse(null)));
+    }
+
+    /** {@code STIF:StopPoint:Q:12274:} → {@code IDFM:12274}, null for anything else */
+    static String quayId(String monitoringRef) {
+        String[] parts = StringUtils.defaultString(monitoringRef).split(":");
+        return parts.length > 3 && parts[1].equals("StopPoint") && parts[2].equals("Q") && StringUtils.isNotBlank(parts[3])
+            ? "IDFM:" + parts[3] : null;
     }
 
     /** {@code STIF:Line::C01371:} → {@code C01371} */
