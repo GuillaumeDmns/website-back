@@ -354,6 +354,48 @@ class RealtimeIT extends IntegrationTest {
         });
     }
 
+    @Test
+    void boardsALoopOnItsWayBack() {
+        // The 412 at Marcel Maillard, both quays listed towards La Croix de Berny: a bus on its way out (round Châtenay
+        // first, 30 min to Théâtre - Mairie) then one on its way back (10 min)
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        EXTERNAL.on("/prim/stop-monitoring", request -> Response.json(SiriJson.stopMonitoring(
+            "STIF:StopArea:SP:70012:".equals(request.param("MonitoringRef")) ? List.of(
+                new SiriJson.Visit(MiniGtfs.BUS_412, "Gare de la Croix de Berny", null, now.plusSeconds(120), null, null, null, "Marcel Maillard",
+                    MiniGtfs.MAILLARD_OUT),
+                new SiriJson.Visit(MiniGtfs.BUS_412, "Gare de la Croix de Berny", null, now.plusSeconds(300), null, null, null, "Marcel Maillard",
+                    MiniGtfs.MAILLARD_BACK))
+                : List.of())));
+
+        JsonNode rides = user.get("/api/v2/lines/" + MiniGtfs.BUS_412 + "/rides?from=" + MiniGtfs.MARCEL_MAILLARD + "&to=" + MiniGtfs.THEATRE_MAIRIE
+            + "&limit=10").json();
+
+        // Not the bus on its way out, nor any ride round the loop
+        assertThat(departures(rides).getFirst()).isEqualTo(now.plusSeconds(300));
+        assertThat(rides.values()).hasSizeGreaterThan(2).allSatisfy(ride -> {
+            assertThat(rideTime(ride)).isEqualTo(Duration.ofMinutes(10));
+            assertThat(ride.path("departure").has("quayId")).isFalse();
+        });
+        assertThat(rides.values().stream().skip(1)).allSatisfy(ride -> assertThat(stopNames(ride)).containsExactly("Marcel Maillard", "Théâtre - Mairie"));
+
+        // To Châtenay, the way out is the ride
+        JsonNode toChatenay = user.get("/api/v2/lines/" + MiniGtfs.BUS_412 + "/rides?from=" + MiniGtfs.MARCEL_MAILLARD + "&to=" + MiniGtfs.CHATENAY
+            + "&limit=10").json();
+        assertThat(departures(toChatenay).getFirst()).isEqualTo(now.plusSeconds(120));
+        assertThat(departures(toChatenay)).doesNotContain(now.plusSeconds(300));
+    }
+
+    @Test
+    void spansTheRidesOfALoopFromItsWayBack() {
+        JsonNode span = user.get("/api/v2/lines/" + MiniGtfs.BUS_412 + "/rides/span?from=" + MiniGtfs.MARCEL_MAILLARD + "&to=" + MiniGtfs.THEATRE_MAIRIE)
+            .json();
+
+        for (String ride : List.of("first", "last", "next")) {
+            assertThat(Duration.between(Instant.parse(span.path(ride).path("departure").asString()), Instant.parse(span.path(ride).path("arrival").asString())))
+                .as(ride).isEqualTo(Duration.ofMinutes(10));
+        }
+    }
+
     private static List<Instant> departures(JsonNode rides) {
         return rides.values().stream().map(ride -> Instant.parse(ride.path("departure").path("time").asString())).toList();
     }

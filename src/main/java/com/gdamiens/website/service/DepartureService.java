@@ -228,7 +228,7 @@ public class DepartureService {
 
             Instant time = ParisTime.ofServiceDay(row.serviceDate(), row.departureSeconds());
             groups.computeIfAbsent(new GroupKey(line, row.headsign()), k -> new ArrayList<>())
-                .add(new Departure(time, time, false, null, null, null, null, null));
+                .add(new Departure(time, time, false, null, null, null, null, null, null));
         }
     }
 
@@ -255,7 +255,8 @@ public class DepartureService {
             line != null && line.replacement() ? null : call.platform(),
             call.vehicleAtStop(),
             Stream.of(call.vehicleJourneyName(), call.journeyNote()).filter(DepartureService::isMission).findFirst().orElse(null),
-            Optional.ofNullable(call.vehicleJourneyName()).filter(DepartureService::isTrainNumber).orElse(null));
+            Optional.ofNullable(call.vehicleJourneyName()).filter(DepartureService::isTrainNumber).orElse(null),
+            call.quayId());
     }
 
     /** SNCF mission code: four letters, sometimes followed by digits ({@code POPI}, {@code TETE31}) */

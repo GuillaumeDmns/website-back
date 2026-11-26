@@ -23,6 +23,9 @@ import java.util.zip.ZipOutputStream;
  *     <li>Noctilien N11 ({@code C03000}): Châtelet → Nation hourly after midnight (24:30 to 29:30);</li>
  *     <li>Bus 341 ({@code C01294}), like the real one around two squares: Péreire Levallois and Charles de Gaulle -
  *     Étoile, two stops of the same name each, one after the other, every 15 min both ways, day and night;</li>
+ *     <li>Bus 412 ({@code C00342}), a loop like the real one: from La Croix de Berny past Marcel Maillard (a quay on
+ *     its way out), round Châtenay, back past Marcel Maillard (another quay of the stop area, on its way back) to
+ *     Théâtre - Mairie and La Croix de Berny, 10 min between stops, every 20 min, day and night;</li>
  *     <li>a transfer from Châtelet to Les Halles.</li>
  * </ul>
  * Every service runs every day from 2020 to 2099, the rail lines from 05:00 to 01:50 the next night.
@@ -41,6 +44,14 @@ public final class MiniGtfs {
     /** Served by the bus 341 only, at two stops each */
     public static final String PEREIRE = "IDFM:70009";
     public static final String ETOILE = "IDFM:70010";
+    /** The bus 412's loop, far from Paris */
+    public static final String CROIX_DE_BERNY = "IDFM:70011";
+    public static final String MARCEL_MAILLARD = "IDFM:70012";
+    public static final String CHATENAY = "IDFM:70013";
+    public static final String THEATRE_MAIRIE = "IDFM:70014";
+    /** Marcel Maillard's quays: on the 412's way out, round the loop first, and on its way back */
+    public static final String MAILLARD_OUT = "IDFM:12001";
+    public static final String MAILLARD_BACK = "IDFM:12002";
 
     public static final String METRO_1 = "C01371";
     public static final String RER_A = "C01742";
@@ -49,6 +60,7 @@ public final class MiniGtfs {
     public static final String BUS_38 = "C02000";
     public static final String NOCTILIEN_11 = "C03000";
     public static final String BUS_341 = "C01294";
+    public static final String BUS_412 = "C00342";
 
     public record Stop(String id, String name, double lat, double lon) {
     }
@@ -66,7 +78,11 @@ public final class MiniGtfs {
             new Stop(LES_HALLES, "Les Halles", 48.8622, 2.3464),
             new Stop(SAINT_LAZARE, "Gare Saint-Lazare", 48.8759, 2.3253),
             new Stop(PEREIRE, "Péreire Levallois", 48.8848, 2.2972),
-            new Stop(ETOILE, "Charles de Gaulle - Étoile", 48.8738, 2.2950))) {
+            new Stop(ETOILE, "Charles de Gaulle - Étoile", 48.8738, 2.2950),
+            new Stop(CROIX_DE_BERNY, "Gare de la Croix de Berny", 48.7606, 2.3036),
+            new Stop(MARCEL_MAILLARD, "Marcel Maillard", 48.7564, 2.2818),
+            new Stop(CHATENAY, "Mairie de Châtenay-Malabry", 48.7651, 2.2647),
+            new Stop(THEATRE_MAIRIE, "Théâtre - Mairie", 48.7547, 2.2969))) {
             STOP_AREAS.put(stop.id(), stop);
         }
     }
@@ -116,6 +132,7 @@ public final class MiniGtfs {
         row("routes.txt", "IDFM:" + BUS_38, "IDFM:Operator_100", "38", "Bus 38", "", "3", "", "82C8E6", "000000");
         row("routes.txt", "IDFM:" + NOCTILIEN_11, "IDFM:Operator_101", "N11", "Noctilien N11", "", "3", "", "0E1E61", "FFFFFF");
         row("routes.txt", "IDFM:" + BUS_341, "IDFM:Operator_100", "341", "Bus 341", "", "3", "", "FFCD00", "000000");
+        row("routes.txt", "IDFM:" + BUS_412, "IDFM:Operator_100", "412", "Bus 412", "", "3", "", "E3051B", "FFFFFF");
 
         file("stops.txt", "stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station,wheelchair_boarding,platform_code");
         STOP_AREAS.values().forEach(stop -> row("stops.txt", stop.id(), "", stop.name(), "", coordinate(stop.lat()), coordinate(stop.lon()),
@@ -139,6 +156,11 @@ public final class MiniGtfs {
         // Named after their streets, like the bus 21's two stops of Gare Saint-Lazare
         quay("IDFM:10001", ETOILE, "Charles de Gaulle - Étoile - Wagram", "1", "1", "");
         quay("IDFM:10002", ETOILE, "Charles de Gaulle - Étoile - Carnot", "1", "1", "");
+        quay("IDFM:11001", CROIX_DE_BERNY, "3", "1", "");
+        quay(MAILLARD_OUT, MARCEL_MAILLARD, "3", "1", "");
+        quay(MAILLARD_BACK, MARCEL_MAILLARD, "3", "1", "");
+        quay("IDFM:13001", CHATENAY, "3", "1", "");
+        quay("IDFM:14001", THEATRE_MAIRIE, "3", "1", "");
         // Nation's ways out: numbered ones (2 before 10), then one without a number
         entrance("IDFM:StopPlaceEntrance:3", NATION, "", "Place de la Nation", 0.0006, 0.0004, "0");
         entrance("IDFM:StopPlaceEntrance:1", NATION, "10", "av. Dorian", -0.0004, -0.0011, "0");
@@ -181,6 +203,9 @@ public final class MiniGtfs {
             3 * 3600, 26 * 3600 + 2400, 900, false);
         trips(BUS_341, "341-W", 1, "Péreire Levallois", List.of("IDFM:10002", "IDFM:10001", "IDFM:9002", "IDFM:9001"), 60,
             3 * 3600, 26 * 3600 + 2400, 900, false);
+        // Round the loop: 10 min from the way out to Châtenay, 20 min back to Marcel Maillard, 30 min to Théâtre - Mairie
+        trips(BUS_412, "412", 0, "Gare de la Croix de Berny", List.of("IDFM:11001", MAILLARD_OUT, "IDFM:13001", MAILLARD_BACK,
+            "IDFM:14001", "IDFM:11001"), 600, 3 * 3600, 26 * 3600 + 2400, 1200, false);
     }
 
     private void quay(String id, String stopArea, String zone, String wheelchair, String platform) {

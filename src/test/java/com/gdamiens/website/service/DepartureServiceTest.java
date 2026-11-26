@@ -55,7 +55,7 @@ class DepartureServiceTest {
     void aReplacementBusHasNoPlatform() {
         // Its real time names the station it stands for (Place de Belgique / Bécon les Bruyères, 26 November 2026)
         StopCall call = new StopCall("C01847", "Paris Saint-Lazare", null, Instant.parse("2026-11-26T00:15:00Z"), null, null,
-            "onTime", null, "BECON LES BRUYERES", false, null, null, "Place de Belgique / Bécon les Bruyères");
+            "onTime", null, "BECON LES BRUYERES", false, null, null, "Place de Belgique / Bécon les Bruyères", "IDFM:8082");
         LineSummary bus = new LineSummary("C01847", "L", "Remplacement Transilien L", TransportMode.BUS, "D282BE", "FFFFFF", true);
         LineSummary train = new LineSummary("C01740", "L", "L", TransportMode.TRANSILIEN, "D282BE", "FFFFFF");
 
@@ -67,7 +67,7 @@ class DepartureServiceTest {
 
     private static StopCall call(String line, String destination, String stop, int minutes, int seconds, String train) {
         Instant time = SEVEN_PM.plusSeconds(minutes * 60L + seconds);
-        return new StopCall(line, destination, null, time, null, null, "onTime", null, null, false, null, train, stop);
+        return new StopCall(line, destination, null, time, null, null, "onTime", null, null, false, null, train, stop, null);
     }
 
     @Test
