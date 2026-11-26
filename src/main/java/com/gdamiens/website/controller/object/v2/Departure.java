@@ -1,5 +1,6 @@
 package com.gdamiens.website.controller.object.v2;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.Instant;
@@ -12,7 +13,10 @@ import java.time.Instant;
  * @param atStop    the vehicle is at the stop
  * @param mission     SNCF mission code ({@code POPI}), when given
  * @param trainNumber SNCF train number, when given
+ * @param quayId      GTFS quay of a real-time departure ({@code IDFM:12274}) when given; not sent: a stop area's quays
+ *                    tell a loop's passes apart in {@code RideService}
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record Departure(Instant time, Instant aimedTime, boolean realtime, String status, String platform, Boolean atStop, String mission, String trainNumber) {
+public record Departure(Instant time, Instant aimedTime, boolean realtime, String status, String platform, Boolean atStop, String mission, String trainNumber,
+                        @JsonIgnore String quayId) {
 }

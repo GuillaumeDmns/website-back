@@ -41,9 +41,13 @@ public class NetworkRepository {
 
     public record TimetableRow(Short directionId, int departureSeconds, String headsign, String terminusId, String terminus) {}
 
-    /** [stops]: where the trip stops from the boarding stop area to the alighting one, both included (empty unless asked) */
+    /**
+     * [quayId]: the boarding quay; [detour]: an earlier pass of a trip that comes back to the boarding stop area
+     * before the alighting one (a loop: nobody boards there for that ride); [stops]: where the trip stops from the
+     * boarding stop area to the alighting one, both included (empty unless asked)
+     */
     public record ScheduledRideRow(String headsign, String tripShortName, String terminus, LocalDate serviceDate, int departureSeconds, int arrivalSeconds,
-                                   List<RideStopRow> stops) {}
+                                   String quayId, boolean detour, List<RideStopRow> stops) {}
 
     /**
      * A stop of a scheduled ride: its quay's name and position, its time (seconds of the service day, null when not
@@ -378,9 +382,10 @@ public class NetworkRepository {
      * Scheduled trips of the route leaving a quay of {@code fromId} between {@code fromSeconds} and {@code toSeconds}
      * after midnight of {@code today} (Europe/Paris, trips of the previous service day included) and stopping
      * further at a quay of {@code toId}, with the times at both and the name of the trip's last stop; with
-     * {@code withStops}, the stops in between too (a direct train skips some). One row per pass: a route serving two
-     * quays of a stop area (a bus around a square) leaves from the first one of {@code fromId} and arrives at the first
-     * one of {@code toId}.
+     * {@code withStops}, the stops in between too (a direct train skips some). One ride per arrival: a route serving two
+     * quays of a stop area in a row (a bus around a square) leaves from the first one of {@code fromId} and arrives at
+     * the first one of {@code toId}; a trip passing [fromId] twice before [toId] (a loop, like the bus 412 at Marcel
+     * Maillard) leaves from its last pass, its earlier passes given as {@code detour} rows.
      */
     public List<ScheduledRideRow> findScheduledRides(String routeId, String fromId, String toId, LocalDate today, int fromSeconds, int toSeconds,
                                                      boolean withStops) {
@@ -409,7 +414,7 @@ public class NetworkRepository {
                   SELECT stop_id FROM gtfs.stops WHERE parent_station = :toId
                 ),
                 candidates AS MATERIALIZED (
-                  SELECT d.service_date, st.trip_id, st.departure_time, st.stop_sequence, st.stop_headsign
+                  SELECT d.service_date, st.trip_id, st.departure_time, st.stop_sequence, st.stop_headsign, fq.stop_id AS quay_id
                   FROM days d CROSS JOIN from_quays fq
                   JOIN LATERAL (
                     SELECT s.trip_id, s.departure_time, s.stop_sequence, s.stop_headsign FROM gtfs.stop_times s
@@ -418,8 +423,19 @@ public class NetworkRepository {
                 ),
                 -- Each boarding with the first quay of [to] after it (a route serving two of its quays arrives at the first one)
                 legs AS MATERIALIZED (
-                  SELECT c.service_date, c.trip_id, c.departure_time, c.stop_sequence, c.stop_headsign, a.arrival_time,
-                         a.stop_sequence AS to_sequence
+                  SELECT c.service_date, c.trip_id, c.departure_time, c.stop_sequence, c.stop_headsign, c.quay_id, a.arrival_time,
+                         a.stop_sequence AS to_sequence,
+                         -- The trip comes back to [from] before [to]: it is boarded on that later pass, not here
+                         EXISTS (
+                           SELECT 1 FROM gtfs.stop_times s
+                           WHERE s.trip_id = c.trip_id AND s.stop_sequence > c.stop_sequence AND s.stop_sequence < a.stop_sequence
+                             AND s.stop_id IN (SELECT stop_id FROM from_quays) AND coalesce(s.pickup_type, 0) <> 1
+                             AND EXISTS (
+                               SELECT 1 FROM gtfs.stop_times m
+                               WHERE m.trip_id = c.trip_id AND m.stop_sequence > c.stop_sequence AND m.stop_sequence < s.stop_sequence
+                                 AND m.stop_id NOT IN (SELECT stop_id FROM from_quays)
+                             )
+                         ) AS detour
                   FROM candidates c
                   JOIN gtfs.trips t ON t.trip_id = c.trip_id AND t.route_id = :routeId
                   JOIN active ac ON ac.service_id = t.service_id AND ac.service_date = c.service_date
@@ -430,15 +446,19 @@ public class NetworkRepository {
                     ORDER BY s.stop_sequence LIMIT 1
                   ) a ON true
                 ),
-                -- One boarding per arrival: the first quay of [from] (two of its quays in a row are one pass, like the stop's
-                -- departures keep the first)
+                -- One boarding per pass: two quays of [from] in a row are one pass, boarded at the first one (like the
+                -- stop's departures keep the first)
                 rides AS MATERIALIZED (
-                  SELECT DISTINCT ON (service_date, trip_id, to_sequence) *
-                  FROM legs
-                  ORDER BY service_date, trip_id, to_sequence, stop_sequence
+                  SELECT * FROM legs l
+                  WHERE NOT EXISTS (
+                    SELECT 1 FROM gtfs.stop_times s
+                    WHERE s.trip_id = l.trip_id AND s.stop_sequence = (
+                      SELECT max(b.stop_sequence) FROM gtfs.stop_times b WHERE b.trip_id = l.trip_id AND b.stop_sequence < l.stop_sequence
+                    ) AND s.stop_id IN (SELECT stop_id FROM from_quays) AND coalesce(s.pickup_type, 0) <> 1
+                  )
                 )
                 SELECT DISTINCT coalesce(c.stop_headsign, t.trip_headsign), t.trip_short_name, last.name, c.service_date,
-                       extract(epoch FROM c.departure_time)::int, extract(epoch FROM c.arrival_time)::int%s
+                       extract(epoch FROM c.departure_time)::int, extract(epoch FROM c.arrival_time)::int, c.quay_id, c.detour%s
                 FROM rides c
                 JOIN gtfs.trips t ON t.trip_id = c.trip_id
                 CROSS JOIN LATERAL (
@@ -450,15 +470,15 @@ public class NetworkRepository {
                 ORDER BY 4, 5""".formatted(stopColumns, stops),
             params,
             (rs, i) -> new ScheduledRideRow(rs.getString(1), rs.getString(2), rs.getString(3), rs.getObject(4, LocalDate.class), rs.getInt(5), rs.getInt(6),
-                withStops ? rideStops(rs) : List.of()));
+                rs.getString(7), rs.getBoolean(8), withStops ? rideStops(rs) : List.of()));
     }
 
-    /** Stops of a ride from the arrays of the columns 7 to 10 (names, latitudes, longitudes, times) */
+    /** Stops of a ride from the arrays of the columns 9 to 12 (names, latitudes, longitudes, times) */
     private static List<RideStopRow> rideStops(ResultSet rs) throws SQLException {
-        String[] names = (String[]) rs.getArray(7).getArray();
-        Double[] lats = (Double[]) rs.getArray(8).getArray();
-        Double[] lons = (Double[]) rs.getArray(9).getArray();
-        Integer[] times = (Integer[]) rs.getArray(10).getArray();
+        String[] names = (String[]) rs.getArray(9).getArray();
+        Double[] lats = (Double[]) rs.getArray(10).getArray();
+        Double[] lons = (Double[]) rs.getArray(11).getArray();
+        Integer[] times = (Integer[]) rs.getArray(12).getArray();
         List<RideStopRow> stops = new ArrayList<>(names.length);
         for (int k = 0; k < names.length; k++) {
             stops.add(new RideStopRow(names[k], lats[k], lons[k], times[k]));

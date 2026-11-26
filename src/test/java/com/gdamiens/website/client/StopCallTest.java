@@ -67,6 +67,19 @@ class StopCallTest {
     }
 
     @Test
+    void readsTheQuayOfTheVisit() {
+        StopCall call = StopCall.from(visits(new SiriJson.Visit("C00342", "Gare de la Croix de Berny", null, Instant.parse("2026-11-26T08:00:00Z"),
+            null, null, null, "Marcel Maillard", "IDFM:12274")).getFirst());
+        assertThat(call.quayId()).isEqualTo("IDFM:12274");
+        // Without one, or a stop area instead
+        assertThat(StopCall.from(visits(new SiriJson.Visit("C00342", "Gare de la Croix de Berny", null, Instant.parse("2026-11-26T08:00:00Z"),
+            null, null, null)).getFirst()).quayId()).isNull();
+        assertThat(StopCall.quayId("STIF:StopArea:SP:69767:")).isNull();
+        assertThat(StopCall.quayId("STIF:StopPoint:Q::")).isNull();
+        assertThat(StopCall.quayId(null)).isNull();
+    }
+
+    @Test
     void readsSiriLineRefs() {
         assertThat(StopCall.lineId("STIF:Line::C01371:")).isEqualTo("C01371");
         assertThat(StopCall.lineId("C01371")).isEqualTo("C01371");
