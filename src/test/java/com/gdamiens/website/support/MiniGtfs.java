@@ -44,6 +44,8 @@ public final class MiniGtfs {
 
     public static final String METRO_1 = "C01371";
     public static final String RER_A = "C01742";
+    /** Buses replacing the RER A during works: a line of their own, the RER A's badge */
+    public static final String RER_A_REPLACEMENT = "C01849";
     public static final String BUS_38 = "C02000";
     public static final String NOCTILIEN_11 = "C03000";
     public static final String BUS_341 = "C01294";
@@ -109,6 +111,7 @@ public final class MiniGtfs {
         if (rail) {
             row("routes.txt", "IDFM:" + METRO_1, "IDFM:Operator_100", "1", "Métro 1", "", "1", "", "FFCD00", "000000");
             row("routes.txt", "IDFM:" + RER_A, "IDFM:1046", "A", "RER A", "", "2", "", "EB2132", "FFFFFF");
+            row("routes.txt", "IDFM:" + RER_A_REPLACEMENT, "IDFM:1046", "A", "Remplacement RER A", "", "3", "", "EB2132", "FFFFFF");
         }
         row("routes.txt", "IDFM:" + BUS_38, "IDFM:Operator_100", "38", "Bus 38", "", "3", "", "82C8E6", "000000");
         row("routes.txt", "IDFM:" + NOCTILIEN_11, "IDFM:Operator_101", "N11", "Noctilien N11", "", "3", "", "0E1E61", "FFFFFF");

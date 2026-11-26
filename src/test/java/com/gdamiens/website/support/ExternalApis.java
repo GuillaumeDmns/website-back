@@ -9,6 +9,7 @@ import java.util.List;
 
 import static com.gdamiens.website.support.MiniGtfs.METRO_1;
 import static com.gdamiens.website.support.MiniGtfs.RER_A;
+import static com.gdamiens.website.support.MiniGtfs.RER_A_REPLACEMENT;
 
 /**
  * What the external APIs answer by default in the integration tests, consistent with {@link MiniGtfs}
@@ -81,7 +82,9 @@ public final class ExternalApis {
                 new SiriJson.Visit(METRO_1, "Châtelet", in(now, 1), in(now, 1), null, null, null),
                 new SiriJson.Visit(RER_A, "Fontenay-sous-Bois", in(now, 5), in(now, 5), "A", "UPAC", RER_A_TRAIN));
             case "STIF:StopArea:SP:70002:" -> List.of(
-                new SiriJson.Visit(RER_A, "Fontenay-sous-Bois", in(now, 7), in(now, 8), "A", "UPAC", RER_A_TRAIN));
+                new SiriJson.Visit(RER_A, "Fontenay-sous-Bois", in(now, 7), in(now, 8), "A", "UPAC", RER_A_TRAIN),
+                // Its "platform" is the name of the station it stands for
+                new SiriJson.Visit(RER_A_REPLACEMENT, "Nation", in(now, 12), in(now, 12), "GARE DE LYON", null, null));
             default -> List.of();
         };
     }
