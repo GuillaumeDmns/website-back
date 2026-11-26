@@ -73,6 +73,16 @@ class RealtimeIT extends IntegrationTest {
         assertThat(rer.path("trainNumber").asString()).isEqualTo(ExternalApis.RER_A_TRAIN);
         assertThat(rer.path("platform").asString()).isEqualTo("A");
 
+        // At Gare de Lyon, the buses replacing the RER A: told apart, without the station's name as platform
+        JsonNode replacement = user.get("/api/v2/stops/IDFM:70002/departures?limit=5").json().path("lines").values().stream()
+            .filter(group -> group.path("line").path("id").asString().equals(MiniGtfs.RER_A_REPLACEMENT)).findFirst().orElseThrow();
+        assertThat(replacement.path("line").path("replacement").asBoolean()).isTrue();
+        assertThat(replacement.path("line").path("mode").asString()).isEqualTo("BUS");
+        assertThat(replacement.path("departures").path(0).has("platform") && !replacement.path("departures").path(0).path("platform").isNull()).isFalse();
+        assertThat(user.get("/api/v2/stops/IDFM:70002/departures?limit=5").json().path("lines").values().stream()
+            .filter(group -> group.path("line").path("id").asString().equals(MiniGtfs.RER_A)))
+            .allSatisfy(group -> assertThat(group.path("line").path("replacement").asBoolean()).isFalse());
+
         // At Gare de Lyon, the bus has no real time: from the schedule
         JsonNode bus = user.get("/api/v2/stops/IDFM:70002/departures?limit=5").json().path("lines").values().stream()
             .filter(group -> group.path("line").path("name").asString().equals("38")).findFirst().orElseThrow();

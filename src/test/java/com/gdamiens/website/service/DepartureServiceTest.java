@@ -1,7 +1,9 @@
 package com.gdamiens.website.service;
 
 import com.gdamiens.website.client.StopCall;
+import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.controller.object.v2.StopAreaSummary;
+import com.gdamiens.website.model.TransportMode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -47,6 +49,18 @@ class DepartureServiceTest {
     void ignoresOtherNames(String value) {
         assertThat(DepartureService.isMission(value)).isFalse();
         assertThat(DepartureService.isTrainNumber(value)).isFalse();
+    }
+
+    @Test
+    void aReplacementBusHasNoPlatform() {
+        // Its real time names the station it stands for (Place de Belgique / Bécon les Bruyères, 26 November 2026)
+        StopCall call = new StopCall("C01847", "Paris Saint-Lazare", null, Instant.parse("2026-11-26T00:15:00Z"), null, null,
+            "onTime", null, "BECON LES BRUYERES", false, null, null, "Place de Belgique / Bécon les Bruyères", "IDFM:8082");
+        LineSummary bus = new LineSummary("C01847", "L", "Remplacement Transilien L", TransportMode.BUS, "D282BE", "FFFFFF", true);
+        LineSummary train = new LineSummary("C01740", "L", "L", TransportMode.TRANSILIEN, "D282BE", "FFFFFF");
+
+        assertThat(DepartureService.toDeparture(call, bus).platform()).isNull();
+        assertThat(DepartureService.toDeparture(call, train).platform()).isEqualTo("BECON LES BRUYERES");
     }
 
     private static final Instant SEVEN_PM = Instant.parse("2026-10-12T19:00:00Z");

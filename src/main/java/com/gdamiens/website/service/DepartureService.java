@@ -177,7 +177,7 @@ public class DepartureService {
                 for (StopCall call : calls) {
                     LineSummary line = lines.get(call.lineId());
                     String destination = call.destination();
-                    Departure departure = toDeparture(call);
+                    Departure departure = toDeparture(call, line);
 
                     if (line != null && destination != null && departure != null && !isTerminating(destination, stop)
                         && departure.time().isAfter(now.minus(PAST_MARGIN))) {
@@ -240,7 +240,11 @@ public class DepartureService {
             .toList());
     }
 
-    private static Departure toDeparture(StopCall call) {
+    /**
+     * A replacement bus has no platform: its real time gives the name of the station it stands for
+     * ({@code BECON LES BRUYERES} at "Place de Belgique / Bécon les Bruyères")
+     */
+    static Departure toDeparture(StopCall call, LineSummary line) {
         Instant time = call.departureTime();
         if (time == null) {
             return null;
@@ -248,7 +252,7 @@ public class DepartureService {
 
         return new Departure(time, call.aimedTime(), true,
             StringUtils.firstNonBlank(call.departureStatus(), call.arrivalStatus()),
-            call.platform(),
+            line != null && line.replacement() ? null : call.platform(),
             call.vehicleAtStop(),
             Stream.of(call.vehicleJourneyName(), call.journeyNote()).filter(DepartureService::isMission).findFirst().orElse(null),
             Optional.ofNullable(call.vehicleJourneyName()).filter(DepartureService::isTrainNumber).orElse(null),

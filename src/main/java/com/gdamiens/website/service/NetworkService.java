@@ -19,6 +19,7 @@ import com.gdamiens.website.repository.NetworkRepository.StopAreaRow;
 import com.gdamiens.website.repository.NetworkRepository.TripPatternRow;
 import com.gdamiens.website.utils.GeoJson;
 import com.gdamiens.website.utils.TtlCache;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -79,10 +80,30 @@ public class NetworkService {
      * @return every line, by IDFM line id ({@code C01371})
      */
     public Map<String, LineSummary> getLines() {
-        return linesCache.get("all", k -> networkRepository.findAllRoutes()
-            .stream()
-            .map(NetworkService::toLineSummary)
+        return linesCache.get("all", k -> toLineSummaries(networkRepository.findAllRoutes()).stream()
             .collect(Collectors.toUnmodifiableMap(LineSummary::id, Function.identity())));
+    }
+
+    static List<LineSummary> toLineSummaries(List<RouteRow> routes) {
+        Set<String> guided = routes.stream()
+            .filter(route -> route.type() != null && route.type() != 3)
+            .map(NetworkService::badge)
+            .collect(Collectors.toSet());
+        return routes.stream().map(route -> toLineSummary(route, isReplacement(route, guided))).toList();
+    }
+
+    /**
+     * Replacement buses: a bus line named "Remplacement …" by IDFM, or wearing the badge (name and color) of a train,
+     * metro or tram line. Never from the operator: it changes when a line is handed to another one (the T4's are
+     * STRETTO's, the T13's RATP Cap Arc Sud et Ouest's), and the replacement buses' with it.
+     */
+    static boolean isReplacement(RouteRow route, Set<String> guidedBadges) {
+        return route.type() != null && route.type() == 3
+            && (StringUtils.startsWithIgnoreCase(route.longName(), "Remplacement ") || guidedBadges.contains(badge(route)));
+    }
+
+    private static String badge(RouteRow route) {
+        return StringUtils.trimToEmpty(route.shortName()) + "#" + StringUtils.upperCase(StringUtils.trimToEmpty(route.color()));
     }
 
     public Optional<LineSummary> getLine(String lineId) {
@@ -315,14 +336,15 @@ public class NetworkService {
         return values.size() == 1 ? values.iterator().next() : 0;
     }
 
-    private static LineSummary toLineSummary(RouteRow route) {
+    private static LineSummary toLineSummary(RouteRow route, boolean replacement) {
         return new LineSummary(
             IDFMRoute.toLineId(route.routeId()),
             route.shortName(),
             route.longName(),
             TransportMode.fromGtfs(route.type(), route.agencyName(), route.shortName()),
             route.color(),
-            route.textColor());
+            route.textColor(),
+            replacement);
     }
 
     /**

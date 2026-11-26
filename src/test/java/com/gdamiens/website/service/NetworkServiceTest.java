@@ -2,6 +2,7 @@ package com.gdamiens.website.service;
 
 import com.gdamiens.website.controller.object.v2.LineSummary;
 import com.gdamiens.website.model.TransportMode;
+import com.gdamiens.website.repository.NetworkRepository.RouteRow;
 import com.gdamiens.website.repository.NetworkRepository.TripPatternRow;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,34 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NetworkServiceTest {
+
+    @Test
+    void tellsReplacementBusesWhoeverRunsThem() {
+        // As in the GTFS of November 2026
+        List<LineSummary> lines = NetworkService.toLineSummaries(List.of(
+            new RouteRow("IDFM:C01740", "L", "L", (short) 2, "D282BE", "FFFFFF", "Transilien"),
+            new RouteRow("IDFM:C01847", "L", "Remplacement Transilien L", (short) 3, "D282BE", "FFFFFF", "Transilien"),
+            // Handed to another operator: the line and its replacement buses with it
+            new RouteRow("IDFM:C01843", "T4", "T4", (short) 0, "DC9600", "000000", "STRETTO"),
+            new RouteRow("IDFM:C01683", "T4", "T4", (short) 3, "dc9600", "000000", "STRETTO"),
+            // Named so, its badge another color than the train's
+            new RouteRow("IDFM:C01844", "K", "Remplacement Transilien K", (short) 3, "9B9842", "FFFFFF", "Transilien"),
+            // An ordinary bus of the same name, in its own color
+            new RouteRow("IDFM:C00001", "L", "Gare - Centre", (short) 3, "0064B0", "FFFFFF", "Keolis")));
+
+        assertThat(lines).extracting(LineSummary::id, LineSummary::replacement, LineSummary::mode).containsExactly(
+            org.assertj.core.groups.Tuple.tuple("C01740", false, TransportMode.TRANSILIEN),
+            org.assertj.core.groups.Tuple.tuple("C01847", true, TransportMode.BUS),
+            org.assertj.core.groups.Tuple.tuple("C01843", false, TransportMode.TRAM),
+            org.assertj.core.groups.Tuple.tuple("C01683", true, TransportMode.BUS),
+            org.assertj.core.groups.Tuple.tuple("C01844", true, TransportMode.BUS),
+            org.assertj.core.groups.Tuple.tuple("C00001", false, TransportMode.BUS));
+    }
+
+    @Test
+    void anotherOperatorKeepsATrainATrain() {
+        assertThat(TransportMode.fromGtfs((short) 2, "Keolis", "L")).isEqualTo(TransportMode.TRANSILIEN);
+    }
 
     @Test
     void ordersLinesByModeThenNaturalName() {
