@@ -90,6 +90,8 @@ class VehicleServiceTest {
 
     private final List<ScheduledCallRow> schedule = new ArrayList<>();
 
+    private final List<ScheduledCallRow> metroSchedule = new ArrayList<>();
+
     private final MutableClock clock = new MutableClock(Instant.now());
 
     private final VehiclePacing pacing = new VehiclePacing(new ApiQuota(new ApplicationProperties(), clock), clock);
@@ -116,6 +118,7 @@ class VehicleServiceTest {
         });
         when(networkRepository.findScheduledCalls(eq("IDFM:" + TRAIN_LINE), any()))
             .thenAnswer(invocation -> today.equals(invocation.getArgument(1)) ? schedule : List.of());
+        when(networkRepository.findScheduledCalls(eq("IDFM:" + METRO_LINE), any())).thenReturn(metroSchedule);
         when(trafficService.getClosedStops(anyString())).thenReturn(Set.of());
     }
 
@@ -323,6 +326,158 @@ class VehicleServiceTest {
         assertThat(after.fromStopId()).isEqualTo(S2.id());
         assertThat(after.toStopId()).isEqualTo(S5.id());
         assertThat(after.id()).isEqualTo(before.id());
+    }
+
+    @Test
+    void aVehicleFollowedStopByStopNeverGoesBackInTime() {
+        // A train at S1, S2 and S3; the next passage at S4 comes before its passage at S3: the train ahead, missed
+        // by S3 (seen on the Métro 3: Havre-Caumartin 19:30, Opéra 19:32, Quatre-Septembre 19:33, Sentier 19:32)
+        metroRides(70);
+        feed(METRO_LINE, metro(callAt(S1, 30), callAt(S2, 120), callAt(S4, 160), callAt(S3, 180), callAt(S4, 250)));
+
+        List<Vehicle> vehicles = service.getVehicles(METRO_LINE);
+
+        assertThat(vehicles).allSatisfy(VehicleServiceTest::inTimeOrder);
+        assertThat(vehicles).anySatisfy(vehicle -> {
+            assertThat(vehicle.toStopId()).isEqualTo(S1.id());
+            assertThat(vehicle.calls()).extracting(VehicleCall::stopName).containsExactly("S1", "S2", "S3", "S4");
+            assertThat(vehicle.calls().getLast().expectedAt()).isEqualTo(now.plusSeconds(250));
+        });
+        // The train ahead, between S3 and S4
+        assertThat(vehicles).anySatisfy(vehicle -> {
+            assertThat(vehicle.fromStopId()).isEqualTo(S3.id());
+            assertThat(vehicle.toStopId()).isEqualTo(S4.id());
+            assertThat(vehicle.expectedAt()).isEqualTo(now.plusSeconds(160));
+        });
+    }
+
+    @Test
+    void aVehicleFollowedStopByStopDoesNotTakeTheCallsOfTheTrainBehind() {
+        // A train reaches S2 in 20 s, S3 misses it; the train behind waits at S1, skipped by S2 (seen on the Métro 3:
+        // Porte de Champerret 19:29, then Pereire 19:34, 5 min for a single stop)
+        metroRides(70);
+        feed(METRO_LINE, metro(callAt(S2, 20), callAt(S1, 150), callAt(S3, 290), callAt(S4, 360)));
+
+        List<Vehicle> vehicles = service.getVehicles(METRO_LINE);
+
+        assertThat(vehicles).hasSize(2);
+        assertThat(vehicles).anySatisfy(vehicle -> {
+            assertThat(vehicle.toStopId()).isEqualTo(S2.id());
+            assertThat(vehicle.calls()).extracting(VehicleCall::stopName).containsExactly("S2");
+        });
+        assertThat(vehicles).anySatisfy(vehicle -> {
+            assertThat(vehicle.toStopId()).isEqualTo(S1.id());
+            assertThat(vehicle.calls()).extracting(VehicleCall::stopName).containsExactly("S1", "S3", "S4");
+        });
+    }
+
+    @Test
+    void aVehicleFollowedStopByStopKeepsItsIdNotTheOneOfTheVehicleBehind() {
+        // Two trains 100 s apart
+        metroRides(70);
+        feed(METRO_LINE, metro(callAt(S2, 20), callAt(S1, 50), callAt(S3, 90), callAt(S2, 120), callAt(S4, 160), callAt(S3, 190)));
+        List<Vehicle> before = service.getVehicles(METRO_LINE);
+        Vehicle ahead = before.stream().filter(vehicle -> vehicle.toStopId().equals(S2.id())).findFirst().orElseThrow();
+        Vehicle behind = before.stream().filter(vehicle -> vehicle.toStopId().equals(S1.id())).findFirst().orElseThrow();
+
+        // The next load: the first one 40 s late, the one behind 70 s; at S2 the first one is now expected 60 s
+        // before the one behind was
+        feed(METRO_LINE, metro(callAt(S2, 60), callAt(S1, 120), callAt(S3, 130), callAt(S2, 190), callAt(S4, 200), callAt(S3, 260)));
+        List<Vehicle> after = reload(METRO_LINE);
+
+        assertThat(after).filteredOn(vehicle -> !vehicle.stale() && vehicle.toStopId().equals(S2.id())).singleElement()
+            .extracting(Vehicle::id).isEqualTo(ahead.id());
+        assertThat(after).filteredOn(vehicle -> !vehicle.stale()).extracting(Vehicle::id).doesNotContain(behind.id());
+    }
+
+    @Test
+    void theMetro3IsFollowedStopByStopWithoutGoingBackInTimeNorJumpingToTheTrainBehind() throws Exception {
+        // The passages per stop of the Métro 3 on 27 November 2026 at 19:54:06 UTC, with the rides of its schedule
+        JsonNode fixture = JSON.readTree(getClass().getResourceAsStream("/prim/metro3-passages.json"));
+        String lineId = "C01373";
+        List<LineDirection> directions = new ArrayList<>();
+        List<ScheduledCallRow> rows = new ArrayList<>();
+        List<Journey> journeys = new ArrayList<>();
+        // Usual time from the first stop of each direction to each stop
+        List<Map<String, Integer>> fromStart = new ArrayList<>();
+        for (int d = 0; d < fixture.path("directions").size(); d++) {
+            JsonNode stopsNode = fixture.path("directions").get(d).path("stops");
+            List<StopRef> stops = new ArrayList<>();
+            Map<String, Integer> times = new HashMap<>();
+            int seconds = 20 * 3600;
+            for (JsonNode stopNode : stopsNode) {
+                StopRef stop = stop(stopNode.path("quay").asInt(), stopNode.path("name").asString());
+                stops.add(stop);
+                times.put(stop.id(), seconds);
+                rows.add(new ScheduledCallRow("trip-" + d, null, stop.id(), seconds, seconds));
+                seconds += stopNode.path("rideToNext").asInt();
+            }
+            directions.add(new LineDirection(d, List.of(new LineBranch(stops.getLast().name(), 100, stops, List.of()))));
+            fromStart.add(times);
+            StopRef terminus = stops.getLast();
+            for (int i = 0; i < stops.size(); i++) {
+                List<Call> calls = new ArrayList<>();
+                for (JsonNode passage : stopsNode.get(i).path("passages")) {
+                    calls.add(callAt(stops.get(i), passage.asInt()));
+                }
+                if (!calls.isEmpty()) {
+                    journeys.add(new Journey("made-up-" + d + "-" + i, lineId, terminus.name(), quayOf(terminus), null, calls));
+                }
+            }
+        }
+        when(networkService.getLineDetail(lineId)).thenReturn(Optional.of(new LineDetail(line(lineId, TransportMode.METRO), directions)));
+        when(networkRepository.findScheduledCalls(eq("IDFM:" + lineId), any())).thenReturn(rows);
+        feed(lineId, journeys.toArray(Journey[]::new));
+
+        List<Vehicle> vehicles = service.getVehicles(lineId);
+
+        assertThat(vehicles).hasSizeGreaterThan(15);
+        Set<String> passages = new java.util.HashSet<>();
+        for (Vehicle vehicle : vehicles) {
+            inTimeOrder(vehicle);
+            List<VehicleCall> calls = vehicle.calls();
+            Map<String, Integer> times = fromStart.get(vehicle.direction());
+            for (int k = 1; k < calls.size(); k++) {
+                // At most one and a half of the usual ride, and 30 s: the train behind comes minutes later
+                int usual = times.get(calls.get(k).stopId()) - times.get(calls.get(k - 1).stopId());
+                assertThat(Duration.between(calls.get(k - 1).expectedAt(), calls.get(k).expectedAt()))
+                    .as("%s to %s", calls.get(k - 1).stopName(), calls.get(k).stopName())
+                    .isLessThanOrEqualTo(Duration.ofSeconds(usual * 3L / 2 + 30));
+            }
+            for (VehicleCall call : calls) {
+                assertThat(passages.add(vehicle.direction() + "|" + call.stopId() + "|" + call.expectedAt()))
+                    .as("passage at %s at %s taken twice", call.stopName(), call.expectedAt()).isTrue();
+            }
+        }
+    }
+
+    private static void inTimeOrder(Vehicle vehicle) {
+        List<VehicleCall> calls = vehicle.calls();
+        for (int k = 1; k < calls.size(); k++) {
+            assertThat(calls.get(k).expectedAt()).as("%s after %s", calls.get(k).stopName(), calls.get(k - 1).stopName())
+                .isAfter(calls.get(k - 1).expectedAt());
+        }
+    }
+
+    /** The metro line's schedule: [seconds] from stop to stop, both ways */
+    private void metroRides(int seconds) {
+        List<List<StopRef>> trips = List.of(List.of(S1, S2, S3, S4, S5), List.of(S5, S4, S3, S2, S1));
+        for (int t = 0; t < trips.size(); t++) {
+            for (int i = 0; i < trips.get(t).size(); i++) {
+                int time = 8 * 3600 + i * seconds;
+                metroSchedule.add(new ScheduledCallRow("M-" + t, null, trips.get(t).get(i).id(), time, time));
+            }
+        }
+    }
+
+    /** A made-up journey of the metro line towards S5, mixing the passages of several trains */
+    private static Journey metro(Call... calls) {
+        return new Journey("made-up", METRO_LINE, "S5", "IDFM:15", null, List.of(calls));
+    }
+
+    /** A call on time, [seconds] from now */
+    private Call callAt(StopRef stop, int seconds) {
+        return new Call(quayOf(stop), now.plusSeconds(seconds), now.plusSeconds(seconds));
     }
 
     /** The next load of the line (cached a minute otherwise) */
