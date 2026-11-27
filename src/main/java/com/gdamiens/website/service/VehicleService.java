@@ -39,6 +39,7 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -231,8 +232,17 @@ public class VehicleService {
         }
     }
 
-    /** Trips of a line over a service day, by the stop areas they serve */
-    private record Schedule(Map<String, List<TripStop>> byStop) {
+    /**
+     * Trips of a line over a service day, by the stop areas they serve
+     *
+     * @param rides usual ride from a stop area to the next one a trip serves (median over the day's trips), by
+     *              {@link #rideKey}
+     */
+    private record Schedule(Map<String, List<TripStop>> byStop, Map<String, Duration> rides) {
+    }
+
+    private static String rideKey(String fromStopAreaId, String toStopAreaId) {
+        return fromStopAreaId + ">" + toStopAreaId;
     }
 
     /**
@@ -282,7 +292,7 @@ public class VehicleService {
 
         Set<String> closed = trafficService.getClosedStops(lineId);
         List<Vehicle> vehicles = perStop
-            ? fromStops(detail.get(), runs, closed, now)
+            ? fromStops(detail.get(), runs, rides(lineId, now), closed, now)
             : fromJourneys(detail.get(), runs, schedules(lineId, now), closed, now);
         vehicles = withPrevious(lineId, vehicles, perStop, now);
         log.info("{} vehicles on line {} ({} journeys from the {} feed, {})", vehicles.size(), lineId, journeys.size(), source,
@@ -307,19 +317,46 @@ public class VehicleService {
         Previous before = previous.get(lineId);
         List<Kept> candidates = before == null || before.at().isBefore(now.minus(Duration.ofMinutes(5))) ? List.of() : before.vehicles();
         Set<Kept> found = new HashSet<>();
-        List<Kept> kept = new ArrayList<>();
-        for (Vehicle vehicle : loaded) {
-            Vehicle current = vehicle;
-            Kept same = candidates.stream().filter(candidate -> !found.contains(candidate) && candidate.vehicle().id().equals(current.id()))
-                .findFirst()
-                .or(() -> !perStop ? Optional.empty() : candidates.stream()
-                    .filter(candidate -> !found.contains(candidate) && sameCalls(candidate.vehicle(), current)).findFirst())
-                .orElse(null);
-            if (same != null) {
-                found.add(same);
-                vehicle = withId(vehicle, same.vehicle().id());
+        Map<Integer, Kept> same = new HashMap<>();
+        for (int v = 0; v < loaded.size(); v++) {
+            for (Kept candidate : candidates) {
+                if (!found.contains(candidate) && candidate.vehicle().id().equals(loaded.get(v).id())) {
+                    found.add(candidate);
+                    same.put(v, candidate);
+                    break;
+                }
             }
-            kept.add(new Kept(vehicle, 0));
+        }
+        if (perStop) {
+            // The closest pairs first: the vehicle behind, expected a headway later, is never taken for this one
+            record Match(int vehicle, Kept candidate, Duration gap) {
+            }
+            List<Match> matches = new ArrayList<>();
+            for (int v = 0; v < loaded.size(); v++) {
+                if (same.containsKey(v)) {
+                    continue;
+                }
+                for (Kept candidate : candidates) {
+                    if (!found.contains(candidate)) {
+                        Duration gap = gapAtNextStop(candidate.vehicle(), loaded.get(v));
+                        if (gap != null) {
+                            matches.add(new Match(v, candidate, gap));
+                        }
+                    }
+                }
+            }
+            matches.sort(Comparator.comparing(Match::gap));
+            for (Match match : matches) {
+                if (!same.containsKey(match.vehicle()) && !found.contains(match.candidate())) {
+                    found.add(match.candidate());
+                    same.put(match.vehicle(), match.candidate());
+                }
+            }
+        }
+        List<Kept> kept = new ArrayList<>();
+        for (int v = 0; v < loaded.size(); v++) {
+            Kept match = same.get(v);
+            kept.add(new Kept(match == null ? loaded.get(v) : withId(loaded.get(v), match.vehicle().id()), 0));
         }
         for (Kept candidate : candidates) {
             Vehicle vehicle = candidate.vehicle();
@@ -331,15 +368,20 @@ public class VehicleService {
         return kept.stream().map(Kept::vehicle).toList();
     }
 
-    /** Same direction, expected at one of the same stops at about the same time */
-    private static boolean sameCalls(Vehicle before, Vehicle now) {
+    /**
+     * How far apart the two loads expect the vehicle at its next stop now: null when they can't be the same (other
+     * direction, [before] not going there, or over {@link #SAME_CALL} apart)
+     */
+    private static Duration gapAtNextStop(Vehicle before, Vehicle now) {
         if (before.direction() != now.direction()) {
-            return false;
+            return null;
         }
-        Map<String, Instant> times = new HashMap<>();
-        before.calls().forEach(call -> times.put(call.stopId(), call.expectedAt()));
-        return now.calls().stream().anyMatch(call -> times.containsKey(call.stopId())
-            && Duration.between(times.get(call.stopId()), call.expectedAt()).abs().compareTo(SAME_CALL) <= 0);
+        return before.calls().stream()
+            .filter(call -> call.stopId().equals(now.toStopId()))
+            .map(call -> Duration.between(call.expectedAt(), now.expectedAt()).abs())
+            .filter(gap -> gap.compareTo(SAME_CALL) <= 0)
+            .findFirst()
+            .orElse(null);
     }
 
     private static Vehicle withId(Vehicle vehicle, String id) {
@@ -470,6 +512,7 @@ public class VehicleService {
 
     private Schedule loadSchedule(ScheduleKey key) {
         Map<String, List<TripStop>> byStop = new HashMap<>();
+        Map<String, List<Integer>> rideSeconds = new HashMap<>();
         List<ScheduledCallRow> rows = networkRepository.findScheduledCalls(IDFMRoute.toRouteId(key.lineId()), key.date());
         int start = 0;
         for (int i = 1; i <= rows.size(); i++) {
@@ -483,10 +526,32 @@ public class VehicleService {
             ScheduledTrip trip = new ScheduledTrip(StringUtils.trimToNull(rows.get(start).number()), stops);
             for (int k = 0; k < stops.size(); k++) {
                 byStop.computeIfAbsent(stops.get(k).stopAreaId(), id -> new ArrayList<>()).add(new TripStop(trip, k));
+                if (k > 0) {
+                    rideSeconds.computeIfAbsent(rideKey(stops.get(k - 1).stopAreaId(), stops.get(k).stopAreaId()), ride -> new ArrayList<>())
+                        .add((int) Duration.between(stops.get(k - 1).departure(), stops.get(k).arrival()).toSeconds());
+                }
             }
             start = i;
         }
-        return new Schedule(byStop);
+        Map<String, Duration> rides = new HashMap<>();
+        rideSeconds.forEach((ride, seconds) -> {
+            seconds.sort(null);
+            rides.put(ride, Duration.ofSeconds(seconds.get(seconds.size() / 2)));
+        });
+        return new Schedule(byStop, rides);
+    }
+
+    /**
+     * Usual rides between stops of the line, from today's scheduled trips; empty when the schedule can't be read
+     * (vehicles followed stop by stop then take their rides from the passages)
+     */
+    private Map<String, Duration> rides(String lineId, Instant now) {
+        try {
+            return schedules.get(new ScheduleKey(lineId, now.atZone(ParisTime.ZONE).toLocalDate()), this::loadSchedule).rides();
+        } catch (RuntimeException e) {
+            log.warn("No schedule of line {}: {}", lineId, e.getMessage());
+            return Map.of();
+        }
     }
 
     /**
@@ -663,8 +728,10 @@ public class VehicleService {
      * Vehicles from passages per stop, along each branch: each vehicle is followed from stop to stop (see
      * {@link #trace}); one first seen at a stop has left the previous one. Closed stops without passages are left
      * out: vehicles go through them.
+     *
+     * @param rides usual rides between stops from the schedule (see {@link Schedule#rides}), else taken from the passages
      */
-    private static List<Vehicle> fromStops(LineDetail detail, List<Run> runs, Set<String> closed, Instant now) {
+    private static List<Vehicle> fromStops(LineDetail detail, List<Run> runs, Map<String, Duration> rides, Set<String> closed, Instant now) {
         // Passages per stop area, the same one listed by several journeys (quays of both sides) counted once
         Map<String, List<Passage>> byStop = new HashMap<>();
         Set<String> seen = new HashSet<>();
@@ -723,8 +790,10 @@ public class VehicleService {
                         }, ArrayList::addAll));
                 }
                 List<Duration> segments = new ArrayList<>();
-                for (int i = 0; i < stops.size(); i++) {
-                    segments.add(i == 0 ? DEFAULT_SEGMENT : segment(passages.get(i - 1), passages.get(i)));
+                segments.add(DEFAULT_SEGMENT);
+                for (int i = 1; i < stops.size(); i++) {
+                    Duration scheduled = scheduledRide(rides, branchStops, open.get(i - 1), open.get(i));
+                    segments.add(scheduled != null ? scheduled : segment(passages.get(i - 1), passages.get(i)));
                 }
 
                 for (Trace trace : trace(passages, segments)) {
@@ -787,54 +856,143 @@ public class VehicleService {
             return stops.getLast();
         }
 
+        /** When it leaves the last stop where it is seen */
         Instant time() {
-            return passages.getLast().call().expected();
+            return passages.getLast().call().leaves();
         }
     }
 
     /**
-     * Vehicles followed stop by stop: a passage continues the earliest vehicle seen at one of the two previous stops
-     * that can get there by then (vehicles don't overtake, and a stop sometimes misses a vehicle for a while), or
-     * is a vehicle first seen there, i.e. that has left the previous stop.
+     * Vehicles followed stop by stop. The vehicles seen at one of the two previous stops (a stop sometimes misses a
+     * vehicle for a while) are expected here after their usual ride; the passages of the stop are paired with them
+     * in order (vehicles don't overtake), each one at most once and within its window (see {@link #pair}). A passage
+     * paired with none is a vehicle first seen there, i.e. that has left the previous stop.
      */
     private static List<Trace> trace(List<List<Passage>> passages, List<Duration> segments) {
         List<Trace> traces = new ArrayList<>();
         for (int i = 0; i < passages.size(); i++) {
-            int index = i;
-            List<Integer> candidates = new ArrayList<>();
-            for (int t = 0; t < traces.size(); t++) {
-                if (traces.get(t).last() < i && traces.get(t).last() >= i - 2) {
-                    candidates.add(t);
+            List<Trace> coming = new ArrayList<>();
+            List<Duration> ridesHere = new ArrayList<>();
+            for (Trace trace : traces) {
+                if (trace.last() < i && trace.last() >= i - 2) {
+                    Duration ride = Duration.ZERO;
+                    for (int k = trace.last() + 1; k <= i; k++) {
+                        ride = ride.plus(segments.get(k));
+                    }
+                    coming.add(trace);
+                    ridesHere.add(ride);
                 }
             }
-            candidates.sort(Comparator.comparing(t -> traces.get(t).time()));
-            for (Passage passage : passages.get(i)) {
-                Instant expected = passage.call().expected();
-                Integer match = candidates.stream().filter(t -> {
-                    Trace trace = traces.get(t);
-                    Duration bound = Duration.ZERO;
-                    for (int k = trace.last() + 1; k <= index; k++) {
-                        bound = bound.plus(segments.get(k).multipliedBy(2)).plusMinutes(1);
-                    }
-                    return expected.isAfter(trace.time().minus(SAME_VEHICLE)) && !expected.isAfter(trace.time().plus(bound));
-                }).findFirst().orElse(null);
-                if (match == null) {
-                    traces.add(new Trace(new ArrayList<>(List.of(i)), new ArrayList<>(List.of(passage))));
+            // In the order they get here
+            List<Integer> order = new ArrayList<>();
+            for (int k = 0; k < coming.size(); k++) {
+                order.add(k);
+            }
+            order.sort(Comparator.comparing(k -> coming.get(k).time().plus(ridesHere.get(k))));
+            List<Instant> left = order.stream().map(k -> coming.get(k).time()).toList();
+            List<Duration> rides = order.stream().map(ridesHere::get).toList();
+            List<Passage> here = passages.get(i);
+            int[] paired = pair(left, rides, here.stream().map(passage -> passage.call().expected()).toList());
+            for (int j = 0; j < here.size(); j++) {
+                if (paired[j] < 0) {
+                    traces.add(new Trace(new ArrayList<>(List.of(i)), new ArrayList<>(List.of(here.get(j)))));
                 } else {
-                    candidates.remove(match);
-                    traces.get(match).stops().add(i);
-                    traces.get(match).passages().add(passage);
+                    Trace trace = coming.get(order.get(paired[j]));
+                    trace.stops().add(i);
+                    trace.passages().add(here.get(j));
                 }
             }
         }
         return traces;
     }
 
-    /** Usual time from a passage at the previous stop to the next one at this stop (median) */
+    /** How much later than its usual ride a vehicle may get to the next stop, on top of half the ride */
+    private static final Duration LATE = Duration.ofSeconds(30);
+
+    /**
+     * Pairs the passages at a stop with the vehicles coming to it: a vehicle that left at [left] gets there after
+     * [rides], between half and one and a half of it (plus {@link #LATE}): never before it left, never as late as the
+     * one behind (they come minutes apart, rides between stops take one or two). Pairs keep the order of both lists
+     * (vehicles don't overtake) and are the closest to the usual rides, a passage or a vehicle left alone costing as
+     * much as a pair at the edge of its window.
+     *
+     * @param left  when each vehicle left the stop where it was last seen, in the order they get here
+     * @param rides its usual ride from there
+     * @param here  the passages at the stop, in time order
+     * @return for each passage, the index of the vehicle it continues, -1 for none
+     */
+    private static int[] pair(List<Instant> left, List<Duration> rides, List<Instant> here) {
+        int m = left.size();
+        int n = here.size();
+        // cost[k][j]: best pairing of the first k vehicles with the first j passages
+        double[][] cost = new double[m + 1][n + 1];
+        for (int k = 0; k <= m; k++) {
+            for (int j = 0; j <= n; j++) {
+                if (k == 0 || j == 0) {
+                    cost[k][j] = k + j;
+                    continue;
+                }
+                double best = Math.min(cost[k - 1][j], cost[k][j - 1]) + 1;
+                double pair = pairCost(left.get(k - 1), rides.get(k - 1), here.get(j - 1));
+                cost[k][j] = Math.min(best, cost[k - 1][j - 1] + pair);
+            }
+        }
+        int[] paired = new int[n];
+        Arrays.fill(paired, -1);
+        int k = m;
+        int j = n;
+        while (k > 0 && j > 0) {
+            double pair = pairCost(left.get(k - 1), rides.get(k - 1), here.get(j - 1));
+            if (cost[k][j] == cost[k - 1][j - 1] + pair) {
+                paired[j - 1] = k - 1;
+                k--;
+                j--;
+            } else if (cost[k][j] == cost[k - 1][j] + 1) {
+                k--;
+            } else {
+                j--;
+            }
+        }
+        return paired;
+    }
+
+    /**
+     * How far [at] is from the usual arrival, from 0 to 1 at the edge of the window; infinite outside it
+     */
+    private static double pairCost(Instant left, Duration ride, Instant at) {
+        long early = ride.toMillis() / 2;
+        long late = ride.toMillis() / 2 + LATE.toMillis();
+        long offset = Duration.between(left.plus(ride), at).toMillis();
+        if (offset < -early || offset > late) {
+            return Double.POSITIVE_INFINITY;
+        }
+        return offset < 0 ? (double) -offset / Math.max(early, 1) : (double) offset / late;
+    }
+
+    /**
+     * Usual ride between two stops of a branch (by index) from the schedule: the rides from stop to stop between
+     * them, else the direct one (trips skipping the stops between them); null when the schedule has neither
+     */
+    private static Duration scheduledRide(Map<String, Duration> rides, List<StopRef> stops, int from, int to) {
+        Duration total = Duration.ZERO;
+        for (int k = from; k < to && total != null; k++) {
+            Duration ride = rides.get(rideKey(stops.get(k).id(), stops.get(k + 1).id()));
+            total = ride == null ? null : total.plus(ride);
+        }
+        if (total == null) {
+            total = rides.get(rideKey(stops.get(from).id(), stops.get(to).id()));
+        }
+        return total == null ? null : clamp(total, Duration.ofSeconds(20), MAX_SEGMENT);
+    }
+
+    /**
+     * Usual time from a passage at the previous stop to the next one at this stop, when the schedule doesn't say:
+     * the lower quartile of the gaps, since a stop missing a vehicle gives the gap to the one behind
+     */
     private static Duration segment(List<Passage> before, List<Passage> here) {
         List<Duration> gaps = new ArrayList<>();
         for (Passage previous : before) {
-            Instant left = previous.call().expected();
+            Instant left = previous.call().leaves();
             here.stream()
                 .map(passage -> Duration.between(left, passage.call().expected()))
                 .filter(gap -> gap.isPositive() && gap.compareTo(MAX_SEGMENT) <= 0)
@@ -845,7 +1003,7 @@ public class VehicleService {
             return DEFAULT_SEGMENT;
         }
         gaps.sort(null);
-        return clamp(gaps.get(gaps.size() / 2), MIN_SEGMENT, MAX_SEGMENT);
+        return clamp(gaps.get((gaps.size() - 1) / 4), MIN_SEGMENT, MAX_SEGMENT);
     }
 
     private static double progress(Duration toNext, Duration segment) {
